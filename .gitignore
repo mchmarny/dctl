@@ -1,0 +1,22 @@
+# Mac 
+.DS_Store
+
+# Test binaries
+*.test
+tmp
+
+# Coverage
+*.out
+
+# Binaries
+bin
+dist
+
+# Keys 
+cosign.*
+*.pem
+
+
+# Configs
+pkg/config/config.yaml
+
