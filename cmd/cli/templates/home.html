@@ -1,0 +1,102 @@
+{{ define "home" }}
+
+{{ template "header" . }}
+
+<!-- Middle  -->
+
+    <input type="hidden" id="period_months" value="{{ .period_months }}" />
+
+    {{ if .err }}
+        <div class="error">
+            <p><b>Error:</b> {{ .err }}</p>
+        </div>
+    {{ end }}
+
+    <section class="search-and-user">
+        <form id="home-search-form">
+            <input type="search" placeholder="select an org..." id="search-bar">
+            <button type="submit" aria-label="submit form">
+                <svg aria-hidden="true">
+                    <use xlink:href="#search"></use>
+                </svg>
+            </button>
+        </form>
+    </section>
+
+    <div class="search-meta">
+        <b class="header-term">All imported events</b> over the last <b>{{ .period_months }} months</b>
+    </div>
+    
+    <section class="grid">
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Monthly Activity
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="time-series-chart"></canvas>            
+                </div>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Top Entities (Company or Org)
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="left-chart"></canvas>
+                </div>
+            </div>
+
+        </article>
+        <article>
+
+            <div class="tbl">
+                <div class="tbl-header">
+                     <div class="content-header">
+                        Top Colaborators
+                    </div>
+                </div>
+                <div class="tbl-content tbl-home">
+                    <canvas class="chart" id="right-chart"></canvas> 
+                </div>
+            </div>
+                    
+            
+        </article>
+
+        <article class="init-hide">
+            <div class="tbl bordered">
+                <div class="tbl-header">
+                    <div class="content-header">
+                        Search Results (page <b id="page-number">1</b>)
+                    </div>
+                </div>
+                <div class="tbl-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Repo</th>
+                                <th>Event Type</th>
+                                <th>Developer</th>
+                                <th>Entity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="result-table-content"></tbody>
+                    </table>
+                    <dev class="result-pager">
+                        <a href="#" id="prev-page">Prev</a> | 
+                        <a href="#" id="next-page">Next</a>
+                    </dev>
+                </div>            
+            </div>
+        </article>
+
+    </section>
+
+<!-- End Middle  -->
+
+{{ template "footer" . }}
+
+{{ end }}

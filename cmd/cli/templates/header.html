@@ -1,0 +1,415 @@
+{{ define "header" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>DevCTL</title>
+    <meta charset="UTF-8">
+    <meta name="description" content="DevCTL - Activity Dashboard">
+    <meta name="keywords" content="developer, git, github, stats, activity">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/static/assets/img/favicon.ico" rel="shortcut icon" />
+    <link rel="stylesheet" href="/static/assets/css/jq.css?version={{ .version }}" />
+    <link rel="stylesheet" href="/static/assets/css/app.css?version={{ .version }}" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="/static/assets/js/app.js?v={{ .version }}"></script>
+</head>
+
+<body>
+
+    <svg style="display:none;">
+      <symbol id="down" viewBox="0 0 16 16">
+          <polygon points="3.81 4.38 8 8.57 12.19 4.38 13.71 5.91 8 11.62 2.29 5.91 3.81 4.38" />
+      </symbol>
+      <symbol id="authors" viewBox="0 0 16 16">
+          <path d="M8,0a8,8,0,1,0,8,8A8,8,0,0,0,8,0ZM8,15a7,7,0,0,1-5.19-2.32,2.71,2.71,0,0,1,1.7-1,13.11,13.11,0,0,0,1.29-.28,2.32,2.32,0,0,0,.94-.34,1.17,1.17,0,0,0-.27-.7h0A3.61,3.61,0,0,1,5.15,7.49,3.18,3.18,0,0,1,8,4.07a3.18,3.18,0,0,1,2.86,3.42,3.6,3.6,0,0,1-1.32,2.88h0a1.13,1.13,0,0,0-.27.69,2.68,2.68,0,0,0,.93.31,10.81,10.81,0,0,0,1.28.23,2.63,2.63,0,0,1,1.78,1A7,7,0,0,1,8,15Z" />
+      </symbol>
+      <symbol id="entity" viewBox="0 0 442.688 442.688">
+          <path d="M442.666,178.822l-4.004-145.078c-0.447-16.222-13.504-29.279-29.727-29.728l-145.08-4.004
+              c-8.475-0.237-16.493,2.97-22.468,8.945L8.954,241.391c-11.924,11.924-11.924,31.325,0,43.249l149.083,149.082
+              c11.951,11.953,31.296,11.956,43.25,0.001L433.721,201.29C439.636,195.374,442.897,187.184,442.666,178.822z M376.238,139.979
+              c-20.323,20.322-53.215,20.324-73.539,0c-20.275-20.275-20.275-53.265,0-73.539c20.323-20.323,53.215-20.324,73.539,0
+              C396.512,86.714,396.512,119.704,376.238,139.979z"/>
+      </symbol>
+      <symbol id="users" viewBox="0 0 16 16">
+        <path d="M8,0a8,8,0,1,0,8,8A8,8,0,0,0,8,0ZM8,15a7,7,0,0,1-5.19-2.32,2.71,2.71,0,0,1,1.7-1,13.11,13.11,0,0,0,1.29-.28,2.32,2.32,0,0,0,.94-.34,1.17,1.17,0,0,0-.27-.7h0A3.61,3.61,0,0,1,5.15,7.49,3.18,3.18,0,0,1,8,4.07a3.18,3.18,0,0,1,2.86,3.42,3.6,3.6,0,0,1-1.32,2.88h0a1.13,1.13,0,0,0-.27.69,2.68,2.68,0,0,0,.93.31,10.81,10.81,0,0,0,1.28.23,2.63,2.63,0,0,1,1.78,1A7,7,0,0,1,8,15Z" />
+      </symbol>
+      <symbol id="repo" viewBox="0 0 512 448">
+            <defs
+              id="defs4">
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-2" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-7" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-77" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-1" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-8" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-9" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-22" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-26" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-0" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-3" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-75" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-4" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-78" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-6" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-5" />
+              <pattern
+                y="0"
+                x="0"
+                height="6"
+                width="6"
+                patternUnits="userSpaceOnUse"
+                id="EMFhbasepattern-62" />
+            </defs>
+            <sodipodi:namedview
+              id="base"
+              pagecolor="#ffffff"
+              bordercolor="#666666"
+              borderopacity="1.0"
+              inkscape:pageopacity="0.0"
+              inkscape:pageshadow="2"
+              inkscape:zoom="1"
+              inkscape:cx="370.6211"
+              inkscape:cy="266.5804"
+              inkscape:document-units="px"
+              inkscape:current-layer="layer1"
+              showgrid="true"
+              inkscape:snap-bbox="true"
+              inkscape:bbox-nodes="true"
+              units="px"
+              inkscape:window-width="1148"
+              inkscape:window-height="866"
+              inkscape:window-x="156"
+              inkscape:window-y="156"
+              inkscape:window-maximized="0"
+              inkscape:snap-nodes="false"
+              inkscape:snap-intersection-paths="true"
+              inkscape:object-nodes="true"
+              inkscape:snap-global="true"
+              inkscape:snap-others="false"
+              inkscape:snap-grids="true"
+              inkscape:object-paths="true">
+              <inkscape:grid
+                type="xygrid"
+                id="grid3336"
+                spacingx="16"
+                spacingy="16"
+                empspacing="2" />
+            </sodipodi:namedview>
+            <metadata
+              id="metadata7">
+              <rdf:RDF>
+                <cc:Work
+                  rdf:about="">
+                  <dc:format>image/svg+xml</dc:format>
+                  <dc:type
+                    rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+                  <dc:title>repository-submodule</dc:title>
+                </cc:Work>
+              </rdf:RDF>
+            </metadata>
+            <g
+              inkscape:label="Layer 1"
+              inkscape:groupmode="layer"
+              id="layer1"
+              transform="translate(0,-604.3622)">
+              <flowRoot
+                xml:space="preserve"
+                id="flowRoot3338"
+                style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+                transform="translate(0,698.0315)"><flowRegion
+                  id="flowRegion3340"><rect
+                    id="rect3342"
+                    width="360"
+                    height="360"
+                    x="0"
+                    y="-5.669281" /></flowRegion><flowPara
+                  id="flowPara3344" /></flowRoot>    <flowRoot
+                xml:space="preserve"
+                id="flowRoot3371"
+                style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"><flowRegion
+                  id="flowRegion3373"><rect
+                    id="rect3375"
+                    width="85"
+                    height="85"
+                    x="5"
+                    y="5" /></flowRegion><flowPara
+                  id="flowPara3377" /></flowRoot>    <flowRoot
+                xml:space="preserve"
+                id="flowRoot3404"
+                style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"><flowRegion
+                  id="flowRegion3406"><rect
+                    id="rect3408"
+                    width="65"
+                    height="50"
+                    x="15"
+                    y="20" /></flowRegion><flowPara
+                  id="flowPara3410" /></flowRoot>    <flowRoot
+                xml:space="preserve"
+                id="flowRoot3437"
+                style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"><flowRegion
+                  id="flowRegion3439"><rect
+                    id="rect3441"
+                    width="80"
+                    height="75"
+                    x="5"
+                    y="5" /></flowRegion><flowPara
+                  id="flowPara3443" /></flowRoot>    <text
+                sodipodi:linespacing="125%"
+                id="text3481"
+                y="1009.7125"
+                x="51.231663"
+                style="font-style:normal;font-variant:normal;font-weight:400;font-size:13.8125px;line-height:125%;font-family:Calibri;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+                xml:space="preserve"><tspan
+                  id="tspan3483"
+                  y="0"
+                  x="0"
+                  sodipodi:role="line"><tspan
+                    id="tspan3485"
+                    style="font-style:normal;font-variant:normal;font-weight:400;font-size:13.8125px;font-family:Calibri;fill:#000000"
+                    dy="0"
+                    dx="0" /></tspan></text>
+              <text
+                sodipodi:linespacing="125%"
+                id="text3698"
+                y="1080.1998"
+                x="82.929802"
+                style="font-style:normal;font-variant:normal;font-weight:400;font-size:13.8125px;line-height:125%;font-family:Calibri;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+                xml:space="preserve"><tspan
+                  id="tspan3700"
+                  y="0"
+                  x="0"
+                  sodipodi:role="line"><tspan
+                    id="tspan3702"
+                    style="font-style:normal;font-variant:normal;font-weight:400;font-size:13.8125px;font-family:Calibri;fill:#000000"
+                    dy="0"
+                    dx="0" /></tspan></text>
+              <g
+                style="font-style:normal;font-variant:normal;font-weight:400;font-size:13.8125px;line-height:125%;font-family:Calibri;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill-opacity:1;stroke:none"
+                id="text3857"
+                transform="matrix(6.2024072,0,0,6.1301787,124.04814,-5115.0829)" />
+              <path
+                style="fill-opacity:1"
+                d="M 98.937501,604.36297 C 79.597548,604.36297 64,619.96052 64,639.30047 l 0,29.0625 0,103.1875 72.8125,-72.81249 c 9.37524,-9.37525 24.43726,-9.37525 33.8125,0 l 184.06249,184.06249 c 9.37526,9.37524 9.37526,24.43725 0,33.81248 l -71.74999,71.75002 229.0625,0 0,-320 -224,0 0,-29.0625 c 0,-19.33995 -15.59755,-34.9375 -34.9375,-34.9375 l -154.124999,0 z"
+                id="rect3518"
+                inkscape:connector-curvature="0" />
+              <path
+                style="fill-opacity:1;stroke:none;stroke-width:32;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+                d="m 152.00061,748.3622 c -4.09587,0 -8.19133,1.56872 -11.32979,4.70719 l -24.63778,24.63778 27.59654,27.59512 a 26.307708,26.307708 0 0 1 8.37103,-1.40159 26.307708,26.307708 0 0 1 26.3077,26.30771 26.307708,26.307708 0 0 1 -1.39445,8.37816 l 36.86961,36.86962 a 26.307708,26.307708 0 0 1 8.37103,-1.4016 26.307708,26.307708 0 0 1 26.30771,26.30771 26.307708,26.307708 0 0 1 -26.30771,26.30771 26.307708,26.307708 0 0 1 -26.30771,-26.30771 26.307708,26.307708 0 0 1 1.39445,-8.37673 l -33.54832,-33.54832 0,88.5473 a 26.307708,26.307708 0 0 1 14.61539,23.53164 26.307708,26.307708 0 0 1 -26.3077,26.30771 26.307708,26.307708 0 0 1 -26.30771,-26.30771 26.307708,26.307708 0 0 1 14.61539,-23.55447 l 0,-93.22167 a 26.307708,26.307708 0 0 1 -14.61539,-23.53164 26.307708,26.307708 0 0 1 1.39446,-8.37674 L 99.497944,794.24226 4.7076932,889.03251 c -6.2769243,6.27693 -6.2769243,16.38264 0,22.65958 L 140.67082,1047.6553 c 6.27693,6.2768 16.38264,6.2768 22.65957,0 L 299.29352,911.69209 c 6.27693,-6.27694 6.27693,-16.38265 0,-22.65958 L 163.33039,753.06939 c -3.13846,-3.13847 -7.23392,-4.70719 -11.32978,-4.70719 z"
+                id="rect3404"
+                inkscape:connector-curvature="0" />
+            </g>
+      </symbol>
+      <symbol id="org" viewBox="0 0 297 297">
+          <path d="m167.666,250.543c-0.053-0.018-4.671-1.435-4.671-1.435-1.687-0.518-3.507-0.385-5.101,0.372l-9.394,4.467-9.394-4.467c-1.594-0.757-3.414-0.889-5.101-0.372 0,0-4.617,1.418-4.671,1.435-8.051,2.683-13.459,10.186-13.459,18.671v20.729c0,3.898 3.159,7.057 7.057,7.057h51.135c3.898,0 7.057-3.159 7.057-7.057v-20.729c0-8.485-5.408-15.988-13.458-18.671z"/>
+          <path d="m126.335,222.662c0,12.222 9.943,22.165 22.165,22.165s22.165-9.943 22.165-22.165-9.943-22.165-22.165-22.165-22.165,9.943-22.165,22.165z"/>
+          <path d="m122.933,97.384h51.135c3.898,0 7.057-3.159 7.057-7.057v-20.729c0-8.485-5.408-15.988-13.459-18.671-0.053-0.018-4.671-1.435-4.671-1.435-1.687-0.519-3.507-0.386-5.101,0.372l-9.394,4.466-9.394-4.467c-1.594-0.757-3.414-0.89-5.101-0.372 0,0-4.617,1.418-4.671,1.435-8.051,2.683-13.459,10.186-13.459,18.671v20.729c0.001,3.899 3.16,7.058 7.058,7.058z"/>
+          <path d="M148.5,44.33c12.222,0,22.165-9.943,22.165-22.165S160.722,0,148.5,0s-22.165,9.943-22.165,22.165   S136.278,44.33,148.5,44.33z"/>
+          <path d="m60.156,250.543c-0.053-0.018-4.672-1.436-4.672-1.436-1.687-0.516-3.507-0.385-5.101,0.374l-9.393,4.466-9.394-4.467c-1.594-0.757-3.413-0.889-5.101-0.372 0,0-4.617,1.418-4.671,1.435-8.051,2.683-13.459,10.186-13.459,18.671v20.729c0,3.898 3.159,7.057 7.057,7.057h51.134c3.898,0 7.057-3.159 7.057-7.057v-20.729c0.001-8.485-5.408-15.989-13.457-18.671z"/>
+          <path d="m40.99,244.827c12.222,0 22.165-9.943 22.165-22.165s-9.943-22.165-22.165-22.165-22.165,9.943-22.165,22.165 9.943,22.165 22.165,22.165z"/>
+          <path d="m275.176,250.543c-0.053-0.018-4.671-1.435-4.671-1.435-1.688-0.518-3.507-0.385-5.101,0.372l-9.394,4.467-9.393-4.466c-1.594-0.758-3.414-0.889-5.101-0.374 0,0-4.618,1.419-4.672,1.436-8.05,2.682-13.458,10.186-13.458,18.671v20.729c0,3.898 3.159,7.057 7.057,7.057h51.134c3.898,0 7.057-3.159 7.057-7.057v-20.729c0-8.485-5.408-15.988-13.458-18.671z"/>
+          <path d="m233.845,222.662c0,12.222 9.943,22.165 22.165,22.165 12.222,0 22.165-9.943 22.165-22.165s-9.943-22.165-22.165-22.165c-12.222,0-22.165,9.943-22.165,22.165z"/>
+          <path d="m40.99,182.07c4.733,0 8.569-3.837 8.569-8.569v-17.152h90.371v17.151c0,4.733 3.837,8.569 8.569,8.569s8.569-3.837 8.569-8.569v-17.152h90.371v17.152c0,4.733 3.837,8.569 8.569,8.569 4.733,0 8.569-3.837 8.569-8.569v-25.721c0-4.733-3.837-8.569-8.569-8.569h-98.941v-23.679c0-4.733-3.837-8.569-8.569-8.569s-8.569,3.837-8.569,8.569v23.679h-98.939c-4.733,0-8.569,3.837-8.569,8.569v25.721c0,4.733 3.836,8.57 8.569,8.57z"/>
+      </symbol>
+      <symbol id="collapse" viewBox="0 0 16 16">
+          <polygon points="11.62 3.81 7.43 8 11.62 12.19 10.09 13.71 4.38 8 10.09 2.29 11.62 3.81" />
+      </symbol>
+      <symbol id="search" viewBox="0 0 16 16">
+          <path d="M6.57,1A5.57,5.57,0,1,1,1,6.57,5.57,5.57,0,0,1,6.57,1m0-1a6.57,6.57,0,1,0,6.57,6.57A6.57,6.57,0,0,0,6.57,0Z" />
+          <rect x="11.84" y="9.87" width="2" height="5.93" transform="translate(-5.32 12.84) rotate(-45)" />
+      </symbol>
+
+      <symbol id="about" viewBox="0 0 24 24">
+        <path d="M21 2H6a2 2 0 0 0-2 2v3H2v2h2v2H2v2h2v2H2v2h2v3a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zm-8 2.999c1.648 0 3 1.351 3 3A3.012 3.012 0 0 1 13 11c-1.647 0-3-1.353-3-3.001 0-1.649 1.353-3 3-3zM19 18H7v-.75c0-2.219 2.705-4.5 6-4.5s6 2.281 6 4.5V18z"/>
+      </symbol>
+
+    </svg>
+
+<header class="page-header">
+  <nav>
+    <a href="/" class="logo">
+      <div><img src="/static/assets/img/logo.svg" alt="logo" id="logo" /></div>
+      <h1>DevCTL</h1>
+      <div class="sub-head">
+        Activity Dashboard
+      </div>
+    </a>
+    <button class="toggle-mob-menu" aria-expanded="false" aria-label="open menu">
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="#down"></use>
+      </svg>
+    </button>
+    <ul class="admin-menu">
+      <li class="menu-heading">
+        <h3>Scope</h3>
+      </li>
+
+      <li>
+        <a href="#" class="nav-link" data-nav="org">
+          <svg>
+            <use xlink:href="#org"></use>
+          </svg>
+          <span>Organization</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="#" class="nav-link" data-nav="repo">
+          <svg>
+            <use xlink:href="#repo"></use>
+          </svg>
+          <span>Repository</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="#" class="nav-link" data-nav="entity">
+          <svg>
+            <use xlink:href="#entity"></use>
+          </svg>
+          <span>Entity</span>
+        </a>
+      </li>
+
+
+      <li class="menu-heading">
+        <h3>Info</h3>
+      </li>
+
+      <li>
+        <a href="/about">
+          <svg>
+            <use xlink:href="#about"></use>
+          </svg>
+          <span>About</span>
+        </a>
+      </li>
+
+      {{ if .account }}
+        <li class="menu-heading">
+          <h3>Settings</h3>
+        </li>
+        <li>
+          <a href="/settings">
+            <svg>
+              <use xlink:href="#settings"></use>
+            </svg>
+            <span>Settings</span>
+          </a>
+        </li>
+      {{ end }}
+
+
+      <li>
+        <button class="collapse-btn" aria-expanded="true" aria-label="collapse menu">
+          <svg aria-hidden="true">
+            <use xlink:href="#collapse"></use>
+          </svg>
+          <span>Collapse</span>
+        </button>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<section class="page-content">
+
+
+{{end}}
