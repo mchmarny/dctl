@@ -1,5 +1,4 @@
 const colors = [
-    'rgb(76, 100, 114)',
     'rgb(87, 164, 177)',
     'rgb(176, 216, 148)',
     'rgb(250, 222, 137)',
@@ -14,7 +13,8 @@ const colors = [
     'rgb(187, 253, 137)',
     'rgb(114, 90, 76)',
     'rgb(177, 148, 87)',
-    'rgb(137, 137, 250)'
+    'rgb(137, 137, 250)',
+    'rgb(76, 100, 114)'
 ];
 
 const searchCriteria = {
@@ -382,7 +382,7 @@ function loadTimeSeriesChart(url, fn) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false
+                        display: true
                     }
                 },
                 scales: {
@@ -391,7 +391,6 @@ function loadTimeSeriesChart(url, fn) {
                         beginAtZero: true,
                         ticks: {
                             precision: 0,
-                            color: colors[5],
                             font: {
                                 size: 14
                             }
@@ -401,7 +400,6 @@ function loadTimeSeriesChart(url, fn) {
                     x:
                     {
                         ticks: {
-                            color: colors[6],
                             font: {
                                 size: 14
                             }
