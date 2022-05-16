@@ -16,8 +16,6 @@ import (
 
 const (
 	dirMode = 0700
-
-	gitHubAccessTokenEnvVar = "GITHUB_ACCESS_TOKEN"
 )
 
 var (
@@ -60,9 +58,10 @@ func main() {
 			dbFilePathFlag,
 		},
 		Commands: []*cli.Command{
-			importAffiliationCmd,
+			authCmd,
+			importCmd,
 			updateCmd,
-			developerQueryCmd,
+			queryCmd,
 			serverCmd,
 		},
 		Before: func(c *cli.Context) error {

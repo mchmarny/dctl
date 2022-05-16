@@ -16,9 +16,6 @@ var (
 		Aliases: []string{"u"},
 		Usage:   "Update all previously imported org, repos, and affiliations",
 		Action:  cmdUpdate,
-		Flags: []cli.Flag{
-			ghTokenFlag,
-		},
 	}
 )
 
@@ -29,7 +26,10 @@ type EventUpdateResult struct {
 
 func cmdUpdate(c *cli.Context) error {
 	start := time.Now()
-	token := c.String(ghTokenFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to get GitHub token")
+	}
 
 	if token == "" {
 		return cli.ShowSubcommandHelp(c)

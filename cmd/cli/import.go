@@ -14,14 +14,6 @@ import (
 )
 
 var (
-	ghTokenFlag = &cli.StringFlag{
-		Name:        "token",
-		Usage:       "GitHub user token",
-		Required:    true,
-		EnvVars:     []string{gitHubAccessTokenEnvVar},
-		DefaultText: "variable",
-	}
-
 	orgNameFlag = &cli.StringFlag{
 		Name:  "org",
 		Usage: "Name of the GitHub organization or user",
@@ -38,7 +30,7 @@ var (
 		Value: data.EventAgeMonthsDefault,
 	}
 
-	importAffiliationCmd = &cli.Command{
+	importCmd = &cli.Command{
 		Name:    "import",
 		Aliases: []string{"i"},
 		Usage:   "List data import operations",
@@ -49,7 +41,6 @@ var (
 				Usage:   "Imports GitHub repo event data (PRs, comments, issues, etc)",
 				Action:  cmdImportEvents,
 				Flags: []cli.Flag{
-					ghTokenFlag,
 					orgNameFlag,
 					repoNameFlag,
 					monthsFlag,
@@ -60,9 +51,6 @@ var (
 				Aliases: []string{"a"},
 				Usage:   "Updates imported developer entity/identity with CNCF and GitHub data",
 				Action:  cmdImportAffiliations,
-				Flags: []cli.Flag{
-					ghTokenFlag,
-				},
 			},
 			{
 				Name:    "names",
@@ -86,7 +74,10 @@ func cmdImportEvents(c *cli.Context) error {
 	org := c.String(orgNameFlag.Name)
 	repo := c.String(repoNameFlag.Name)
 	months := c.Int(monthsFlag.Name)
-	token := c.String(ghTokenFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to get GitHub token")
+	}
 
 	if org == "" || repo == "" || token == "" {
 		return cli.ShowSubcommandHelp(c)
@@ -114,7 +105,10 @@ func cmdImportEvents(c *cli.Context) error {
 }
 
 func cmdImportAffiliations(c *cli.Context) error {
-	token := c.String(ghTokenFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to get GitHub token")
+	}
 
 	if token == "" {
 		return cli.ShowSubcommandHelp(c)

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/mchmarny/dctl/pkg/http"
+	"github.com/mchmarny/dctl/pkg/net"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,7 +35,7 @@ func UpdateNoFullnameDevelopersFromApache(db *sql.DB) (*ApacheUpdateResult, erro
 	}
 
 	var afList AFDeveloperList
-	if err := http.GetJSON(afDevURL, &afList); err != nil {
+	if err := net.GetJSON(afDevURL, &afList); err != nil {
 		return nil, errors.Wrap(err, "failed to get list of developers")
 	}
 
