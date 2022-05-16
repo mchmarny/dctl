@@ -35,39 +35,15 @@ lint: ## Lints the entire project
 .PHONY: lint
 
 cli: tidy ## Builds CLI binary
-	CGO_ENABLED=1 go build -ldflags=" \
+	CGO_ENABLED=0 go build -ldflags=" \
 		-X 'main.version=$(RELEASE_VERSION)' \
 		-X 'main.commit=$(RELEASE_COMMIT)' " \
 		-o bin/dctl \
 		cmd/cli/*.go
 .PHONY: cli
 
-dist: tidy ## Builds CLI distributables
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 go build -ldflags=" \
-		-X 'main.version=$(RELEASE_VERSION)' \
-		-X 'main.commit=$(RELEASE_COMMIT)' " \
-		-o dist/dctl-darwin-arm64 \
-		cmd/cli/*.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 go build -ldflags=" \
-		-X 'main.version=$(RELEASE_VERSION)' \
-		-X 'main.commit=$(RELEASE_COMMIT)' " \
-		-o dist/dctl-darwin-amd64 \
-		cmd/cli/*.go
-	# GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -ldflags=" \
-	# 	-X 'main.version=$(RELEASE_VERSION)' \
-	# 	-X 'main.commit=$(RELEASE_COMMIT)' " \
-	# 	-o dist/dctl-linux-amd64 \
-	# 	cmd/cli/*.go
-	# GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -ldflags=" \
-	# 	-X 'main.version=$(RELEASE_VERSION)' \
-	# 	-X 'main.commit=$(RELEASE_COMMIT)' " \
-	# 	-o dist/dctl-linux-arm64 \
-	# 	cmd/cli/*.go
-	# GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -ldflags=" \
-	# 	-X 'main.version=$(RELEASE_VERSION)' \
-	# 	-X 'main.commit=$(RELEASE_COMMIT)' " \
-	# 	-o dist/dctl-windows-amd64 \
-	# 	cmd/cli/*.go
+dist: test lint ## Runs test, lint before building distributables
+	goreleaser release --snapshot --rm-dist --timeout 10m0s
 .PHONY: dist
 
 server: cli ## Builds CLI and runs the server

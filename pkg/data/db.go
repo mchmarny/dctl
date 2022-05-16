@@ -6,9 +6,9 @@ import (
 	"os"
 	"regexp"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	_ "modernc.org/sqlite"
 )
 
 const (
@@ -59,7 +59,7 @@ func Init(dbFilePath string) error {
 }
 
 func GetDB(path string) (*sql.DB, error) {
-	conn, err := sql.Open("sqlite3", path)
+	conn, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open database: %s", path)
 	}
