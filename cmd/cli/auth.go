@@ -18,7 +18,7 @@ const (
 
 var (
 	authCmd = &cli.Command{
-		Name:    "authenticate",
+		Name:    "auth",
 		Aliases: []string{"a"},
 		Usage:   "Authenticate to GitHub to obtain an access token",
 		Action:  cmdInitAuthFlow,

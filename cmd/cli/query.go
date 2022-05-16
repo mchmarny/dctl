@@ -71,7 +71,7 @@ var (
 	queryCmd = &cli.Command{
 		Name:    "query",
 		Aliases: []string{"q"},
-		Usage:   "List data query options (requires previous import)",
+		Usage:   "List data query operations",
 		Subcommands: []*cli.Command{
 			{
 				Name:   "developers",

@@ -7,11 +7,11 @@
 
 ![](docs/img/screenshot.png)
 
-While GitHub does provide some charts with this information on a repo level, Grafana has [plugin for GitHub](https://grafana.com/grafana/plugins/grafana-github-datasource/) that some foundations use to track their projects (e.g. [CNCF Grafana Dashboard](https://k8s.devstats.cncf.io/)), there isn't really anything that's both, free and simple to provide quick answers to these questions.
+While GitHub does provide repo-level activity charts and Grafana has [plugin for GitHub](https://grafana.com/grafana/plugins/grafana-github-datasource/) (e.g. [CNCF Grafana Dashboard](https://k8s.devstats.cncf.io/)), there isn't really anything that's both, free and simple to use that provides quick answers to these questions.
 
-Using [GitHub API](https://docs.github.com/en/rest), `dctl` downloads locally metadata about the projects selected by you, and augments it with developer affiliation content from [CNCF](https://github.com/cncf/gitdm) and [Apache Foundation](https://www.apache.org/foundation/members.html) to provide you with an organization, repository, or entity scoped event drill-downs. You can even use time period, contribution type, and developer name filters to identify specific trends and navigate to the original detail in GitHub for additional context.
+`dctl` downloads locally all event metadata for set of repos indicated by you using [GitHub API](https://docs.github.com/en/rest), augments it with developer affiliations from sources like [CNCF](https://github.com/cncf/gitdm) and [Apache Foundation](https://www.apache.org/foundation/members.html), and exposes easy to use drill-downs in locally hosted UI. `dctl` can also be used to query the imported dat and output JSON payloads with results for subsequent postprocessing in another tool. Either way, you can use time period, contribution type, and developer name filters to further scope your data and identify specific trends or navigate directly to the original detail in GitHub for additional context.
         
-And, since all this data is cached locally, you can even use [`CLI`](https://www.sqlite.org/index.html) to run even more customized queries using SQL without needing to re-download the data. See below for more details on how to do that. 
+Additionally, since all this data is cached locally, you can even use SQL to even further customized your queries without the  need to re-download data. See below for more details on how to do that. 
 
 Hope you find this tool helpful. [Let me know](https://twitter.com/mchmarny) if you have any questions.
 
@@ -27,18 +27,41 @@ dctl
 
 You should see the CLI version and a short summary along with the usage options: 
 
+* `auth` - Authenticate to GitHub to obtain an access token
 * `import` - List data import operations
-* `update` - Update all previously imported org, repos, and affiliations
-* `query` -  List data query options (requires previous import)
+* `query` - List data query operations
 * `server` - Start local HTTP server
 
+### Authentication 
+
+To avid the low rate limits for unauthenticated queries against GitHub API, `dctl` uses OAuth token. To obtain the token you will have first authenticate:
+
+> `dctl` doesn't ask for any scopes, so the resulting token has only access to already public data
+
+```shell
+dctl auth
+```
+
+The result should look something like this: 
+
+```shell
+1). Copy this code: E123-4567
+2). Navigate to this URL in your browser to authenticate: https://github.com/login/device
+3). Hit enter to complete the process:
+```
+
+Once you enter the provided code in the GitHub UI prompt and hit enter, `dctl` will persist the token in your home directory for all subsequent queries. Should you need to, you can revoke that token in your [GitHub Settings](https://docs.github.com/en/developers/apps/managing-oauth-apps/deleting-an-oauth-app). 
+
 ### Import Data 
+
+> Assumes you have already authenticated
 
 The `dctl` CLI comes with an embedded [SQLite](https://www.sqlite.org/index.html) database. The following import operations are currently supported: 
 
 * `events` - Imports GitHub repo event data (PRs, comments, issues, etc)
 * `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
 * `names` - Updates imported developer names with Apache Foundation data
+* `updates` - Update all previously imported org, repos, and affiliations
 
 #### Import GitHub Events
 
@@ -73,6 +96,8 @@ dctl --debug import events --org <organization> --repo <repository>
 ```
 
 #### Update Developer Name and Entity Affiliation
+
+> Assumes you have already authenticated
 
 Developers on GitHub often don't include their company or organization affiliation, and when they do, there use all kind of creative ways of spelling it (you'd be surprized how many different IBMs and Googles are out there). To clean this data up, `dctl` provides two different operations:
 
@@ -138,6 +163,8 @@ At this point you can use your browser to navigate to [127.0.0.1:8080](http://12
 > You can change the port on which the server starts by providing the `--port` flag. 
 
 ### Query Data 
+
+> Assumes you have already authenticated
 
 The imported data is also available as `JSON` via `dctl` query:
 

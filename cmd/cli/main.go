@@ -34,7 +34,7 @@ var (
 
 	dbFilePathFlag = &cli.StringFlag{
 		Name:        "db",
-		Usage:       fmt.Sprintf("Path to the Sqlite database file (optional, defaults to $HOME/.%s/data.db)", name),
+		Usage:       "Path to the Sqlite database file",
 		Destination: &dbFilePath,
 		Value:       dbFilePath,
 	}
@@ -52,7 +52,7 @@ func main() {
 		Name:     "dctl",
 		Version:  fmt.Sprintf("%s - (commit: %s)", version, commit),
 		Compiled: time.Now(),
-		Usage:    "CLI for developer data",
+		Usage:    "CLI for quick insight into the GitHub org/repo activity",
 		Flags: []cli.Flag{
 			debugFlag,
 			dbFilePathFlag,
@@ -60,7 +60,6 @@ func main() {
 		Commands: []*cli.Command{
 			authCmd,
 			importCmd,
-			updateCmd,
 			queryCmd,
 			serverCmd,
 		},
