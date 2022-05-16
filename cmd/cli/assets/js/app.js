@@ -28,8 +28,8 @@ const searchCriteria = {
     "page": 1,
     "page_size": 10,
     init: function() {
-        var origValues = {};
-        for (var prop in this) {
+        let origValues = {};
+        for (let prop in this) {
             if (this.hasOwnProperty(prop) && prop != "origValues") {
                 origValues[prop] = this[prop];
             }
@@ -37,17 +37,17 @@ const searchCriteria = {
         this.origValues = origValues;
     },
     reset: function() {
-        for (var prop in this.origValues) {
+        for (let prop in this.origValues) {
             this[prop] = this.origValues[prop];
         }
     }
 }
 
-var autocomplete_cache = {};
-var timeEventsChart;
-var leftChart;
-var rightChart;
-var searchItem;
+let autocomplete_cache = {};
+let timeEventsChart;
+let leftChart;
+let rightChart;
+let searchItem;
 
 $(function () {
     // On page load
@@ -58,7 +58,7 @@ $(function () {
     /* GLOBALs */
     $(".init-hide").hide();
     $(window).resize(function () {
-        var scrollWidth = $('.tbl-content').width() - $('.tbl-content table').width();
+        const scrollWidth = $('.tbl-content').width() - $('.tbl-content table').width();
         $('.tbl-header').css({'padding-right': scrollWidth });
     });
 
@@ -87,7 +87,7 @@ $(function () {
     // Change view based on the clicked link
     $(".nav-link").click(function(e) {
         e.preventDefault();
-        var nav = $(this).data("nav");
+        const nav = $(this).data("nav");
         console.log(`nav: ${nav}`);
         
         // if not home go there 
@@ -126,7 +126,7 @@ function loadView(view) {
     const searchTerm = $(".header-term").html("All imported events");
     
     resetCharts();
-    var org = "", repo = "", entity = "";
+    let org = "", repo = "", entity = "";
 
     setupSearchAutocomplete(searchBar, `/data/query?v=${view}&q=`, function(item) {
         resetSearch();
@@ -305,7 +305,7 @@ function setupSearchAutocomplete(sel, url, fn) {
     $(sel).autocomplete({
         minLength: 1,
         source: function (request, response) {
-            var term = request.term;
+            const term = request.term;
             if (term in autocomplete_cache) {
                 response(autocomplete_cache[term]);
                 return;
