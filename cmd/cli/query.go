@@ -68,7 +68,7 @@ var (
 		Required: false,
 	}
 
-	developerQueryCmd = &cli.Command{
+	queryCmd = &cli.Command{
 		Name:    "query",
 		Aliases: []string{"q"},
 		Usage:   "List data query options (requires previous import)",
@@ -88,7 +88,6 @@ var (
 				Action: cmdQueryDeveloper,
 				Flags: []cli.Flag{
 					ghUserNameQueryFlag,
-					ghTokenFlag,
 				},
 			},
 			{
@@ -114,7 +113,6 @@ var (
 				Action: cmdQueryOrgRepos,
 				Flags: []cli.Flag{
 					orgNameFlag,
-					ghTokenFlag,
 				},
 			},
 			{
@@ -240,7 +238,10 @@ func cmdQueryEntities(c *cli.Context) error {
 
 func cmdQueryDeveloper(c *cli.Context) error {
 	val := c.String(ghUserNameQueryFlag.Name)
-	token := c.String(ghTokenFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to get GitHub token")
+	}
 
 	if val == "" || token == "" {
 		return cli.ShowSubcommandHelp(c)
@@ -308,7 +309,10 @@ func cmdQueryDevelopers(c *cli.Context) error {
 
 func cmdQueryOrgRepos(c *cli.Context) error {
 	org := c.String(orgNameFlag.Name)
-	token := c.String(ghTokenFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return errors.Wrap(err, "failed to get GitHub token")
+	}
 
 	if org == "" && token == "" {
 		return cli.ShowSubcommandHelp(c)
