@@ -10,7 +10,6 @@ tmp
 
 # Binaries
 bin
-dist
 
 # Keys 
 cosign.*
