@@ -95,6 +95,7 @@ var (
 		"S&P GLOBAL INC":                              "S&P",
 		"S&P GLOBAL":                                  "S&P",
 		"VERVERICA ORIGINAL CREATORS OF APACHE FLINK": "VERVERICA",
+		"CHAINGUARDDEV":                               "CHAINGUARD",
 	}
 )
 
