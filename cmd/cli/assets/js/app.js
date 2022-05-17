@@ -27,7 +27,7 @@ const searchCriteria = {
     "entity": null,
     "page": 1,
     "page_size": 10,
-    init: function() {
+    init: function () {
         let origValues = {};
         for (let prop in this) {
             if (this.hasOwnProperty(prop) && prop != "origValues") {
@@ -36,7 +36,7 @@ const searchCriteria = {
         }
         this.origValues = origValues;
     },
-    reset: function() {
+    reset: function () {
         for (let prop in this.origValues) {
             this[prop] = this.origValues[prop];
         }
@@ -59,37 +59,37 @@ $(function () {
     $(".init-hide").hide();
     $(window).resize(function () {
         const scrollWidth = $('.tbl-content').width() - $('.tbl-content table').width();
-        $('.tbl-header').css({'padding-right': scrollWidth });
+        $('.tbl-header').css({ 'padding-right': scrollWidth });
     });
 
     /* TOGGLE HEADER STATE */
-    $(".admin-menu .collapse-btn").click(function() {
+    $(".admin-menu .collapse-btn").click(function () {
         $("body").toggleClass("collapsed");
-        $(".admin-menu").attr("aria-expanded") == "true" 
-            ? $(".admin-menu").attr("aria-expanded", "false") 
+        $(".admin-menu").attr("aria-expanded") == "true"
+            ? $(".admin-menu").attr("aria-expanded", "false")
             : $(".admin-menu").attr("aria-expanded", "true");
-        $(".collapse-btn").attr("aria-label") == "collapse menu" 
-            ? $(".collapse-btn").attr("aria-label", "expand menu") 
+        $(".collapse-btn").attr("aria-label") == "collapse menu"
+            ? $(".collapse-btn").attr("aria-label", "expand menu")
             : $(".collapse-btn").attr("aria-label", "collapse menu");
     });
 
     /* TOGGLE MOBILE MENU */
-    $(".toggle-mob-menu").click(function() {
+    $(".toggle-mob-menu").click(function () {
         $("body").toggleClass("mob-menu-opened");
-        $(".admin-menu").attr("aria-expanded") == "true" 
-            ? $(".admin-menu").attr("aria-expanded", "false") 
+        $(".admin-menu").attr("aria-expanded") == "true"
+            ? $(".admin-menu").attr("aria-expanded", "false")
             : $(".admin-menu").attr("aria-expanded", "true");
-        $(".collapse-btn").attr("aria-label") == "open menu" 
-            ? $(".collapse-btn").attr("aria-label", "close menu") 
+        $(".collapse-btn").attr("aria-label") == "open menu"
+            ? $(".collapse-btn").attr("aria-label", "close menu")
             : $(".collapse-btn").attr("aria-label", "open menu");
     });
 
     // Change view based on the clicked link
-    $(".nav-link").click(function(e) {
+    $(".nav-link").click(function (e) {
         e.preventDefault();
         const nav = $(this).data("nav");
         console.log(`nav: ${nav}`);
-        
+
         // if not home go there 
         if (window.location.pathname == '/about') {
             window.location.href = `/?nav=` + nav;
@@ -124,11 +124,11 @@ function loadView(view) {
     const months = $("#period_months").val();
     const searchBar = $("#search-bar").attr("placeholder", `select ${view}...`).val("");
     const searchTerm = $(".header-term").html("All imported events");
-    
+
     resetCharts();
     let org = "", repo = "", entity = "";
 
-    setupSearchAutocomplete(searchBar, `/data/query?v=${view}&q=`, function(item) {
+    setupSearchAutocomplete(searchBar, `/data/query?v=${view}&q=`, function (item) {
         resetSearch();
 
         searchItem = item;
@@ -136,9 +136,9 @@ function loadView(view) {
 
         // destroy previous charts
         resetCharts();
-        
+
         // parse what the item mean 
-        switch(view) {
+        switch (view) {
             case "org":
                 org = item.value;
                 searchCriteria.org = item.value;
@@ -152,11 +152,11 @@ function loadView(view) {
                 searchCriteria.entity = item.value;
                 break;
             default:
-              console.log(`unknown view: ${view}, defaulting to org`);
-          }
+                console.log(`unknown view: ${view}, defaulting to org`);
+        }
 
-          // submit search based on the view selection
-          submitSearch();
+        // submit search based on the view selection
+        submitSearch();
 
         // re-reload charts
         loadTimeSeriesChart(`/data/type?m=${months}&o=${org}&r=${repo}&e=${entity}`, onTimeSeriesChartSelect);
@@ -167,14 +167,14 @@ function loadView(view) {
     loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect);
     loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect);
 
-    $("#prev-page").click(function(e) {
+    $("#prev-page").click(function (e) {
         e.preventDefault();
         if (searchCriteria.page > 1) {
             searchCriteria.page--;
             submitSearch();
         }
     });
-    $("#next-page").click(function(e) {
+    $("#next-page").click(function (e) {
         e.preventDefault();
         searchCriteria.page++;
         submitSearch();
@@ -182,7 +182,7 @@ function loadView(view) {
 }
 
 function resetSearch() {
-    searchItem = null; 
+    searchItem = null;
     $("#result-table-content").empty();
     $(".init-hide").hide();
     searchCriteria.reset();
@@ -223,10 +223,10 @@ function submitSearch() {
     const table = $("#result-table-content").empty();
     const criteria = JSON.stringify(searchCriteria);
     console.log(criteria);
-    $.post("/data/search", criteria).done(function(data){
+    $.post("/data/search", criteria).done(function (data) {
         console.log(data);
         displaySearchResults(table, data);
-    }).fail(function(response) {
+    }).fail(function (response) {
         handleResponseError(response);
     });
     return false;
@@ -242,6 +242,7 @@ function parseOptional(val, prefix) {
     return "";
 }
 
+
 function displaySearchResults(table, data) {
     $("#page-number").html(searchCriteria.page);
     table.empty();
@@ -250,25 +251,20 @@ function displaySearchResults(table, data) {
         $(".init-hide").show();
         return;
     }
-    $.each(data, function(key, item) {
+    $.each(data, function (key, item) {
         $("<tr>")
             .append(`<td>${item.event_date}</td>`)
-            .append(`<td><a href="#" class="gh-link">${item.org}/${item.repo}</a></td>`)
-            .append(`<td>${item.event_type}</td>`)
-            .append(`<td><a href="#" class="gh-link">${item.username}</a> ${parseOptional(item.full_name, " - ")}</td>`)
+            .append(`<td><a href="https://github.com/${item.org}/${item.repo}" class="link" 
+                target="_blank">${item.org}/${item.repo}</a></td>`)
+            .append(`<td><a href="${item.url}" class="link" 
+                target="_blank">${item.event_type}</a></td>`)
+            .append(`<td><a href="https://github.com/${item.username}" class="link" 
+                target="_blank">${item.username}</a> ${parseOptional(item.full_name, " - ")}</td>`)
             .append(`<td>${parseOptional(item.entity)}</td>`)
-            .appendTo(table); 
-    });
-    $(".gh-link").click(function(e) {
-        e.preventDefault();
-        openGitHubTab($(this).html());
+            .appendTo(table);
     });
     $(".init-hide").show();
     return false;
-}
-
-function openGitHubTab(val) {
-    window.open("https://github.com/" + val, '_blank');
 }
 
 function handleResponseError(response) {
@@ -294,7 +290,7 @@ function handleResponseError(response) {
 }
 
 function setupSearchAutocomplete(sel, url, fn) {
-    $(sel).on("input", function() {
+    $(sel).on("input", function () {
         const val = $(this).val();
         if (val.length < 1) {
             resetSearch();
@@ -346,25 +342,25 @@ function loadTimeSeriesChart(url, fn) {
                     backgroundColor: colors[0],
                     borderWidth: 1,
                     order: 2
-                },{
+                }, {
                     label: 'PR-Comments',
                     data: data.pr_comment,
                     backgroundColor: colors[1],
                     borderWidth: 1,
                     order: 3
-                },{
+                }, {
                     label: 'Issues',
                     data: data.issue_request,
                     backgroundColor: colors[2],
                     borderWidth: 1,
                     order: 4
-                },{
+                }, {
                     label: 'Issue-Comments',
                     data: data.issue_comment,
                     backgroundColor: colors[3],
                     borderWidth: 1,
                     order: 5
-                },{
+                }, {
                     label: 'Mean',
                     type: 'line',
                     fill: false,
@@ -435,7 +431,7 @@ function loadTimeSeriesChart(url, fn) {
 
 
 function loadLeftChart(url, fn) {
-    $.get(url, function(data) {
+    $.get(url, function (data) {
         console.log(data);
         leftChart = new Chart($("#left-chart")[0].getContext("2d"), {
             type: 'polarArea',
@@ -482,7 +478,7 @@ function loadLeftChart(url, fn) {
 }
 
 function loadRightChart(url, fn) {
-    $.get(url, function(data) {
+    $.get(url, function (data) {
         console.log(data);
         rightChart = new Chart($("#right-chart")[0].getContext("2d"), {
             type: 'pie',

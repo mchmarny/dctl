@@ -41,7 +41,7 @@ const (
 	`
 
 	selectRepoEventsSQL = `SELECT 
-			id, org, repo, username, event_type, event_date 
+			id, org, repo, username, event_type, event_date, event_url
 		FROM event 
 		WHERE org = ? 
 		AND repo = ? 
@@ -58,6 +58,7 @@ const (
 			e.repo,
 			e.event_date,
 			e.event_type,
+			e.event_url,
 			d.id as dev_id,
 			d.update_date,
 			d.username,
@@ -101,6 +102,7 @@ type EventDetails struct {
 	Username   string `json:"username,omitempty"`
 	Email      string `json:"email,omitempty"`
 	FullName   string `json:"full_name,omitempty"`
+	EventURL   string `json:"url,omitempty"`
 	AvatarURL  string `json:"avatar_url,omitempty"`
 	ProfileURL string `json:"profile_url,omitempty"`
 	Entity     string `json:"entity,omitempty"`
@@ -148,9 +150,9 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 
 	for rows.Next() {
 		e := &EventDetails{}
-		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType,
-			&e.DevID, &e.Updated, &e.Username, &e.Email, &e.FullName,
-			&e.AvatarURL, &e.ProfileURL, &e.Entity, &e.Location); err != nil {
+		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL,
+			&e.DevID, &e.Updated, &e.Username, &e.Email, &e.FullName, &e.AvatarURL, &e.ProfileURL,
+			&e.Entity, &e.Location); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")
 		}
 		list = append(list, e)
@@ -231,7 +233,7 @@ func QueryEvents(db *sql.DB, org, repo string, author, etype, since *string, lim
 	list := make([]*Event, 0)
 	for rows.Next() {
 		e := &Event{}
-		if err := rows.Scan(&e.ID, &e.Org, &e.Repo, &e.Username, &e.Type, &e.Date); err != nil {
+		if err := rows.Scan(&e.ID, &e.Org, &e.Repo, &e.Username, &e.Type, &e.Date, &e.URL); err != nil {
 			return nil, errors.Wrap(err, "failed to scan row")
 		}
 		list = append(list, e)

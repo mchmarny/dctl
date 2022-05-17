@@ -31,10 +31,11 @@ const (
 	sortDirection    string = "desc"
 
 	insertEventSQL = `INSERT INTO event (
-			id, org, repo, username, event_type, event_date
+			id, org, repo, username, event_type, event_date, event_url
 		) 
-		VALUES (?, ?,?, ?, ?, ?) 
-		ON CONFLICT(id, org, repo, username, event_type, event_date) DO NOTHING
+		VALUES (?, ?, ?, ?, ?, ?, ?) 
+		ON CONFLICT(id, org, repo, username, event_type, event_date) DO UPDATE SET 
+			event_url = ?
 	`
 )
 
@@ -54,6 +55,7 @@ type Event struct {
 	Username string `json:"username,omitempty"`
 	Type     string `json:"type,omitempty"`
 	Date     string `json:"date,omitempty"`
+	URL      string `json:"url,omitempty"`
 }
 
 type importer func(ctx context.Context) error
@@ -169,7 +171,7 @@ type EventImporter struct {
 	minEventTime time.Time
 }
 
-func (e *EventImporter) add(id int64, eType string, usr *github.User, updated *time.Time) error {
+func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updated *time.Time) error {
 	item := &Event{
 		ID:       id,
 		Org:      e.owner,
@@ -177,6 +179,7 @@ func (e *EventImporter) add(id int64, eType string, usr *github.User, updated *t
 		Username: trim(usr.Login),
 		Type:     eType,
 		Date:     parseDate(updated),
+		URL:      url,
 	}
 
 	e.mu.Lock()
@@ -273,7 +276,7 @@ func (e *EventImporter) flush() error {
 	}
 
 	for i, e := range events {
-		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date)
+		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date, e.URL, e.URL)
 		if err != nil {
 			rollbackTransaction(tx)
 			return errors.Wrapf(err, "error inserting event[%d]: %s/%s#%d", i, e.Org, e.Repo, e.ID)
@@ -347,7 +350,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypePR, items[i].User, items[i].CreatedAt); err != nil {
+			if err := e.add(*items[i].ID, EventTypePR, *items[i].HTMLURL, items[i].User, items[i].CreatedAt); err != nil {
 				return errors.Wrapf(err, "error adding pr event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -391,7 +394,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypeIssue, items[i].User, items[i].CreatedAt); err != nil {
+			if err := e.add(*items[i].ID, EventTypeIssue, *items[i].HTMLURL, items[i].User, items[i].CreatedAt); err != nil {
 				return errors.Wrapf(err, "error adding issue event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -441,7 +444,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypeIssueComment, items[i].User, items[i].UpdatedAt); err != nil {
+			if err := e.add(*items[i].ID, EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt); err != nil {
 				return errors.Wrapf(err, "error adding issue comment event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -484,7 +487,7 @@ func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypePRComment, items[i].User, items[i].UpdatedAt); err != nil {
+			if err := e.add(*items[i].ID, EventTypePRComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt); err != nil {
 				return errors.Wrapf(err, "error adding PR comment event: %s/%s", e.owner, e.repo)
 			}
 		}

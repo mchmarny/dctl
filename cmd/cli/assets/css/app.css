@@ -22,6 +22,7 @@
   --box-shadow: 0 0 2px -2px rgba(0, 0, 0, 0.055);
   --table-header: rgb(87, 164, 177);
   --table-row-odd: rgb(241, 251, 226);
+  --link-color: #031ff5;
 }
 
 * {
@@ -708,9 +709,9 @@ fieldset {
   margin: 0;
 }
 
-a.gh-link {
+a.link {
   text-decoration: none;
-  color: var(--blue);
+  color: var(--link-color);
 }
 
 .result-pager {
