@@ -175,7 +175,7 @@ qlite3 ~/.dctl/data.db
 
 DB Schema
 
-> The script to create DB schema is located in [pkg/data/sql/ddl.sql](pkg/data/sql/ddl.sql)
+> The script to create DB schema is located in [pkg/data/sql/ddl.sql](../pkg/data/sql/ddl.sql)
 
 ### Table: `developer` (PK: `username`)
 
