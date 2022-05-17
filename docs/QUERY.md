@@ -100,8 +100,6 @@ dctl query entity --name GOOGLE
 }
 ```
 
-
-
 ## Repositories
 
 Query for organization repositories: 

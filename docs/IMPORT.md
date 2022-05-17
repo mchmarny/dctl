@@ -1,8 +1,6 @@
 # dctl - import
 
-> Assumes you have already [authenticated](../README.md)
-
-The `dctl` CLI comes with an embedded [SQLite](https://www.sqlite.org/index.html) database. The following import operations are currently supported: 
+The `dctl` CLI comes with an embedded [sqlite](https://www.sqlite.org/index.html) database. The following data import operations are currently supported: 
 
 * `events` - Imports GitHub repo event data (PRs, comments, issues, etc)
 * `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
@@ -11,7 +9,7 @@ The `dctl` CLI comes with an embedded [SQLite](https://www.sqlite.org/index.html
 
 ## Import GitHub Events
 
-> `dctl` will need an access to your [GitHub access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token). Either create an environment variable `GITHUB_ACCESS_TOKEN` to hold that token or provide it each time using the `--token` flag. 
+> Assumes you have already [authenticated](../README.md)
 
 ```shell
 dctl import events --org <organization> --repo <repository>
@@ -89,7 +87,6 @@ Like with the affiliation, when done, `dctl` will return the results (in this ex
     "mapped_devs": 3
 }
 ```
-
 
 ## Disclaimer
 

@@ -90,12 +90,15 @@ var (
 	}
 
 	entitySubstitutions = map[string]string{
+		"CHAINGUARDDEV":       "CHAINGUARD",
+		"GCP":                 "GOOGLE",
+		"GOOGLECLOUD":         "GOOGLE",
+		"GOOGLECLOUDPLATFORM": "GOOGLE",
 		"INTERNATIONAL BUSINESS MACHINES CORPORATION": "IBM",
 		"INTERNATIONAL BUSINESS MACHINES":             "IBM",
 		"S&P GLOBAL INC":                              "S&P",
 		"S&P GLOBAL":                                  "S&P",
 		"VERVERICA ORIGINAL CREATORS OF APACHE FLINK": "VERVERICA",
-		"CHAINGUARDDEV":                               "CHAINGUARD",
 	}
 )
 
