@@ -90,6 +90,10 @@ var (
 	}
 
 	entitySubstitutions = map[string]string{
+		"CHAINGUARDDEV":       "CHAINGUARD",
+		"GCP":                 "GOOGLE",
+		"GOOGLECLOUD":         "GOOGLE",
+		"GOOGLECLOUDPLATFORM": "GOOGLE",
 		"INTERNATIONAL BUSINESS MACHINES CORPORATION": "IBM",
 		"INTERNATIONAL BUSINESS MACHINES":             "IBM",
 		"S&P GLOBAL INC":                              "S&P",
