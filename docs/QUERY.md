@@ -148,16 +148,9 @@ dctl query events --org knative --repo serving
         "repo": "serving",
         "username": "phunghaduong99",
         "type": "issue_request",
-        "date": "2022-05-13"
+        "date": "2022-05-13",
+        "url": "https://github.com/knative/serving/pull/6389#issuecomment-1235445267"
     },    
-    {
-        "id": 935056755,
-        "org": "knative",
-        "repo": "serving",
-        "username": "dprotaso",
-        "type": "pr_request",
-        "date": "2022-05-12"
-    },
     ...
 ]
 ```
