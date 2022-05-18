@@ -15,7 +15,7 @@ One of the core principles on which `dctl` is built is that open source contribu
 
 ## How
 
-`dctl` imports all contribution metadata for a specific repo(s) using the [GitHub API](https://docs.github.com/en/rest), and augments that data with developer affiliations from sources like [CNCF](https://github.com/cncf/gitdm) and [Apache Foundation](https://www.apache.org/foundation/members.html). More about importing data [here](docs/IMPORT.md].
+`dctl` imports all contribution metadata for a specific repo(s) using the [GitHub API](https://docs.github.com/en/rest), and augments that data with developer affiliations from sources like [CNCF](https://github.com/cncf/gitdm) and [Apache Foundation](https://www.apache.org/foundation/members.html). More about importing data [here](docs/IMPORT.md).
 
 Once downloaded, `dctl` exposes that data using a local UI with option to drill-downs different aspects of the project activity (screenshot above). The instructions on how to start the integrated server and access the UI in your browser are located [here](docs/SERVER.md).
 
