@@ -68,6 +68,12 @@ var (
 		Required: false,
 	}
 
+	eventMentionFlag = &cli.StringFlag{
+		Name:     "mention",
+		Usage:    "GitHub mention (@username in body or assignments)",
+		Required: false,
+	}
+
 	queryCmd = &cli.Command{
 		Name:    "query",
 		Aliases: []string{"q"},
@@ -124,6 +130,7 @@ var (
 					repoNameFlag,
 					eventSinceFlag,
 					eventAuthorFlag,
+					eventMentionFlag,
 					eventTypeFlag,
 					queryLimitFlag,
 				},
@@ -171,10 +178,7 @@ func cmdQueryEvents(c *cli.Context) error {
 	author := c.String(eventAuthorFlag.Name)
 	since := c.String(eventSinceFlag.Name)
 	etype := c.String(eventTypeFlag.Name)
-
-	if org == "" || repo == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
+	mention := c.String(eventMentionFlag.Name)
 
 	limit := c.Int(queryLimitFlag.Name)
 	if limit == 0 || limit > queryResultLimitDefault {
@@ -182,18 +186,29 @@ func cmdQueryEvents(c *cli.Context) error {
 	}
 
 	log.WithFields(log.Fields{
-		"org":    org,
-		"repo":   repo,
-		"author": author,
-		"since":  since,
-		"type":   etype,
-		"limit":  limit,
+		"org":     org,
+		"repo":    repo,
+		"author":  author,
+		"since":   since,
+		"type":    etype,
+		"limit":   limit,
+		"mention": mention,
 	}).Debug("query events")
+
+	q := &data.EventSearchCriteria{
+		Org:       optional(org),
+		Repo:      optional(repo),
+		Username:  optional(author),
+		EventType: optional(etype),
+		FromDate:  optional(since),
+		Mention:   optional(mention),
+		PageSize:  limit,
+	}
 
 	db := getDBOrFail()
 	defer db.Close()
 
-	list, err := data.QueryEvents(db, org, repo, optional(author), optional(etype), optional(since), limit)
+	list, err := data.SearchEvents(db, q)
 	if err != nil {
 		return errors.Wrap(err, "failed to query events")
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mchmarny/dctl/pkg/data"
@@ -70,7 +71,7 @@ var (
 
 type EventImportResult struct {
 	Org      string         `json:"org,omitempty"`
-	Repo     string         `json:"repo,omitempty"`
+	Repos    []string       `json:"repos,omitempty"`
 	Duration string         `json:"duration,omitempty"`
 	Imported map[string]int `json:"imported,omitempty"`
 }
@@ -123,18 +124,24 @@ func cmdImportEvents(c *cli.Context) error {
 		return cli.ShowSubcommandHelp(c)
 	}
 
+	repos := strings.Split(repo, ",")
+
 	res := &EventImportResult{
-		Org:  org,
-		Repo: repo,
+		Org:      org,
+		Repos:    repos,
+		Imported: make(map[string]int),
 	}
 
-	m, err := data.ImportEvents(dbFilePath, token, org, repo, months)
-	if err != nil {
-		return errors.Wrap(err, "failed to import events")
+	for _, r := range repos {
+		m, err := data.ImportEvents(dbFilePath, token, org, r, months)
+		if err != nil {
+			return errors.Wrap(err, "failed to import events")
+		}
+		for k, v := range m {
+			res.Imported[k] = v
+		}
 	}
 
-	// update final state
-	res.Imported = m
 	res.Duration = time.Since(start).String()
 
 	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {

@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/google/go-github/v44/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	usernameRegEx = regexp.MustCompile(`@([A-Za-z0-9_]+)`)
 )
 
 func mapUserToDeveloper(u *github.User) *Developer {
@@ -43,7 +48,7 @@ func toDate(t *github.Timestamp) string {
 
 func trim(s *string) string {
 	if s != nil {
-		return strings.TrimSpace(*s)
+		return strings.ReplaceAll(strings.TrimSpace(*s), "@", "")
 	}
 	return ""
 }
@@ -111,4 +116,25 @@ func SearchGitHubUsers(ctx context.Context, client *http.Client, query string, l
 	}
 
 	return r, nil
+}
+
+func getUsernames(users ...*github.User) []string {
+	if users == nil {
+		return make([]string, 0)
+	}
+
+	r := make([]string, 0)
+	for _, u := range users {
+		if u != nil {
+			r = append(r, trim(u.Login))
+		}
+	}
+	return r
+}
+
+func parseUsers(body *string) []string {
+	if body == nil {
+		return make([]string, 0)
+	}
+	return usernameRegEx.FindAllString(*body, -1)
 }

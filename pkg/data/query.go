@@ -40,18 +40,6 @@ const (
 		ORDER BY 1
 	`
 
-	selectRepoEventsSQL = `SELECT 
-			id, org, repo, username, event_type, event_date, event_url
-		FROM event 
-		WHERE org = ? 
-		AND repo = ? 
-		AND username = COALESCE(?, username)
-		AND event_type = COALESCE(?, event_type)
-		AND event_date >= COALESCE(?, event_date)
-		ORDER BY 2, 3, 6 DESC
-		LIMIT ?
-	`
-
 	selectEventSQL = `SELECT
 			e.id as event_id,
 			e.org,
@@ -59,6 +47,7 @@ const (
 			e.event_date,
 			e.event_type,
 			e.event_url,
+			e.mention,
 			d.id as dev_id,
 			d.update_date,
 			d.username,
@@ -76,6 +65,7 @@ const (
 		AND e.org = COALESCE(?, e.org)
 		AND e.repo = COALESCE(?, e.repo)
 		AND e.username = COALESCE(?, e.username)
+		AND e.mention = COALESCE(?, e.mention)
 		AND d.entity = COALESCE(?, d.entity)
 		ORDER BY 1 DESC, 2, 3
 		LIMIT ? OFFSET ?
@@ -93,20 +83,21 @@ type EventTypeSeries struct {
 
 type EventDetails struct {
 	EventID    int64  `json:"event_id,omitempty"`
-	Org        string `json:"org,omitempty"`
-	Repo       string `json:"repo,omitempty"`
+	Org        string `json:"event_org,omitempty"`
+	Repo       string `json:"event_repo,omitempty"`
 	EventDate  string `json:"event_date,omitempty"`
 	EventType  string `json:"event_type,omitempty"`
+	EventURL   string `json:"event_url,omitempty"`
+	Mention    string `json:"event_mention,omitempty"`
 	DevID      int64  `json:"dev_id,omitempty"`
 	Updated    string `json:"dev_update_date,omitempty"`
-	Username   string `json:"username,omitempty"`
-	Email      string `json:"email,omitempty"`
-	FullName   string `json:"full_name,omitempty"`
-	EventURL   string `json:"url,omitempty"`
-	AvatarURL  string `json:"avatar_url,omitempty"`
-	ProfileURL string `json:"profile_url,omitempty"`
-	Entity     string `json:"entity,omitempty"`
-	Location   string `json:"location,omitempty"`
+	Username   string `json:"dev_username,omitempty"`
+	Email      string `json:"dev_email,omitempty"`
+	FullName   string `json:"dev_full_name,omitempty"`
+	AvatarURL  string `json:"dev_avatar_url,omitempty"`
+	ProfileURL string `json:"dev_profile_url,omitempty"`
+	Entity     string `json:"dev_entity,omitempty"`
+	Location   string `json:"dev_location,omitempty"`
 }
 
 type EventSearchCriteria struct {
@@ -117,6 +108,7 @@ type EventSearchCriteria struct {
 	Repo      *string `json:"repo,omitempty"`
 	Username  *string `json:"user,omitempty"`
 	Entity    *string `json:"entity,omitempty"`
+	Mention   *string `json:"mention,omitempty"`
 	Page      int     `json:"page,omitempty"`
 	PageSize  int     `json:"page_size,omitempty"`
 }
@@ -140,7 +132,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 	}
 
 	offset := (q.Page - 1) * q.PageSize
-	rows, err := stmt.Query(q.FromDate, q.ToDate, q.EventType, q.Org, q.Repo, q.Username, q.Entity, q.PageSize, offset)
+	rows, err := stmt.Query(q.FromDate, q.ToDate, q.EventType, q.Org, q.Repo, q.Username, q.Mention, q.Entity, q.PageSize, offset)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, errors.Wrap(err, "failed to execute event search statement")
 	}
@@ -150,7 +142,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 
 	for rows.Next() {
 		e := &EventDetails{}
-		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL,
+		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL, &e.Mention,
 			&e.DevID, &e.Updated, &e.Username, &e.Email, &e.FullName, &e.AvatarURL, &e.ProfileURL,
 			&e.Entity, &e.Location); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")
@@ -212,32 +204,4 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 	}
 
 	return series, nil
-}
-
-func QueryEvents(db *sql.DB, org, repo string, author, etype, since *string, limit int) ([]*Event, error) {
-	if db == nil {
-		return nil, errDBNotInitialized
-	}
-
-	stmt, err := db.Prepare(selectRepoEventsSQL)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare repo events statement")
-	}
-
-	rows, err := stmt.Query(org, repo, author, etype, since, limit)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
-	}
-	defer rows.Close()
-
-	list := make([]*Event, 0)
-	for rows.Next() {
-		e := &Event{}
-		if err := rows.Scan(&e.ID, &e.Org, &e.Repo, &e.Username, &e.Type, &e.Date, &e.URL); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
-		}
-		list = append(list, e)
-	}
-
-	return list, nil
 }

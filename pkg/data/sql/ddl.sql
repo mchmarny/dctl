@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS event (
     event_type TEXT NOT NULL,
     event_date TEXT NOT NULL,
     event_url TEXT NOT NULL,
+    mention TEXT NOT NULL,
     PRIMARY KEY (id, org, repo, username, event_type, event_date),
     FOREIGN KEY(username) REFERENCES developer(username) ON DELETE CASCADE
 );

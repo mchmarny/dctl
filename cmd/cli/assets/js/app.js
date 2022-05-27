@@ -210,16 +210,21 @@ function onTimeSeriesChartSelect(label, val) {
 }
 
 function onLeftChartSelect(label) {
+    // TODO: refresh the left chart with only the selected entity
+    // TODO: refresh the right chart with only the devs from the selected entity
     searchCriteria.entity = label;
     submitSearch();
 }
 
 function onRightChartSelect(label) {
+    // TODO: Refresh the left chart with only the entity of the developer
     searchCriteria.user = label;
     submitSearch();
 }
 
 function submitSearch() {
+    // TODO: Update search meta with the plain lang of the criteria 
+    // TODO: Provide option to reset the search criteria
     const table = $("#result-table-content").empty();
     const criteria = JSON.stringify(searchCriteria);
     console.log(criteria);
@@ -254,13 +259,13 @@ function displaySearchResults(table, data) {
     $.each(data, function (key, item) {
         $("<tr>")
             .append(`<td>${item.event_date}</td>`)
-            .append(`<td><a href="https://github.com/${item.org}/${item.repo}" class="link" 
-                target="_blank">${item.org}/${item.repo}</a></td>`)
-            .append(`<td><a href="${item.url}" class="link" 
+            .append(`<td><a href="https://github.com/${item.event_org}/${item.event_repo}" class="link" 
+                target="_blank">${item.event_org}/${item.event_repo}</a></td>`)
+            .append(`<td><a href="${item.event_url}" class="link" 
                 target="_blank">${item.event_type}</a></td>`)
-            .append(`<td><a href="https://github.com/${item.username}" class="link" 
-                target="_blank">${item.username}</a> ${parseOptional(item.full_name, " - ")}</td>`)
-            .append(`<td>${parseOptional(item.entity)}</td>`)
+            .append(`<td><a href="https://github.com/${item.dev_username}" class="link" 
+                target="_blank">${item.dev_username}</a> ${parseOptional(item.dev_full_name, " - ")}</td>`)
+            .append(`<td>${parseOptional(item.dev_entity)}</td>`)
             .appendTo(table);
     });
     $(".init-hide").show();
