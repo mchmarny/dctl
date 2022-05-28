@@ -15,6 +15,7 @@ const (
 	repoNamePartsLimit  = 2
 	hundredPercent      = 100
 	categoryOther       = "ALL OTHERS"
+	arraySelector       = "|"
 )
 
 type SeriesData[T any] struct {
@@ -86,6 +87,7 @@ func developerDataHandler(c *gin.Context) {
 	org := c.Query("o")
 	repo := c.Query("r")
 	entity := c.Query("e")
+	exclude := strings.Split(c.Query("x"), arraySelector)
 
 	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')",
 		org, repo, entity, months)
@@ -98,7 +100,7 @@ func developerDataHandler(c *gin.Context) {
 	db := getDBOrFail()
 	defer db.Close()
 
-	res, err := data.GetDeveloperPercentages(db, optional(entity), optional(org), optional(repo), months)
+	res, err := data.GetDeveloperPercentages(db, optional(entity), optional(org), optional(repo), exclude, months)
 	if err != nil {
 		log.Errorf("failed to get org repo series: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -117,6 +119,7 @@ func entityDataHandler(c *gin.Context) {
 	org := c.Query("o")
 	repo := c.Query("r")
 	entity := c.Query("e")
+	exclude := strings.Split(c.Query("x"), arraySelector)
 
 	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')",
 		org, repo, entity, months)
@@ -129,7 +132,7 @@ func entityDataHandler(c *gin.Context) {
 	db := getDBOrFail()
 	defer db.Close()
 
-	res, err := data.GetEntityPercentages(db, optional(entity), optional(org), optional(repo), months)
+	res, err := data.GetEntityPercentages(db, optional(entity), optional(org), optional(repo), exclude, months)
 	if err != nil {
 		log.Errorf("failed to get event type series: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
