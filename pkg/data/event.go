@@ -298,8 +298,8 @@ func (e *EventImporter) flush() error {
 		_, err = tx.Stmt(stateStmt).Exec(t, e.owner, e.repo, p.Page, since, p.Page, since)
 		if err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting state[%s]: %s/%s with page:%d and since:%v",
-				t, e.owner, e.repo, p.Page, since)
+			return errors.Wrapf(err, "error inserting state[%s]: %s/%s with page:%d and since:%s",
+				t, e.owner, e.repo, p.Page, p.Since.Format("2006-01-02"))
 		}
 	}
 
@@ -331,7 +331,7 @@ func (e *EventImporter) isEventBatchValidAge(first *time.Time, last *time.Time) 
 }
 
 func (e *EventImporter) importPREvents(ctx context.Context) error {
-	log.Debugf("starting pr event import on page %d since %v", e.state[EventTypePR].Page, e.state[EventTypePR].Since)
+	log.Debugf("starting pr event import on page %d since %s", e.state[EventTypePR].Page, e.state[EventTypePR].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListOptions{
 		State:     "all",
@@ -357,7 +357,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 
 		// PR list has no since option so break manually when both 1st and last event are older than the min.
 		if !e.isEventBatchValidAge(items[0].CreatedAt, items[len(items)-1].CreatedAt) {
-			log.Debugf("pr - all returned events older than %v", e.minEventTime)
+			log.Debugf("pr - all returned events older than %v", e.minEventTime.Format("2006-01-02"))
 			break
 		}
 
@@ -384,7 +384,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importIssueEvents(ctx context.Context) error {
-	log.Debugf("starting issue event import on page %d since %v", e.state[EventTypeIssue].Page, e.state[EventTypeIssue].Since)
+	log.Debugf("starting issue event import on page %d since %s", e.state[EventTypeIssue].Page, e.state[EventTypeIssue].Since.Format("2006-01-02"))
 
 	opt := &github.IssueListByRepoOptions{
 		State:     "all",
@@ -438,7 +438,7 @@ func getStrPtr(s string) *string {
 }
 
 func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
-	log.Debugf("starting issue comment event import on page %d since %v", e.state[EventTypeIssueComment].Page, e.state[EventTypeIssueComment].Since)
+	log.Debugf("starting issue comment event import on page %d since %s", e.state[EventTypeIssueComment].Page, e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
 
 	opt := &github.IssueListCommentsOptions{
 		Sort:      getStrPtr(sortField),
@@ -481,7 +481,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
-	log.Debugf("starting pr comment event import on page %d since %v", e.state[EventTypePRComment].Page, e.state[EventTypePRComment].Since)
+	log.Debugf("starting pr comment event import on page %d since %s", e.state[EventTypePRComment].Page, e.state[EventTypePRComment].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListCommentsOptions{
 		Sort:      sortField,

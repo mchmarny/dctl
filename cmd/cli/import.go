@@ -120,11 +120,22 @@ func cmdImportEvents(c *cli.Context) error {
 		return errors.Wrap(err, "failed to get GitHub token")
 	}
 
-	if org == "" || repo == "" || token == "" {
+	if org == "" || token == "" {
 		return cli.ShowSubcommandHelp(c)
 	}
 
-	repos := strings.Split(repo, ",")
+	var repos []string
+
+	if repo == "" {
+		ctx := context.Background()
+		client := net.GetOAuthClient(ctx, token)
+		repos, err = data.GetOrgRepoNames(ctx, client, org)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get org %s repos", org)
+		}
+	} else {
+		repos = strings.Split(repo, ",")
+	}
 
 	res := &EventImportResult{
 		Org:      org,

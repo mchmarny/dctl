@@ -86,6 +86,18 @@ func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	return list, nil
 }
 
+func GetOrgRepoNames(ctx context.Context, client *http.Client, org string) ([]string, error) {
+	list, err := GetOrgRepos(ctx, client, org)
+	if err != nil {
+		return nil, err
+	}
+	repos := make([]string, 0)
+	for _, r := range list {
+		repos = append(repos, r.Name)
+	}
+	return repos, nil
+}
+
 func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*Repo, error) {
 	if org == "" {
 		return nil, errors.New("org is required")

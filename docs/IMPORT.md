@@ -2,7 +2,7 @@
 
 The `dctl` CLI comes with an embedded [sqlite](https://www.sqlite.org/index.html) database. The following data import operations are currently supported: 
 
-* `events` - Imports GitHub repo event data (PRs, comments, issues, etc)
+* `events` - Imports GitHub org/repo event data (PRs, comments, issues, etc)
 * `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
 * `names` - Updates imported developer names with Apache Foundation data
 * `updates` - Update all previously imported org, repos, and affiliations
@@ -33,6 +33,12 @@ When completed, `dctl` will return a summary of the import:
   },
   "duration": "4.794015292s"
 }
+```
+
+To import data for all repos in a specific organization simply omit the `--repo` flag:
+
+```shell
+dctl import events --org <organization>
 ```
 
 To get a more immediate feedback during import use the debug flag:

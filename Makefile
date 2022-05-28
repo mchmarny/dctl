@@ -51,7 +51,7 @@ server: cli ## Builds CLI and runs the server
 .PHONY: server
 
 local: ## Copies latest binary to local bin directory
-	sudo mv bin/dctl /usr/local/bin/
+	sudo cp bin/dctl /usr/local/bin/dctl
 	sudo chmod 755 /usr/local/bin/dctl
 .PHONY: local
 
