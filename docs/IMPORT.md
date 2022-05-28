@@ -21,15 +21,17 @@ When completed, `dctl` will return a summary of the import:
 
 ```json
 {
-    "org": "tektoncd",
-    "repo": "dashboard",
-    "duration": "4.4883105s",
-    "imported": {
-        "issue_comment":61,
-        "issue_request":42,
-        "pr_comment":55,
-        "pr_request":100
-    }
+  "org": "knative",
+  "repos": [
+    "serving"
+  ],
+  "imported": {
+    "knative/serving/issue": 5,
+    "knative/serving/issue_comment": 2,
+    "knative/serving/pr": 100,
+    "knative/serving/pr_comment": 79
+  },
+  "duration": "4.794015292s"
 }
 ```
 

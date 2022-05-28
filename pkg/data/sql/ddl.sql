@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS event (
     event_date TEXT NOT NULL,
     event_url TEXT NOT NULL,
     mention TEXT NOT NULL,
+    labels TEXT NOT NULL,
     PRIMARY KEY (id, org, repo, username, event_type, event_date),
     FOREIGN KEY(username) REFERENCES developer(username) ON DELETE CASCADE
 );
@@ -29,5 +30,6 @@ CREATE TABLE IF NOT EXISTS state (
     org TEXT NOT NULL,
     repo TEXT NOT NULL,
     page INTEGER NOT NULL, 
+    since INTEGER NOT NULL, 
     PRIMARY KEY (query, org, repo)
 );

@@ -65,7 +65,7 @@ linters:
     - nakedret
     - nolintlint
     - exportloopref
-    - structcheck
+    # - structcheck
     - typecheck
     - unconvert
     - varcheck

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v44/github"
+	"github.com/google/go-github/v45/github"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -116,6 +116,20 @@ func SearchGitHubUsers(ctx context.Context, client *http.Client, query string, l
 	}
 
 	return r, nil
+}
+
+func getLabels(labels []*github.Label) []string {
+	if labels == nil {
+		return make([]string, 0)
+	}
+
+	r := make([]string, 0)
+	for _, l := range labels {
+		if l != nil {
+			r = append(r, strings.ToLower(trim(l.Name)))
+		}
+	}
+	return r
 }
 
 func getUsernames(users ...*github.User) []string {

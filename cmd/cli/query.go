@@ -70,7 +70,13 @@ var (
 
 	eventMentionFlag = &cli.StringFlag{
 		Name:     "mention",
-		Usage:    "GitHub mention (@username in body or assignments)",
+		Usage:    "GitHub mention (like query on @username in body or assignments)",
+		Required: false,
+	}
+
+	eventLabelFlag = &cli.StringFlag{
+		Name:     "label",
+		Usage:    "GitHub label (like query on issues and PRs)",
 		Required: false,
 	}
 
@@ -128,10 +134,11 @@ var (
 				Flags: []cli.Flag{
 					orgNameFlag,
 					repoNameFlag,
+					eventTypeFlag,
 					eventSinceFlag,
 					eventAuthorFlag,
 					eventMentionFlag,
-					eventTypeFlag,
+					eventLabelFlag,
 					queryLimitFlag,
 				},
 			},
@@ -179,6 +186,7 @@ func cmdQueryEvents(c *cli.Context) error {
 	since := c.String(eventSinceFlag.Name)
 	etype := c.String(eventTypeFlag.Name)
 	mention := c.String(eventMentionFlag.Name)
+	label := c.String(eventLabelFlag.Name)
 
 	limit := c.Int(queryLimitFlag.Name)
 	if limit == 0 || limit > queryResultLimitDefault {
@@ -193,6 +201,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		"type":    etype,
 		"limit":   limit,
 		"mention": mention,
+		"label":   label,
 	}).Debug("query events")
 
 	q := &data.EventSearchCriteria{
@@ -202,6 +211,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		EventType: optional(etype),
 		FromDate:  optional(since),
 		Mention:   optional(mention),
+		Label:     optional(label),
 		PageSize:  limit,
 	}
 

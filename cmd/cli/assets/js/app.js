@@ -343,7 +343,7 @@ function loadTimeSeriesChart(url, fn) {
                 labels: data.dates,
                 datasets: [{
                     label: 'PR',
-                    data: data.pr_request,
+                    data: data.pr,
                     backgroundColor: colors[0],
                     borderWidth: 1,
                     order: 2
@@ -355,7 +355,7 @@ function loadTimeSeriesChart(url, fn) {
                     order: 3
                 }, {
                     label: 'Issues',
-                    data: data.issue_request,
+                    data: data.issue,
                     backgroundColor: colors[2],
                     borderWidth: 1,
                     order: 4

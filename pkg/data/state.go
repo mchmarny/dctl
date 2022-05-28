@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -15,40 +16,55 @@ var (
 		"event_type": "SELECT COUNT(DISTINCT event_type) FROM event",
 	}
 
-	insertState = `INSERT INTO state (query, org, repo, page) VALUES (?, ?, ?, ?)
-		ON CONFLICT(query, org, repo) DO UPDATE SET page = ?
+	insertState = `INSERT INTO state (query, org, repo, page, since) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(query, org, repo) DO UPDATE SET page = ?, since = ?
 	`
 
-	selectState = `SELECT page FROM state WHERE query = ? AND org = ? AND repo = ?`
+	selectState = `SELECT since, page FROM state WHERE query = ? AND org = ? AND repo = ?`
 )
 
-func GetState(db *sql.DB, query, org, repo string) (int, error) {
+type State struct {
+	Since time.Time `json:"since"`
+	Page  int       `json:"page"`
+}
+
+func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error) {
 	if db == nil {
-		return 0, errDBNotInitialized
+		return nil, errDBNotInitialized
 	}
 
 	stateStmt, err := db.Prepare(selectState)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to prepare state select statement")
+		return nil, errors.Wrap(err, "failed to prepare state select statement")
 	}
 
 	row := stateStmt.QueryRow(query, org, repo)
 
-	var count sql.NullInt16
-	err = row.Scan(&count)
+	s := &State{
+		Since: min,
+		Page:  1,
+	}
+	var since int64
+	err = row.Scan(&since, &s.Page)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 1, nil
+			return s, nil
 		}
-		return 0, errors.Wrap(err, "failed to scan row")
+		return nil, errors.Wrap(err, "failed to scan row")
 	}
 
-	return int(count.Int16), nil
+	s.Since = time.Unix(since, 0).UTC()
+
+	return s, nil
 }
 
-func SaveState(db *sql.DB, query, org, repo string, page int) error {
+func SaveState(db *sql.DB, query, org, repo string, state *State) error {
 	if db == nil {
 		return errDBNotInitialized
+	}
+
+	if state == nil {
+		return errors.New("state is nil")
 	}
 
 	if query == "" || org == "" || repo == "" {
@@ -60,7 +76,8 @@ func SaveState(db *sql.DB, query, org, repo string, page int) error {
 		return errors.Wrapf(err, "failed to prepare state insert statement")
 	}
 
-	if _, err = stateStmt.Exec(query, org, repo, page, page); err != nil {
+	since := state.Since.Unix()
+	if _, err = stateStmt.Exec(query, org, repo, state.Page, state.Page, since, since); err != nil {
 		return errors.Wrap(err, "failed to insert state")
 	}
 

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-github/v44/github"
+	"github.com/google/go-github/v45/github"
 	"github.com/mchmarny/dctl/pkg/net"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -16,9 +16,9 @@ import (
 
 const (
 	// EventTypes is a list of event types to import
-	EventTypePR           string = "pr_request"
+	EventTypePR           string = "pr"
 	EventTypePRComment    string = "pr_comment"
-	EventTypeIssue        string = "issue_request"
+	EventTypeIssue        string = "issue"
 	EventTypeIssueComment string = "issue_comment"
 
 	pageSizeDefault = 100
@@ -32,11 +32,11 @@ const (
 	sortDirection    string = "desc"
 
 	insertEventSQL = `INSERT INTO event (
-			id, org, repo, username, event_type, event_date, event_url, mention
+			id, org, repo, username, event_type, event_date, event_url, mention, labels
 		) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
 		ON CONFLICT(id, org, repo, username, event_type, event_date) DO UPDATE SET 
-			event_url = ?, mention = ?
+			event_url = ?, mention = ?, labels = ?
 	`
 )
 
@@ -58,6 +58,7 @@ type Event struct {
 	Date     string `json:"date,omitempty"`
 	URL      string `json:"url,omitempty"`
 	Mention  string `json:"mention,omitempty"`
+	Labels   string `json:"labels,omitempty"`
 }
 
 type importer func(ctx context.Context) error
@@ -115,8 +116,8 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		list:         make([]*Event, 0),
 		counts:       make(map[string]int),
 		users:        make(map[string]*github.User),
-		state:        make(map[string]int),
-		minEventTime: time.Now().AddDate(0, -months, 0),
+		state:        make(map[string]*State),
+		minEventTime: time.Now().AddDate(0, -months, 0).UTC(),
 	}
 
 	importers := []importer{
@@ -126,7 +127,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		imp.importPRCommentEvents,
 	}
 
-	if err := imp.loadLastPageState(); err != nil {
+	if err := imp.loadState(); err != nil {
 		return nil, errors.Wrapf(err, "error loading last page state: %s/%s", owner, repo)
 	}
 
@@ -169,7 +170,7 @@ type EventImporter struct {
 	list         []*Event
 	counts       map[string]int
 	users        map[string]*github.User
-	state        map[string]int
+	state        map[string]*State
 	minEventTime time.Time
 }
 
@@ -177,7 +178,7 @@ func (e *EventImporter) qualifyTypeKey(t string) string {
 	return e.owner + "/" + e.repo + "/" + t
 }
 
-func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updated *time.Time, mention []string) error {
+func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updated *time.Time, mention []string, labels []*github.Label) error {
 	item := &Event{
 		ID:       id,
 		Org:      e.owner,
@@ -187,6 +188,7 @@ func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updat
 		Date:     parseDate(updated),
 		URL:      url,
 		Mention:  strings.Join(unique(mention), ","),
+		Labels:   strings.Join(unique(getLabels(labels)), ","),
 	}
 
 	e.mu.Lock()
@@ -203,7 +205,7 @@ func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updat
 	return nil
 }
 
-func (e *EventImporter) loadLastPageState() error {
+func (e *EventImporter) loadState() error {
 	db, err := GetDB(e.dbPath)
 	if err != nil {
 		return errors.Wrapf(err, "error getting DB: %s", e.dbPath)
@@ -211,11 +213,11 @@ func (e *EventImporter) loadLastPageState() error {
 	defer db.Close()
 
 	for _, t := range event_types {
-		lastPage, err := GetState(db, t, e.owner, e.repo)
+		state, err := GetState(db, t, e.owner, e.repo, e.minEventTime)
 		if err != nil {
 			return errors.Wrapf(err, "error getting last page: %s/%s - %s", e.owner, e.repo, t)
 		}
-		e.state[t] = lastPage
+		e.state[t] = state
 	}
 
 	return nil
@@ -230,7 +232,7 @@ func (e *EventImporter) flush() error {
 
 	var events []*Event
 	var users map[string]*github.User
-	var state map[string]int
+	var state map[string]*State
 
 	e.mu.Lock()
 	events = e.list
@@ -283,8 +285,8 @@ func (e *EventImporter) flush() error {
 	}
 
 	for i, e := range events {
-		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date, e.URL, e.Mention,
-			e.URL, e.Mention)
+		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date, e.URL, e.Mention, e.Labels,
+			e.URL, e.Mention, e.Labels)
 		if err != nil {
 			rollbackTransaction(tx)
 			return errors.Wrapf(err, "error inserting event[%d]: %s/%s#%d", i, e.Org, e.Repo, e.ID)
@@ -292,10 +294,12 @@ func (e *EventImporter) flush() error {
 	}
 
 	for t, p := range state {
-		_, err = tx.Stmt(stateStmt).Exec(t, e.owner, e.repo, p, p)
+		since := p.Since.Unix()
+		_, err = tx.Stmt(stateStmt).Exec(t, e.owner, e.repo, p.Page, since, p.Page, since)
 		if err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting state[%s]: %s/%s", t, e.owner, e.repo)
+			return errors.Wrapf(err, "error inserting state[%s]: %s/%s with page:%d and since:%v",
+				t, e.owner, e.repo, p.Page, since)
 		}
 	}
 
@@ -327,7 +331,7 @@ func (e *EventImporter) isEventBatchValidAge(first *time.Time, last *time.Time) 
 }
 
 func (e *EventImporter) importPREvents(ctx context.Context) error {
-	log.Debugf("starting pr event import on page %d", e.state[EventTypePR])
+	log.Debugf("starting pr event import on page %d since %v", e.state[EventTypePR].Page, e.state[EventTypePR].Since)
 
 	opt := &github.PullRequestListOptions{
 		State:     "all",
@@ -335,7 +339,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		Direction: sortDirection,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypePR],
+			Page:    e.state[EventTypePR].Page,
 		},
 	}
 
@@ -353,7 +357,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 
 		// PR list has no since option so break manually when both 1st and last event are older than the min.
 		if !e.isEventBatchValidAge(items[0].CreatedAt, items[len(items)-1].CreatedAt) {
-			log.Debugf("pr - all returned events older than %d months", EventAgeMonthsDefault)
+			log.Debugf("pr - all returned events older than %v", e.minEventTime)
 			break
 		}
 
@@ -362,12 +366,12 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			mention = append(mention, getUsernames(items[i].Assignee)...)
 			mention = append(mention, getUsernames(items[i].Assignees...)...)
 			mention = append(mention, getUsernames(items[i].RequestedReviewers...)...)
-			if err := e.add(*items[i].ID, EventTypePR, *items[i].HTMLURL, items[i].User, items[i].CreatedAt, mention); err != nil {
+			if err := e.add(*items[i].ID, EventTypePR, *items[i].HTMLURL, items[i].User, items[i].CreatedAt, mention, items[i].Labels); err != nil {
 				return errors.Wrapf(err, "error adding pr event: %s/%s", e.owner, e.repo)
 			}
 		}
 
-		e.state[EventTypePR] = opt.ListOptions.Page
+		e.state[EventTypePR].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -380,16 +384,16 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importIssueEvents(ctx context.Context) error {
-	log.Debugf("starting issue event import on page %d", e.state[EventTypeIssue])
+	log.Debugf("starting issue event import on page %d since %v", e.state[EventTypeIssue].Page, e.state[EventTypeIssue].Since)
 
 	opt := &github.IssueListByRepoOptions{
 		State:     "all",
 		Sort:      sortField,
 		Direction: sortDirection,
-		Since:     e.minEventTime,
+		Since:     e.state[EventTypeIssue].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypeIssue],
+			Page:    e.state[EventTypeIssue].Page,
 		},
 	}
 
@@ -409,12 +413,12 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			mention := parseUsers(items[i].Body)
 			mention = append(mention, getUsernames(items[i].Assignee)...)
 			mention = append(mention, getUsernames(items[i].Assignees...)...)
-			if err := e.add(*items[i].ID, EventTypeIssue, *items[i].HTMLURL, items[i].User, items[i].CreatedAt, mention); err != nil {
+			if err := e.add(*items[i].ID, EventTypeIssue, *items[i].HTMLURL, items[i].User, items[i].CreatedAt, mention, items[i].Labels); err != nil {
 				return errors.Wrapf(err, "error adding issue event: %s/%s", e.owner, e.repo)
 			}
 		}
 
-		e.state[EventTypeIssue] = opt.ListOptions.Page
+		e.state[EventTypeIssue].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -434,15 +438,15 @@ func getStrPtr(s string) *string {
 }
 
 func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
-	log.Debugf("starting issue comment event import on page %d", e.state[EventTypeIssueComment])
+	log.Debugf("starting issue comment event import on page %d since %v", e.state[EventTypeIssueComment].Page, e.state[EventTypeIssueComment].Since)
 
 	opt := &github.IssueListCommentsOptions{
 		Sort:      getStrPtr(sortField),
 		Direction: getStrPtr(sortCommentField),
-		Since:     &e.minEventTime,
+		Since:     &e.state[EventTypeIssueComment].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypeIssueComment],
+			Page:    e.state[EventTypeIssueComment].Page,
 		},
 	}
 
@@ -459,12 +463,12 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body)); err != nil {
+			if err := e.add(*items[i].ID, EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
 				return errors.Wrapf(err, "error adding issue comment event: %s/%s", e.owner, e.repo)
 			}
 		}
 
-		e.state[EventTypeIssueComment] = opt.ListOptions.Page
+		e.state[EventTypeIssueComment].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -477,15 +481,15 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
-	log.Debugf("starting pr comment event import on page %d", e.state[EventTypePRComment])
+	log.Debugf("starting pr comment event import on page %d since %v", e.state[EventTypePRComment].Page, e.state[EventTypePRComment].Since)
 
 	opt := &github.PullRequestListCommentsOptions{
 		Sort:      sortField,
 		Direction: sortCommentField,
-		Since:     e.minEventTime,
+		Since:     e.state[EventTypePRComment].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypePRComment],
+			Page:    e.state[EventTypePRComment].Page,
 		},
 	}
 
@@ -502,12 +506,12 @@ func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypePRComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body)); err != nil {
+			if err := e.add(*items[i].ID, EventTypePRComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
 				return errors.Wrapf(err, "error adding PR comment event: %s/%s", e.owner, e.repo)
 			}
 		}
 
-		e.state[EventTypePRComment] = opt.ListOptions.Page
+		e.state[EventTypePRComment].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break

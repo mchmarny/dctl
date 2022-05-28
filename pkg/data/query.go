@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -48,6 +49,7 @@ const (
 			e.event_type,
 			e.event_url,
 			e.mention,
+			e.labels,
 			d.id as dev_id,
 			d.update_date,
 			d.username,
@@ -65,7 +67,8 @@ const (
 		AND e.org = COALESCE(?, e.org)
 		AND e.repo = COALESCE(?, e.repo)
 		AND e.username = COALESCE(?, e.username)
-		AND e.mention = COALESCE(?, e.mention)
+		AND e.mention LIKE COALESCE(?, e.mention)
+		AND e.labels LIKE COALESCE(?, e.labels)
 		AND d.entity = COALESCE(?, d.entity)
 		ORDER BY 1 DESC, 2, 3
 		LIMIT ? OFFSET ?
@@ -74,9 +77,9 @@ const (
 
 type EventTypeSeries struct {
 	Dates         []string  `json:"dates"`
-	PRs           []int     `json:"pr_request"`
+	PRs           []int     `json:"pr"`
 	PRComments    []int     `json:"pr_comment"`
-	Issues        []int     `json:"issue_request"`
+	Issues        []int     `json:"issue"`
 	IssueComments []int     `json:"issue_comment"`
 	Avg           []float32 `json:"avg"`
 }
@@ -89,6 +92,7 @@ type EventDetails struct {
 	EventType  string `json:"event_type,omitempty"`
 	EventURL   string `json:"event_url,omitempty"`
 	Mention    string `json:"event_mention,omitempty"`
+	Labels     string `json:"event_labels,omitempty"`
 	DevID      int64  `json:"dev_id,omitempty"`
 	Updated    string `json:"dev_update_date,omitempty"`
 	Username   string `json:"dev_username,omitempty"`
@@ -109,6 +113,7 @@ type EventSearchCriteria struct {
 	Username  *string `json:"user,omitempty"`
 	Entity    *string `json:"entity,omitempty"`
 	Mention   *string `json:"mention,omitempty"`
+	Label     *string `json:"label,omitempty"`
 	Page      int     `json:"page,omitempty"`
 	PageSize  int     `json:"page_size,omitempty"`
 }
@@ -119,6 +124,14 @@ func (c EventSearchCriteria) String() string {
 		return ""
 	}
 	return string(b)
+}
+
+func optionalLike(s *string) *string {
+	if s == nil || *s == "" {
+		return nil
+	}
+	v := fmt.Sprintf("%%%s%%", *s)
+	return &v
 }
 
 func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
@@ -132,7 +145,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 	}
 
 	offset := (q.Page - 1) * q.PageSize
-	rows, err := stmt.Query(q.FromDate, q.ToDate, q.EventType, q.Org, q.Repo, q.Username, q.Mention, q.Entity, q.PageSize, offset)
+	rows, err := stmt.Query(q.FromDate, q.ToDate, q.EventType, q.Org, q.Repo, q.Username, optionalLike(q.Mention), optionalLike(q.Label), q.Entity, q.PageSize, offset)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, errors.Wrap(err, "failed to execute event search statement")
 	}
@@ -142,7 +155,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 
 	for rows.Next() {
 		e := &EventDetails{}
-		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL, &e.Mention,
+		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL, &e.Mention, &e.Labels,
 			&e.DevID, &e.Updated, &e.Username, &e.Email, &e.FullName, &e.AvatarURL, &e.ProfileURL,
 			&e.Entity, &e.Location); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")

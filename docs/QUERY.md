@@ -129,12 +129,13 @@ Query events provides a number of filter options:
 
 * `org` - Name of the GitHub organization or user
 * `repo` - Name of the GitHub repository
-* `since` - Event since date (YYYY-MM-DD)
+* `type` - Event type (pr, issue, pr_comment, issue_comment)
 * `author` - Event author (GitHub username)
-* `type` - Event type (pr_request, issue_request, pr_comment, issue_comment)
+* `since` - Event since date (YYYY-MM-DD)
+* `label` - GitHub label (like query on issues and PRs)
+* `mention` GitHub mentions (like query on @username in body of the event or its assignments)
 * `limit` - Limits number of result returned (default: 500)
-
-> Given the possible amount data, the `--org` and `--repo` flags are required
+ 
 
 ```shell
 dctl query events --org knative --repo serving
@@ -142,16 +143,22 @@ dctl query events --org knative --repo serving
 
 ```json
 [
-    {
-        "id": 1235445267,
-        "org": "knative",
-        "repo": "serving",
-        "username": "phunghaduong99",
-        "type": "issue_request",
-        "date": "2022-05-13",
-        "url": "https://github.com/knative/serving/pull/6389#issuecomment-1235445267"
-    },    
-    ...
+  {
+    "event_id": 378946614,
+    "event_org": "knative",
+    "event_repo": "serving",
+    "event_date": "2018-11-08",
+    "event_type": "issue",
+    "event_url": "https://github.com/knative/serving/pull/2437",
+    "event_mention": "mattmoor",
+    "event_labels": "size/l,lgtm,approved",
+    "dev_id": 16194785,
+    "dev_update_date": "2022-05-28",
+    "dev_username": "k4leung4",
+    "dev_avatar_url": "https://avatars.githubusercontent.com/u/16194785?v=4",
+    "dev_profile_url": "https://github.com/k4leung4"
+  },  
+  ...
 ]
 ```
 
@@ -192,7 +199,9 @@ DB Schema
 | username   | `TEXT`    | `false`    |
 | event_type | `TEXT`    | `false`    |
 | event_date | `TEXT`    | `false`    |
-
+| event_url  | `TEXT`    | `false`    |
+| mention    | `TEXT`    | `false`    |
+| labels     | `TEXT`    | `false`    |
 
 ## Disclaimer
 
