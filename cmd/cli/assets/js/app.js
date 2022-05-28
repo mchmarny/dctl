@@ -43,10 +43,14 @@ const searchCriteria = {
     }
 }
 
+const originalOnClick = Chart.controllers.doughnut.overrides.plugins.legend.onClick;
+
 let autocomplete_cache = {};
 let timeEventsChart;
 let leftChart;
+let leftChartExcludes = [];
 let rightChart;
+let rightChartExcludes = [];
 let searchItem;
 
 $(function () {
@@ -117,7 +121,6 @@ $(function () {
     }
 });
 
-
 function loadView(view) {
     resetSearch();
 
@@ -127,6 +130,20 @@ function loadView(view) {
 
     resetCharts();
     let org = "", repo = "", entity = "";
+
+    const onLeftExclude = function () {
+        leftChart.destroy();
+        const x = leftChartExcludes.join("|");
+        console.log(x);
+        loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}&x=${x}`, onLeftChartSelect, onLeftExclude);
+    };
+
+    const onRightExclude = function () {
+        rightChart.destroy();
+        const x = rightChartExcludes.join("|");
+        console.log(x);
+        loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}&x=${x}`, onRightChartSelect, onRightExclude);
+    };
 
     setupSearchAutocomplete(searchBar, `/data/query?v=${view}&q=`, function (item) {
         resetSearch();
@@ -160,12 +177,12 @@ function loadView(view) {
 
         // re-reload charts
         loadTimeSeriesChart(`/data/type?m=${months}&o=${org}&r=${repo}&e=${entity}`, onTimeSeriesChartSelect);
-        loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect);
-        loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect);
+        loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect, onLeftExclude);
+        loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect, onRightExclude);
     });
     loadTimeSeriesChart(`/data/type?m=${months}&o=${org}&r=${repo}&e=${entity}`, onTimeSeriesChartSelect);
-    loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect);
-    loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect);
+    loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect, onLeftExclude);
+    loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect, onRightExclude);
 
     $("#prev-page").click(function (e) {
         e.preventDefault();
@@ -246,7 +263,6 @@ function parseOptional(val, prefix) {
     }
     return "";
 }
-
 
 function displaySearchResults(table, data) {
     $("#page-number").html(searchCriteria.page);
@@ -332,7 +348,6 @@ function setupSearchAutocomplete(sel, url, fn) {
     }
     return false;
 }
-
 
 function loadTimeSeriesChart(url, fn) {
     $.get(url, function (data) {
@@ -434,8 +449,12 @@ function loadTimeSeriesChart(url, fn) {
     });
 }
 
+function loadLeftChart(url, fn, cb) {
+    const onLickHandler = function(e, legendItem) {
+        leftChartExcludes.push(legendItem.text);
+        cb();
+    }
 
-function loadLeftChart(url, fn) {
     $.get(url, function (data) {
         console.log(data);
         leftChart = new Chart($("#left-chart")[0].getContext("2d"), {
@@ -455,6 +474,7 @@ function loadLeftChart(url, fn) {
                 plugins: {
                     legend: {
                         position: 'right',
+                        onClick: onLickHandler
                     }
                 },
                 animations: {
@@ -482,7 +502,12 @@ function loadLeftChart(url, fn) {
     });
 }
 
-function loadRightChart(url, fn) {
+function loadRightChart(url, fn, cb) {
+    const onRightHandler = function(e, legendItem) {
+        rightChartExcludes.push(legendItem.text);
+        cb();
+    }
+
     $.get(url, function (data) {
         console.log(data);
         rightChart = new Chart($("#right-chart")[0].getContext("2d"), {
@@ -502,6 +527,7 @@ function loadRightChart(url, fn) {
                 plugins: {
                     legend: {
                         position: 'right',
+                        onClick: onRightHandler
                     }
                 },
                 animations: {

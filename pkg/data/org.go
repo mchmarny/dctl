@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v45/github"
@@ -27,6 +28,7 @@ const (
 			AND d.entity = COALESCE(?, d.entity)
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
+			AND d.entity NOT IN (%s)
 			GROUP BY d.entity
 		) dt 
 		ORDER BY 2 DESC 
@@ -45,6 +47,7 @@ const (
 			AND d.entity = COALESCE(?, d.entity)
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
+			AND d.username NOT IN (%s)
 			GROUP BY d.username
 		) dt 
 		ORDER BY 2 DESC 
@@ -111,20 +114,27 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 	return list, nil
 }
 
-// GetOrgRepoPercentages returns a list of repo percentages for the given organization.
-func GetDeveloperPercentages(db *sql.DB, entity, org, repo *string, months int) ([]*CountedItem, error) {
+func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []string, months int) ([]*CountedItem, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
-	stmt, err := db.Prepare(selectDeveloperPercent)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare developer percentages statement")
+	params := make([]string, len(ex))
+	qArgs := []interface{}{since, entity, org, repo}
+
+	for i, v := range ex {
+		params[i] = "?"
+		qArgs = append(qArgs, v)
 	}
 
-	rows, err := stmt.Query(since, entity, org, repo)
+	stmt, err := db.Prepare(fmt.Sprintf(sqlStr, strings.Join(params, ",")))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare percentages statement")
+	}
+
+	rows, err := stmt.Query(qArgs...)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, errors.Wrap(err, "failed to execute select statement")
 	}
@@ -142,35 +152,14 @@ func GetDeveloperPercentages(db *sql.DB, entity, org, repo *string, months int) 
 	return list, nil
 }
 
+// GetOrgRepoPercentages returns a list of repo percentages for the given organization.
+func GetDeveloperPercentages(db *sql.DB, entity, org, repo *string, ex []string, months int) ([]*CountedItem, error) {
+	return getPercentages(db, selectDeveloperPercent, entity, org, repo, ex, months)
+}
+
 // GetEntityPercentages returns a list of entity percentages for the given repository.
-func GetEntityPercentages(db *sql.DB, entity, org, repo *string, months int) ([]*CountedItem, error) {
-	if db == nil {
-		return nil, errDBNotInitialized
-	}
-
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
-
-	stmt, err := db.Prepare(selectOrgEntityPercent)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare repo entity percentages statement")
-	}
-
-	rows, err := stmt.Query(since, entity, org, repo)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
-	}
-	defer rows.Close()
-
-	list := make([]*CountedItem, 0)
-	for rows.Next() {
-		e := &CountedItem{}
-		if err := rows.Scan(&e.Name, &e.Count); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
-		}
-		list = append(list, e)
-	}
-
-	return list, nil
+func GetEntityPercentages(db *sql.DB, entity, org, repo *string, ex []string, months int) ([]*CountedItem, error) {
+	return getPercentages(db, selectOrgEntityPercent, entity, org, repo, ex, months)
 }
 
 // GetOrgLike returns a list of orgs and repos that match the given pattern.
