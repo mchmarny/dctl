@@ -55,7 +55,7 @@ brews:
     tap:
       owner: mchmarny
       name: homebrew-dctl
-      # token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     url_template: "https://github.com/mchmarny/dctl/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     commit_author:
       name: github-actions
