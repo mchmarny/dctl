@@ -18,7 +18,7 @@ brew tap mchmarny/dctl
 brew install dctl
 ```
 
-All new release will be automatically picked up with brew upgrade.
+All new release will be automatically picked up with `brew upgrade`.
 
 `dctl` also provides pre-build releases for Mac, Linux, and Windows for both, AMD and ARM. See [releases](https://github.com/mchmarny/dctl/releases) to download the supported distributable for your platform/architecture combination. Alternatively, you can build your own version, see [BUILD.md](docs/BUILD.md) for details.
 
