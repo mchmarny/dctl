@@ -13,7 +13,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}}
-      - -s -w -X main.commit={{.Commit}}
+      - -s -w -X main.commit={{.ShortCommit}}
     goos:
       - darwin
       - linux

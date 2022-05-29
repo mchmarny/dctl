@@ -50,7 +50,7 @@ func main() {
 
 	app := &cli.App{
 		Name:     "dctl",
-		Version:  fmt.Sprintf("%s - (commit: %s)", version, commit),
+		Version:  fmt.Sprintf("%s - (%s)", version, commit),
 		Compiled: time.Now(),
 		Usage:    "CLI for quick insight into the GitHub org/repo activity",
 		Flags: []cli.Flag{
