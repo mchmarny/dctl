@@ -9,6 +9,19 @@
 
 > Hope you find this tool helpful. [Let me know](https://twitter.com/mchmarny) if you have any questions.
 
+## Install 
+
+On Max and Linux you can install `dctl` with [Homebrew](https://brew.sh/):
+
+```shell
+brew tap mchmarny/dctl
+brew install dctl
+```
+
+All new release will be automatically picked up with brew upgrade.
+
+`dctl` also provides pre-build releases for Mac, Linux, and Windows for both, AMD and ARM. See [releases](https://github.com/mchmarny/dctl/releases) to download the supported distributable for your platform/architecture combination. Alternatively, you can build your own version, see [BUILD.md](docs/BUILD.md) for details.
+
 ## Why
 
 One of the core principles on which `dctl` is built is that open source contributions are more than just PRs. And, while GitHub does provide repo-level activity charts and Grafana has a [plugin for GitHub](https://grafana.com/grafana/plugins/grafana-github-datasource/) (e.g. [CNCF Grafana Dashboard](https://k8s.devstats.cncf.io/)), there isn't really anything out there that's both, free and simple to use that provides that data.
