@@ -3,8 +3,10 @@ package data
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -197,4 +199,43 @@ func CleanEntities(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func cleanEntityName(val string) string {
+	original := val
+	// get everything trimmed and upper cased
+	val = strings.ToUpper(strings.TrimSpace(val))
+
+	// substitute any known aliases
+	if name, ok := entitySubstitutions[val]; ok {
+		val = name
+	}
+
+	// remove any non-alphanumeric characters
+	val = entityRegEx.ReplaceAllString(val, "")
+
+	// split remaining string into words
+	parts := make([]string, 0)
+
+	// remove any part that's in the entity noise map
+	for _, part := range strings.Split(val, " ") {
+		if len(strings.ToUpper(strings.TrimSpace(part))) == 0 {
+			continue
+		}
+		if _, ok := entityNoise[part]; !ok {
+			parts = append(parts, part)
+		}
+	}
+
+	// put it all back together
+	val = strings.Join(parts, " ")
+
+	// substitute any known aliases again, in case we fixed something
+	if name, ok := entitySubstitutions[val]; ok {
+		val = name
+	}
+
+	log.Debugf("cleaned entity name: %s -> %s", original, val)
+
+	return val
 }

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,35 +69,13 @@ const (
 	`
 
 	updateDeveloperNamesSQL = `UPDATE developer SET full_name = ? WHERE username = ?`
+
+	updateDeveloperPropertySQL = `UPDATE developer SET %s = ? WHERE %s = ?`
 )
 
 var (
-	entityNoise = map[string]bool{
-		"B.V.":        true,
-		"CDL":         true,
-		"CO":          true,
-		"COMPANY":     true,
-		"CORP":        true,
-		"CORPORATION": true,
-		"GMBH":        true,
-		"GROUP":       true,
-		"INC":         true,
-		"LLC":         true,
-		"LTD":         true,
-		"PVT":         true,
-		"SE":          true,
-	}
-
-	entitySubstitutions = map[string]string{
-		"CHAINGUARDDEV":       "CHAINGUARD",
-		"GCP":                 "GOOGLE",
-		"GOOGLECLOUD":         "GOOGLE",
-		"GOOGLECLOUDPLATFORM": "GOOGLE",
-		"INTERNATIONAL BUSINESS MACHINES CORPORATION": "IBM",
-		"INTERNATIONAL BUSINESS MACHINES":             "IBM",
-		"S&P GLOBAL INC":                              "S&P",
-		"S&P GLOBAL":                                  "S&P",
-		"VERVERICA ORIGINAL CREATORS OF APACHE FLINK": "VERVERICA",
+	UpdatableProperties = []string{
+		"entity", "location",
 	}
 )
 
@@ -271,45 +248,6 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 	return nil
 }
 
-func cleanEntityName(val string) string {
-	original := val
-	// get everything trimmed and upper cased
-	val = strings.ToUpper(strings.TrimSpace(val))
-
-	// substitute any known aliases
-	if name, ok := entitySubstitutions[val]; ok {
-		val = name
-	}
-
-	// remove any non-alphanumeric characters
-	val = entityRegEx.ReplaceAllString(val, "")
-
-	// split remaining string into words
-	parts := make([]string, 0)
-
-	// remove any part that's in the entity noise map
-	for _, part := range strings.Split(val, " ") {
-		if len(strings.ToUpper(strings.TrimSpace(part))) == 0 {
-			continue
-		}
-		if _, ok := entityNoise[part]; !ok {
-			parts = append(parts, part)
-		}
-	}
-
-	// put it all back together
-	val = strings.Join(parts, " ")
-
-	// substitute any known aliases again, in case we fixed something
-	if name, ok := entitySubstitutions[val]; ok {
-		val = name
-	}
-
-	log.Debugf("cleaned entity name: %s -> %s", original, val)
-
-	return val
-}
-
 func printDevDeltas(dbDev *Developer, ghDev *Developer, cncfDev *CNCFDeveloper) {
 	log.Debugf("%s [entity db:%s, gh:%s, cncf:%s], email [db:%s, gh:%s, cncf:%s]",
 		dbDev.Username, dbDev.Entity, ghDev.Entity, cncfDev.GetLatestAffiliation(),
@@ -403,4 +341,36 @@ func UpdateDeveloperNames(db *sql.DB, devs map[string]string) error {
 	}
 
 	return nil
+}
+
+func UpdateDeveloperProperty(db *sql.DB, prop, old, new string) (int64, error) {
+	if db == nil {
+		return 0, errDBNotInitialized
+	}
+
+	if prop == "" || new == "" || old == "" {
+		return 0, errors.Errorf("invalid property: %s, old: %s, new: %s", prop, new, old)
+	}
+
+	// CHeck if contains
+	if !Contains(UpdatableProperties, prop) {
+		return 0, errors.Errorf("invalid property: %s (permitted options: %v)", prop, UpdatableProperties)
+	}
+
+	stmt, err := db.Prepare(fmt.Sprintf(updateDeveloperPropertySQL, prop, prop))
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to prepare sql statement")
+	}
+
+	res, err := stmt.Exec(new, old)
+	if err != nil && err != sql.ErrNoRows {
+		return 0, errors.Wrap(err, "failed to execute developer property update statement")
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to get rows affected")
+	}
+
+	return rows, nil
 }

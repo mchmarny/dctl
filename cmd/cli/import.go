@@ -31,6 +31,23 @@ var (
 		Value: data.EventAgeMonthsDefault,
 	}
 
+	subTypeFlag = &cli.StringFlag{
+		Name:  "sub",
+		Usage: fmt.Sprintf("Substitution type [%s]", strings.Join(data.UpdatableProperties, ",")),
+	}
+
+	oldValFlag = &cli.StringFlag{
+		Name:     "old",
+		Usage:    "Old value",
+		Required: true,
+	}
+
+	newValFlag = &cli.StringFlag{
+		Name:     "new",
+		Usage:    "New value",
+		Required: true,
+	}
+
 	importCmd = &cli.Command{
 		Name:    "import",
 		Aliases: []string{"i"},
@@ -64,6 +81,17 @@ var (
 				Aliases: []string{"u"},
 				Usage:   "Update all previously imported org, repos, and affiliations",
 				Action:  cmdUpdate,
+			},
+			{
+				Name:    "substitute",
+				Aliases: []string{"s"},
+				Usage:   "Global substitute imported data (e.g. replacing entity name)",
+				Action:  cmdSubstitute,
+				Flags: []cli.Flag{
+					subTypeFlag,
+					oldValFlag,
+					newValFlag,
+				},
 			},
 		},
 	}
@@ -200,6 +228,36 @@ func cmdUpdateAFNames(c *cli.Context) error {
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
+		return errors.Wrapf(err, "error encoding list: %+v", res)
+	}
+
+	return nil
+}
+
+func cmdSubstitute(c *cli.Context) error {
+	sub := c.String(subTypeFlag.Name)
+	old := c.String(oldValFlag.Name)
+	new := c.String(newValFlag.Name)
+
+	if sub == "" || old == "" || new == "" {
+		return cli.ShowSubcommandHelp(c)
+	}
+
+	db := getDBOrFail()
+	defer db.Close()
+
+	res, err := data.UpdateDeveloperProperty(db, sub, old, new)
+	if err != nil {
+		return errors.Wrap(err, "failed to update names from apache foundation")
+	}
+
+	m := make(map[string]interface{})
+	m["updated"] = res
+	m["substitution_type"] = sub
+	m["old_value"] = old
+	m["new_value"] = new
+
+	if err := json.NewEncoder(os.Stdout).Encode(m); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
 	}
 
