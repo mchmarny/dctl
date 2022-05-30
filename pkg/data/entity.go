@@ -235,7 +235,9 @@ func cleanEntityName(val string) string {
 		val = name
 	}
 
-	log.Debugf("cleaned entity name: %s -> %s", original, val)
+	if len(val) > 0 {
+		log.Debugf("cleaned entity name: %s -> %s", original, val)
+	}
 
 	return val
 }

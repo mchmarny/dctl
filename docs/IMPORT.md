@@ -1,11 +1,13 @@
 # dctl - import
 
-The `dctl` CLI comes with an embedded [sqlite](https://www.sqlite.org/index.html) database. The following data import operations are currently supported: 
+The following data import operations are currently supported: 
 
-* `events` - Imports GitHub org/repo event data (PRs, comments, issues, etc)
+* `events` - Imports GitHub repo event data (PRs, comments, issues, etc)
 * `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
-* `names` - Updates imported developer names with Apache Foundation data
-* `updates` - Update all previously imported org, repos, and affiliations
+* `substitutions` - Create a global data substitute (e.g. standardize location or entity name)
+* `updates` - Update all previously imported org, repos, and affiliations 
+
+The `dctl` CLI comes with an embedded [sqlite](https://www.sqlite.org/index.html) database. All imported data is persisted locally so all your queries are fast and subsequent imports only download the new data. 
 
 ## Import GitHub Events
 
@@ -47,19 +49,18 @@ To get a more immediate feedback during import use the debug flag:
 dctl --debug import events --org <organization> --repo <repository>
 ```
 
-## Update Developer Name and Entity Affiliation
+## Update Developer Entity Affiliation
 
-> Assumes you have already authenticated
+> Assumes you have already authenticated and imported data
 
-Developers on GitHub often don't include their company or organization affiliation, and when they do, there use all kind of creative ways of spelling it (you'd be surprized how many different IBMs and Googles are out there). To clean this data up, `dctl` provides two different operations:
+Developers on GitHub often don't include their company or organization affiliation, and when they do, they tend to do it in all kinds of creative ways (you'd be surprized how many different IBMs and Googles are out there). To clean this data up, `dctl` provides:
 
 * `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
-* `names` - Updates imported developer names with Apache Foundation data
 
 To update affiliations using [CNCF developer affiliation files](https://github.com/cncf/gitdm):
 
 ```shell
-dctl import affiliation
+dctl import affiliations
 ```
 
 > Alternatively you can provide the `--url` parameter to import a specific `developers_affiliations.txt` file 
@@ -77,22 +78,65 @@ When completed, `dctl` will output the results (in this example, out of the `375
 
 Just like before, to get a more immediate feedback during import use the --debug flag.
 
-## Update Developer Full Name
+## Standardize imported data using substitutions
 
-Similarly, you can use the [Apache Foundation](https://www.apache.org/foundation/members.html) developer data to update developer full name (AF's data is used only when the local data has no developer full name):
+To  Standardize imported data (e.g. standardize location or entity name) you can use the substitute operation to create global data substitutions. For example, to replace all instances of `INTERNATIONAL BUSINESS MACHINES` with `IBM` you would execute the following operation: 
 
 ```shell
-dctl import names
+dctl import substitutions --sub entity --old "INTERNATIONAL BUSINESS MACHINES" --new IBM
 ```
 
-Like with the affiliation, when done, `dctl` will return the results (in this example, out of the `3201` unique developers that were already imported into the local database, `3` were updated based on the `8337` AF names): 
+> Note, these substitutions will be applied to the already imported data as well as saved and apply after each new import and update operation.
+
+The response will look something like this:
 
 ```json
 {
-    "duration": "740.209µs",
-    "db_devs": 3201,
-    "af_devs": 8337,
-    "mapped_devs": 3
+  "prop":"entity",
+  "old":"INTERNATIONAL BUSINESS MACHINES",
+  "new":"IBM",
+  "rows":0
+}
+```
+
+## Update all previously imported data
+
+Once you configured the GitHub organizations and repositories for which you want to track metrics, you just need to run the `updates` command and `dctl` will automatically update the data, reconcile affiliations, and apply the substitutions. 
+
+```shell
+dctl import updates
+```
+
+> Just like with all the other operations you can include the `--debug` flag to get more immediate feedback on the update progress.
+
+The response will look something like this:
+
+
+```json
+{
+  "duration": "1m16.1696975s",
+  "imported": {
+    "knative/serving/issue": 11,
+    "knative/serving/issue_comment": 38,
+    "knative/serving/pr": 100,
+    "knative/serving/pr_comment": 83,
+    ...
+  },
+  "updated": {
+    "duration": "47.540827625s",
+    "db_devs": 795,
+    "cncf_devs": 38988,
+    "mapped_devs": 313
+  },
+  "substituted": [
+    {
+      "prop": "entity",
+      "old": "GOOGLE LLC",
+      "new": "GOOGLE",
+      "rows": 0
+    },
+    ...
+  ]
 }
 ```
 

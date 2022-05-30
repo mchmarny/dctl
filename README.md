@@ -30,28 +30,32 @@ One of the core principles on which `dctl` is built is that open source contribu
 
 ## How
 
-`dctl` imports all contribution metadata for a specific repo(s) using the [GitHub API](https://docs.github.com/en/rest), and augments that data with developer affiliations from sources like [CNCF](https://github.com/cncf/gitdm) and [Apache Foundation](https://www.apache.org/foundation/members.html). More about importing data [here](docs/IMPORT.md).
+`dctl` imports all contribution metadata for a specific repo(s) using the [GitHub API](https://docs.github.com/en/rest), and augments that data with developer affiliations from sources like [CNCF](https://github.com/cncf/gitdm). More about importing data [here](docs/IMPORT.md).
 
-Once downloaded, `dctl` exposes that data using a local UI with option to drill-downs different aspects of the project activity (screenshot above). The instructions on how to start the integrated server and access the UI in your browser are located [here](docs/SERVER.md).
+Once downloaded, `dctl` exposes that data using a local UI with an option to drill-down on different aspects of the project activity (screenshot above). The instructions on how to start the integrated server and access the UI in your browser are located [here](docs/SERVER.md).
 
 `dctl` can also be used to query the imported data in CLI and output JSON payloads for subsequent postprocessing in another tool (e.g. [jq](https://stedolan.github.io/jq/)). More about the CLI query option [here](docs/QUERY.md)
 
-Whichever way you decide to use `dctl`, you will be able to use time period, contribution type, and developer name filters to further scope your data and identify specific trends with direct links to the original detail in GitHub for additional context. And, since all this data is cached locally in [sqlite](https://www.sqlite.org/index.html) DB, you can even use another tool to further customized your queries using SQL without the need to re-download data. More about that [here](docs/QUERY.md)
+Whichever way you decide to use `dctl`, you will be able to use time period, contribution type, and developer name filters to further scope your data and identify specific trends with direct links to the original detail in GitHub for additional context. 
+
+And, since all this data is cached locally in [sqlite](https://www.sqlite.org/index.html) DB, you can even use another tool to further customized your queries using SQL without the need to re-download data. More about that [here](docs/QUERY.md)
 
 ## Usage 
 
-`dctl` is a dual-purpose utility that can be either used as a `CLI` to [authentication](#authentication), [import](docs/IMPORT.md) data, and [query](docs/QUERY.md) the data, or as a [server](docs/SERVER.md) to launch a local app that provides UI to access the imported data in your browser. 
+`dctl` is a dual-purpose utility that can be either used as a CLI and as a server that can be accessed locally with your browser:
 
-* [authentication](#authentication)
-* [import](docs/IMPORT.md)
-* [query](docs/QUERY.md)
-* [server](docs/SERVER.md)
+* [Authenticating to GitHub](#authentication)
+* [Importing Data](docs/IMPORT.md)
+* [Querying Data](docs/QUERY.md)
+* [Using Server](docs/SERVER.md)
 
 ## Authentication 
 
-To get access to the higher GitHub API rate limits, `dctl` uses OAuth authentication to obtain a token:
+To import data, `dctl` users GitHub API. While you can use GitHub API without authentication, to avoid throttling, and to get access to the higher API rate limits, `dctl` uses OAuth-based authentication to obtain a GitHub user token:
 
 > `dctl` doesn't ask for any access scopes, so the resulting token has only access to already public data
+
+To authenticate to GitHub using `dctl`:
 
 ```shell
 dctl auth
@@ -65,7 +69,9 @@ The result should look something like this:
 3). Hit enter to complete the process:
 ```
 
-Once you enter the provided code in the GitHub UI prompt and hit enter, `dctl` will persist the token in your home directory for all subsequent queries. Should you need to, you can revoke that token in your [GitHub Settings](https://docs.github.com/en/developers/apps/managing-oauth-apps/deleting-an-oauth-app). 
+Follow these steps. Once you enter the provided code in the GitHub UI prompt and hit enter, `dctl` will persist the token in your home directory for all subsequent queries. Should you need to, you can revoke that token in your [GitHub Settings](https://docs.github.com/en/developers/apps/managing-oauth-apps/deleting-an-oauth-app). 
+
+Once authenticated, try [importing some data](docs/IMPORT.md).
 
 ## Disclaimer
 

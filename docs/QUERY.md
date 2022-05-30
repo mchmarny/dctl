@@ -1,6 +1,6 @@
 # dctl - query
 
-> Assumes you have already [authenticated](../README.md)
+> Assumes you have already [authenticated](../README.md) and [imported](../IMPORT.md) data.
 
 The imported data is also available as `JSON` via `dctl` query:
 
@@ -8,31 +8,36 @@ The imported data is also available as `JSON` via `dctl` query:
 dctl query
 ```
 
-Commands: 
+There are four types of query operations:
 
-* `developers` - List developers
-* `developer` - Get specific CNCF developer details, identities and associated entities
-* `entities` - List entities (companies or organizations with which users are affiliated)
-* `entity` - Get specific CNCF entity and its associated developers
-* `repositories` - List GitHub org/user repositories
-* `events` - List GitHub repository events
-
+* `developer` - List developer operations
+* `entity` - List entity operations
+* `org` - List GitHub org/user operations
+* `events` - List GitHub events
 
 ## Developer
 
-Query for developer usernames and their last update info: 
+The developer query provides two operations: 
+
+* `list` - List developers
+* `detail` - Get specific developer details, identities and associated entities
+
+To query the developer list you provide the `--like` flag that can be any part of the developer username or full name:
 
 ```shell
-dctl query developers --like marn
+dctl query developer list --like mark
 ```
+
+The response will look something like this:
 
 ```json
 [
-    {
-        "username": "mchmarny",
-        "update_date": "2022-05-13"
-    },
-    ...    
+  {
+    "username": "mchmarny",
+    "entity": "GOOGLE",
+    "update_date": "2022-05-30"
+  },
+  ...    
 ]
 ```
 
@@ -41,33 +46,45 @@ dctl query developers --like marn
 You can also query for details of a single developer: 
 
 ```shell
-dctl query developer --name mchmarny
+dctl query developer detail --name mchmarny
 ```
 
 ```json
 {
-    "username": "mchmarny",
-    "update_date": "2022-05-13",
-    "id": 175854,
-    "avatar_url": "https://avatars.githubusercontent.com/u/175854?v=4",
-    "profile_url": "https://github.com/mchmarny",
-    "organizations": [
-        {
-            "url": "https://api.github.com/orgs/knative",
-            "name":"knative"
-        },
-        ...
-    ]
+  "username": "mchmarny",
+  "update_date": "2022-05-30",
+  "id": 175854,
+  "full_name": "Mark Chmarny",
+  "email": "mark@chmarny.com",
+  "avatar_url": "https://avatars.githubusercontent.com/u/175854?v=4",
+  "profile_url": "https://github.com/mchmarny",
+  "current_entity": "GOOGLE",
+  "location": "Portland, OR",
+  "organizations": [
+    {
+      "url": "https://api.github.com/orgs/knative",
+      "name":"knative"
+    }
+    ...
+  ]
 }
 ```
 
 ## Entities
 
-Query for entity names and the number of repositories that have events: 
+Just like with developer, `dctl` provides two operations for entity:
+
+* `list` - List entities (companies or organizations with which users are affiliated)
+* `detail` - Get specific entity and its associated developers
+
+
+To query the entity list you provide the `--like` flag that can be any part of the entity name:
 
 ```shell
-dctl query entities --like goog
+dctl query entity list --like OO
 ```
+
+The response will look something like this:
 
 ```json
 [
@@ -75,6 +92,7 @@ dctl query entities --like goog
         "name": "GOOGLE",
         "count": 23
     }
+    ...
 ]
 ```
 
@@ -83,7 +101,7 @@ dctl query entities --like goog
 You can also get all the details for specific entity: 
 
 ```shell
-dctl query entity --name GOOGLE
+dctl query entity detail --name GOOGLE
 ```
 
 ```json
@@ -96,6 +114,7 @@ dctl query entity --name GOOGLE
             "entity": "GOOGLE",
             "update_date": "2022-05-14"
         },
+        ...
     ]
 }
 ```
@@ -105,7 +124,7 @@ dctl query entity --name GOOGLE
 Query for organization repositories: 
 
 ```shell
-dctl query repositories --org knative
+dctl query org repos --org knative
 ```
 
 ```json
@@ -135,33 +154,42 @@ Query events provides a number of filter options:
 * `label` - GitHub label (like query on issues and PRs)
 * `mention` GitHub mentions (like query on @username in body of the event or its assignments)
 * `limit` - Limits number of result returned (default: 500)
- 
+
+For example, to query for all issue events from the Knative Serving repository since Jan 1, that mention `@mattmoor` you would execute the following query:
 
 ```shell
-dctl query events --org knative --repo serving
+dctl query events --org knative --repo serving --since 2022-01-01 --type pr --mention mattmoor
 ```
 
 ```json
 [
   {
-    "event_id": 378946614,
+    "event_id": 863026555,
     "event_org": "knative",
     "event_repo": "serving",
-    "event_date": "2018-11-08",
-    "event_type": "issue",
-    "event_url": "https://github.com/knative/serving/pull/2437",
-    "event_mention": "mattmoor",
-    "event_labels": "size/l,lgtm,approved",
-    "dev_id": 16194785,
-    "dev_update_date": "2022-05-28",
-    "dev_username": "k4leung4",
-    "dev_avatar_url": "https://avatars.githubusercontent.com/u/16194785?v=4",
-    "dev_profile_url": "https://github.com/k4leung4"
+    "event_date": "2022-02-25",
+    "event_type": "pr",
+    "event_url": "https://github.com/knative/serving/pull/12668",
+    "event_mention": "julz,mattmoor",
+    "event_labels": "area/api,size/m,lgtm,approved",
+    "dev_id": 18562,
+    "dev_update_date": "2022-05-30",
+    "dev_username": "dprotaso",
+    "dev_full_name": "Dave Protasowski",
+    "dev_avatar_url": "https://avatars.githubusercontent.com/u/18562?v=4",
+    "dev_profile_url": "https://github.com/dprotaso",
+    "dev_entity": "VMWARE",
+    "dev_location": "Toronto ON"
   },  
   ...
 ]
 ```
 
+You can also pipe the `dctl` output to something like `jq` for further processing. For example, to get the count of all the PR events since specific date you would: 
+
+```shell
+dctl query events --org knative --repo serving --since 2022-01-01 --type pr | jq '. | length'
+```
 
 ## Query DB Directly (SQL)
 
@@ -171,11 +199,13 @@ For more specialized queries you can also query the local database. The imported
 qlite3 ~/.dctl/data.db
 ```
 
-DB Schema
+### DB Schema
 
-> The script to create DB schema is located in [pkg/data/sql/ddl.sql](../pkg/data/sql/ddl.sql)
+> The script that is used to create DB schema is located in [pkg/data/sql/ddl.sql](../pkg/data/sql/ddl.sql)
 
-### Table: `developer` (PK: `username`)
+The two main tables in `dctl` schema are `developer` and `event`:
+
+#### Table: `developer` (PK: `username`)
 
 | `Columns`     | `Type`    | `Nullable` |
 | ------------- | --------- | ---------- |
@@ -189,7 +219,7 @@ DB Schema
 | entity        | `TEXT`    | `true`     |
 | location      | `TEXT`    | `true`     |
 
-### Table: `event` (PK: `id`, `org`, `repo`, `username`, `event_type`, `event_date`)
+#### Table: `event` (PK: `id`, `org`, `repo`, `username`, `event_type`, `event_date`)
 
 | `Columns`  | `Type`    | `Nullable` |
 | ---------- | --------- | ---------- |
@@ -202,6 +232,8 @@ DB Schema
 | event_url  | `TEXT`    | `false`    |
 | mention    | `TEXT`    | `false`    |
 | labels     | `TEXT`    | `false`    |
+
+
 
 ## Disclaimer
 

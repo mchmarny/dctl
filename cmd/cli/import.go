@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -71,27 +72,21 @@ var (
 				Action:  cmdImportAffiliations,
 			},
 			{
-				Name:    "names",
-				Aliases: []string{"n"},
-				Usage:   "Updates imported developer names with Apache Foundation data",
-				Action:  cmdUpdateAFNames,
+				Name:    "substitutions",
+				Aliases: []string{"s"},
+				Usage:   "Create a global data substitutions (e.g. standardize location or entity name)",
+				Action:  cmdSubstitutes,
+				Flags: []cli.Flag{
+					subTypeFlag,
+					oldValFlag,
+					newValFlag,
+				},
 			},
 			{
 				Name:    "updates",
 				Aliases: []string{"u"},
 				Usage:   "Update all previously imported org, repos, and affiliations",
 				Action:  cmdUpdate,
-			},
-			{
-				Name:    "substitute",
-				Aliases: []string{"s"},
-				Usage:   "Global substitute imported data (e.g. replacing entity name)",
-				Action:  cmdSubstitute,
-				Flags: []cli.Flag{
-					subTypeFlag,
-					oldValFlag,
-					newValFlag,
-				},
 			},
 		},
 	}
@@ -105,8 +100,10 @@ type EventImportResult struct {
 }
 
 type EventUpdateResult struct {
-	Duration string         `json:"duration,omitempty"`
-	Imported map[string]int `json:"imported,omitempty"`
+	Duration    string                        `json:"duration,omitempty"`
+	Imported    map[string]int                `json:"imported,omitempty"`
+	Updated     *data.AffiliationImportResult `json:"updated,omitempty"`
+	Substituted []*data.Substitution          `json:"substituted,omitempty"`
 }
 
 func cmdUpdate(c *cli.Context) error {
@@ -127,9 +124,26 @@ func cmdUpdate(c *cli.Context) error {
 		return errors.Wrap(err, "failed to import events")
 	}
 
+	db := getDBOrFail()
+	defer db.Close()
+
 	// update final state
 	res.Imported = m
 	res.Duration = time.Since(start).String()
+
+	// also update affiliations
+	a, err := importAffiliations(db)
+	if err != nil {
+		return errors.Wrap(err, "failed to import affiliations")
+	}
+	res.Updated = a
+
+	// also update substitutes
+	sub, err := data.ApplySubstitutions(db)
+	if err != nil {
+		return errors.Wrap(err, "failed to apply substitutions")
+	}
+	res.Substituted = sub
 
 	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
@@ -190,23 +204,32 @@ func cmdImportEvents(c *cli.Context) error {
 	return nil
 }
 
-func cmdImportAffiliations(c *cli.Context) error {
+func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 	token, err := getGitHubToken()
 	if err != nil {
-		return errors.Wrap(err, "failed to get GitHub token")
+		return nil, errors.Wrap(err, "failed to get GitHub token")
 	}
 
 	if token == "" {
-		return cli.ShowSubcommandHelp(c)
+		return nil, errors.New("no GitHub token")
 	}
 
 	ctx := context.Background()
 	client := net.GetOAuthClient(ctx, token)
 
+	res, err := data.UpdateDevelopersWithCNCFEntityAffiliations(ctx, db, client)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to import affiliations")
+	}
+
+	return res, nil
+}
+
+func cmdImportAffiliations(c *cli.Context) error {
 	db := getDBOrFail()
 	defer db.Close()
 
-	res, err := data.UpdateDevelopersWithCNCFEntityAffiliations(ctx, db, client)
+	res, err := importAffiliations(db)
 	if err != nil {
 		return errors.Wrap(err, "failed to import affiliations")
 	}
@@ -218,23 +241,7 @@ func cmdImportAffiliations(c *cli.Context) error {
 	return nil
 }
 
-func cmdUpdateAFNames(c *cli.Context) error {
-	db := getDBOrFail()
-	defer db.Close()
-
-	res, err := data.UpdateNoFullnameDevelopersFromApache(db)
-	if err != nil {
-		return errors.Wrap(err, "failed to update names from apache foundation")
-	}
-
-	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", res)
-	}
-
-	return nil
-}
-
-func cmdSubstitute(c *cli.Context) error {
+func cmdSubstitutes(c *cli.Context) error {
 	sub := c.String(subTypeFlag.Name)
 	old := c.String(oldValFlag.Name)
 	new := c.String(newValFlag.Name)
@@ -246,18 +253,12 @@ func cmdSubstitute(c *cli.Context) error {
 	db := getDBOrFail()
 	defer db.Close()
 
-	res, err := data.UpdateDeveloperProperty(db, sub, old, new)
+	res, err := data.SaveAndApplyDeveloperSub(db, sub, old, new)
 	if err != nil {
 		return errors.Wrap(err, "failed to update names from apache foundation")
 	}
 
-	m := make(map[string]interface{})
-	m["updated"] = res
-	m["substitution_type"] = sub
-	m["old_value"] = old
-	m["new_value"] = new
-
-	if err := json.NewEncoder(os.Stdout).Encode(m); err != nil {
+	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
 	}
 

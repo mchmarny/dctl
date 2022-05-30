@@ -33,3 +33,10 @@ CREATE TABLE IF NOT EXISTS state (
     since INTEGER NOT NULL, 
     PRIMARY KEY (query, org, repo)
 );
+
+CREATE TABLE IF NOT EXISTS sub (
+    type TEXT NOT NULL,
+    old TEXT NOT NULL,
+    new TEXT NOT NULL,
+    PRIMARY KEY (type, old)
+);

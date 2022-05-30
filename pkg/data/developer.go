@@ -73,12 +73,6 @@ const (
 	updateDeveloperPropertySQL = `UPDATE developer SET %s = ? WHERE %s = ?`
 )
 
-var (
-	UpdatableProperties = []string{
-		"entity", "location",
-	}
-)
-
 type Developer struct {
 	Username      string `json:"username,omitempty"`
 	Updated       string `json:"update_date,omitempty"`
@@ -341,36 +335,4 @@ func UpdateDeveloperNames(db *sql.DB, devs map[string]string) error {
 	}
 
 	return nil
-}
-
-func UpdateDeveloperProperty(db *sql.DB, prop, old, new string) (int64, error) {
-	if db == nil {
-		return 0, errDBNotInitialized
-	}
-
-	if prop == "" || new == "" || old == "" {
-		return 0, errors.Errorf("invalid property: %s, old: %s, new: %s", prop, new, old)
-	}
-
-	// CHeck if contains
-	if !Contains(UpdatableProperties, prop) {
-		return 0, errors.Errorf("invalid property: %s (permitted options: %v)", prop, UpdatableProperties)
-	}
-
-	stmt, err := db.Prepare(fmt.Sprintf(updateDeveloperPropertySQL, prop, prop))
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to prepare sql statement")
-	}
-
-	res, err := stmt.Exec(new, old)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, errors.Wrap(err, "failed to execute developer property update statement")
-	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to get rows affected")
-	}
-
-	return rows, nil
 }

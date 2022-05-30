@@ -86,51 +86,77 @@ var (
 		Usage:   "List data query operations",
 		Subcommands: []*cli.Command{
 			{
-				Name:   "developers",
-				Usage:  "List developers",
-				Action: cmdQueryDevelopers,
-				Flags: []cli.Flag{
-					developerLikeQueryFlag,
-					queryLimitFlag,
+				Name:    "developer",
+				Usage:   "List developer operations",
+				Aliases: []string{"d"},
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Usage:   "List developers",
+						Aliases: []string{"l"},
+						Action:  cmdQueryDevelopers,
+						Flags: []cli.Flag{
+							developerLikeQueryFlag,
+							queryLimitFlag,
+						},
+					},
+					{
+						Name:    "detail",
+						Usage:   "Get specific developer details, identities and associated entities",
+						Aliases: []string{"d"},
+						Action:  cmdQueryDeveloper,
+						Flags: []cli.Flag{
+							ghUserNameQueryFlag,
+						},
+					},
 				},
 			},
 			{
-				Name:   "developer",
-				Usage:  "Get specific CNCF developer details, identities and associated entities",
-				Action: cmdQueryDeveloper,
-				Flags: []cli.Flag{
-					ghUserNameQueryFlag,
+				Name:    "entity",
+				Usage:   "List entity operations",
+				Aliases: []string{"e"},
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Usage:   "List entities (companies or organizations with which users are affiliated)",
+						Aliases: []string{"l"},
+						Action:  cmdQueryEntities,
+						Flags: []cli.Flag{
+							entityLikeQueryFlag,
+							queryLimitFlag,
+						},
+					},
+					{
+						Name:    "detail",
+						Usage:   "Get specific entity and its associated developers",
+						Aliases: []string{"d"},
+						Action:  cmdQueryEntity,
+						Flags: []cli.Flag{
+							entityNameQueryFlag,
+						},
+					},
 				},
 			},
 			{
-				Name:   "entities",
-				Usage:  "List entities (companies or organizations with which users are affiliated)",
-				Action: cmdQueryEntities,
-				Flags: []cli.Flag{
-					entityLikeQueryFlag,
-					queryLimitFlag,
+				Name:    "org",
+				Usage:   "List GitHub org/user operations",
+				Aliases: []string{"o"},
+				Subcommands: []*cli.Command{
+					{
+						Name:   "repos",
+						Usage:  "List GitHub org/user repositories",
+						Action: cmdQueryOrgRepos,
+						Flags: []cli.Flag{
+							orgNameFlag,
+						},
+					},
 				},
 			},
 			{
-				Name:   "entity",
-				Usage:  "Get specific CNCF entity and its associated developers",
-				Action: cmdQueryEntity,
-				Flags: []cli.Flag{
-					entityNameQueryFlag,
-				},
-			},
-			{
-				Name:   "repositories",
-				Usage:  "List GitHub org/user repositories",
-				Action: cmdQueryOrgRepos,
-				Flags: []cli.Flag{
-					orgNameFlag,
-				},
-			},
-			{
-				Name:   "events",
-				Usage:  "List GitHub repository events",
-				Action: cmdQueryEvents,
+				Name:    "events",
+				Usage:   "List GitHub events",
+				Aliases: []string{"e"},
+				Action:  cmdQueryEvents,
 				Flags: []cli.Flag{
 					orgNameFlag,
 					repoNameFlag,
@@ -339,7 +365,7 @@ func cmdQueryOrgRepos(c *cli.Context) error {
 		return errors.Wrap(err, "failed to get GitHub token")
 	}
 
-	if org == "" && token == "" {
+	if org == "" || token == "" {
 		return cli.ShowSubcommandHelp(c)
 	}
 

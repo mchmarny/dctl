@@ -95,7 +95,6 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 			res.MappedDevs++
 			continue
 		}
-		log.Debugf("no CNCF affiliation for %s", u)
 	}
 
 	// run this on the end to update the user entities that were not part of the above process
