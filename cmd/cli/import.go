@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -145,7 +143,7 @@ func cmdUpdate(c *cli.Context) error {
 	}
 	res.Substituted = sub
 
-	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
+	if err := getEncoder().Encode(res); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
 	}
 
@@ -197,7 +195,7 @@ func cmdImportEvents(c *cli.Context) error {
 
 	res.Duration = time.Since(start).String()
 
-	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
+	if err := getEncoder().Encode(res); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
 	}
 
@@ -234,7 +232,7 @@ func cmdImportAffiliations(c *cli.Context) error {
 		return errors.Wrap(err, "failed to import affiliations")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
+	if err := getEncoder().Encode(res); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
 	}
 
@@ -258,7 +256,7 @@ func cmdSubstitutes(c *cli.Context) error {
 		return errors.Wrap(err, "failed to update names from apache foundation")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(res); err != nil {
+	if err := getEncoder().Encode(res); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", res)
 	}
 

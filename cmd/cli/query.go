@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -114,7 +113,7 @@ var (
 			{
 				Name:    "entity",
 				Usage:   "List entity operations",
-				Aliases: []string{"e"},
+				Aliases: []string{"c"},
 				Subcommands: []*cli.Command{
 					{
 						Name:    "list",
@@ -198,7 +197,7 @@ func cmdQueryEntity(c *cli.Context) error {
 		return errors.Wrap(err, "failed to query entity")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(ent); err != nil {
+	if err := getEncoder().Encode(ent); err != nil {
 		return errors.Wrapf(err, "error encoding: %+v", ent)
 	}
 
@@ -249,7 +248,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		return errors.Wrap(err, "failed to query events")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(list); err != nil {
+	if err := getEncoder().Encode(list); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", list)
 	}
 
@@ -280,7 +279,7 @@ func cmdQueryEntities(c *cli.Context) error {
 		return errors.Wrap(err, "failed to query entities")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(list); err != nil {
+	if err := getEncoder().Encode(list); err != nil {
 		return errors.Wrapf(err, "error encoding list: %+v", list)
 	}
 
@@ -320,7 +319,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 		return errors.Wrap(err, "failed to query orgs")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(dev); err != nil {
+	if err := getEncoder().Encode(dev); err != nil {
 		return errors.Wrapf(err, "error encoding: %+v", dev)
 	}
 
@@ -351,7 +350,7 @@ func cmdQueryDevelopers(c *cli.Context) error {
 		return errors.Wrap(err, "error quering CNCF developer")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(list); err != nil {
+	if err := getEncoder().Encode(list); err != nil {
 		return errors.Wrapf(err, "error encoding: %+v", list)
 	}
 
@@ -376,7 +375,7 @@ func cmdQueryOrgRepos(c *cli.Context) error {
 		return errors.Wrap(err, "failed to query repos")
 	}
 
-	if err := json.NewEncoder(os.Stdout).Encode(list); err != nil {
+	if err := getEncoder().Encode(list); err != nil {
 		return errors.Wrapf(err, "error encoding: %+v", list)
 	}
 

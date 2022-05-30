@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -132,4 +133,10 @@ func getHomeDir() string {
 		}
 	}
 	return dirPath
+}
+
+func getEncoder() *json.Encoder {
+	e := json.NewEncoder(os.Stdout)
+	e.SetIndent("", "  ")
+	return e
 }
