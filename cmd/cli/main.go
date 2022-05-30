@@ -22,6 +22,7 @@ var (
 	name    = "dctl"
 	version = "v0.0.1-default"
 	commit  = ""
+	date    = ""
 
 	dbFilePath = path.Join(getHomeDir(), data.DataFileName)
 	debug      = false
@@ -50,7 +51,7 @@ func main() {
 
 	app := &cli.App{
 		Name:     "dctl",
-		Version:  fmt.Sprintf("%s - (%s)", version, commit),
+		Version:  fmt.Sprintf("%s (%s - %s)", version, commit, date),
 		Compiled: time.Now(),
 		Usage:    "CLI for quick insight into the GitHub org/repo activity",
 		Flags: []cli.Flag{

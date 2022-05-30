@@ -1,10 +1,11 @@
-RELEASE_VERSION    ?=$(shell cat ./version)
-RELEASE_COMMIT     ?=$(shell git rev-parse --short HEAD)
+RELEASE_VERSION ?=$(shell cat ./version)
+RELEASE_COMMIT  ?=$(shell git rev-parse --short HEAD)
+RELEASE_DATE    ?=$(shell date +%Y-%m-%dT%H:%M:%S%Z)
 
 all: help
 
 version: ## Prints the current version
-	@echo $(RELEASE_VERSION)
+	@echo $(RELEASE_VERSION) - $(RELEASE_COMMIT) - $(RELEASE_DATE)
 .PHONY: version
 
 tidy: ## Updates the go modules and vendors all dependancies 
@@ -37,7 +38,8 @@ lint: ## Lints the entire project
 cli: tidy ## Builds CLI binary
 	CGO_ENABLED=0 go build -ldflags=" \
 		-X 'main.version=$(RELEASE_VERSION)' \
-		-X 'main.commit=$(RELEASE_COMMIT)' " \
+		-X 'main.commit=$(RELEASE_COMMIT)' \
+		-X 'main.date=$(RELEASE_DATE)' " \
 		-o bin/dctl \
 		cmd/cli/*.go
 .PHONY: cli
