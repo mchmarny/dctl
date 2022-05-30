@@ -1,6 +1,6 @@
 linters-settings:
   dupl:
-    threshold: 200
+    threshold: 175
   funlen:
     lines: 150
     statements: 100
@@ -37,10 +37,10 @@ linters-settings:
   misspell:
     locale: US
   nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
+    allow-leading-space: false # don't require machine-readable nolint directives (i.e. with no leading space)
     allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+    require-explanation: true # don't require an explanation for nolint directives
+    require-specific: true # don't require nolint directives to be specific about which linter is being skipped
 
 linters:
   disable-all: true
@@ -70,6 +70,9 @@ linters:
     - unconvert
     - varcheck
     - whitespace
+    - errcheck
+    - gomnd
+    - deadcode
 
 issues:
   exclude:
@@ -79,9 +82,7 @@ issues:
   # exclude-rules:
   #   - path: cmd/app/oauth.go
   #     linters:
-  #       - deadcode
-  #       - gomnd
-  #       - errcheck
+  #       - some-linter
 
 run:
   concurrency: 4

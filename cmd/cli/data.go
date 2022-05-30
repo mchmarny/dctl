@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -83,38 +84,16 @@ func mapCountedItemsToSeries(res []*data.CountedItem) *SeriesData[int] {
 }
 
 func developerDataHandler(c *gin.Context) {
-	months := queryAsInt(c, "m", data.EventAgeMonthsDefault)
-	org := c.Query("o")
-	repo := c.Query("r")
-	entity := c.Query("e")
-	exclude := strings.Split(c.Query("x"), arraySelector)
-
-	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')",
-		org, repo, entity, months)
-
-	if orgStr, repoStr, ok := parseRepo(&repo); ok {
-		org = *orgStr
-		repo = *repoStr
-	}
-
-	db := getDBOrFail()
-	defer db.Close()
-
-	res, err := data.GetDeveloperPercentages(db, optional(entity), optional(org), optional(repo), exclude, months)
-	if err != nil {
-		log.Errorf("failed to get org repo series: %s", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "error querying org repo series",
-		})
-		return
-	}
-
-	data := mapCountedItemsToSeries(res)
-
-	c.JSON(http.StatusOK, data)
+	percentageHandler(c, data.GetDeveloperPercentages)
 }
 
 func entityDataHandler(c *gin.Context) {
+	percentageHandler(c, data.GetEntityPercentages)
+}
+
+type percentageProvider func(db *sql.DB, entity, org, repo *string, ex []string, months int) ([]*data.CountedItem, error)
+
+func percentageHandler(c *gin.Context, fn percentageProvider) {
 	months := queryAsInt(c, "m", data.EventAgeMonthsDefault)
 	org := c.Query("o")
 	repo := c.Query("r")
@@ -132,7 +111,7 @@ func entityDataHandler(c *gin.Context) {
 	db := getDBOrFail()
 	defer db.Close()
 
-	res, err := data.GetEntityPercentages(db, optional(entity), optional(org), optional(repo), exclude, months)
+	res, err := fn(db, optional(entity), optional(org), optional(repo), exclude, months)
 	if err != nil {
 		log.Errorf("failed to get event type series: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{

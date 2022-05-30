@@ -66,6 +66,19 @@ func GetDB(path string) (*sql.DB, error) {
 	return conn, nil
 }
 
+// Contains checks for val in list
+func Contains[T comparable](list []T, val T) bool {
+	if list == nil {
+		return false
+	}
+	for _, item := range list {
+		if item == val {
+			return true
+		}
+	}
+	return false
+}
+
 type Query struct {
 	On    int64  `json:"on,omitempty"`
 	Type  string `json:"type,omitempty"`
