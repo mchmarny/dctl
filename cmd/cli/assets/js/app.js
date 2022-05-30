@@ -17,6 +17,7 @@ const colors = [
     'rgb(76, 100, 114)'
 ];
 
+const searchCriteriaView = ["from", "to", "event_type", "org", "repo", "entity", "user"];
 const searchCriteria = {
     "from": null,
     "to": null,
@@ -40,6 +41,16 @@ const searchCriteria = {
         for (let prop in this.origValues) {
             this[prop] = this.origValues[prop];
         }
+    },
+    String: function () {
+        let q = [];
+        for (let prop in this) {
+            if (!searchCriteriaView.includes(prop)) { continue; }
+            if (this.hasOwnProperty(prop) && this[prop] != null) {
+                q.push(`<b>${prop}</b>: ${this[prop]}`);
+            }
+        }
+        return q.join(", ");
     }
 }
 
@@ -93,12 +104,6 @@ $(function () {
         e.preventDefault();
         const nav = $(this).data("nav");
         console.log(`nav: ${nav}`);
-
-        // if not home go there 
-        if (window.location.pathname == '/about') {
-            window.location.href = `/?nav=` + nav;
-            return false;
-        }
 
         loadView(nav);
         return false;
@@ -239,12 +244,14 @@ function onRightChartSelect(label) {
     submitSearch();
 }
 
-function submitSearch() {
-    // TODO: Update search meta with the plain lang of the criteria 
-    // TODO: Provide option to reset the search criteria
+// TODO: Update search meta with the plain lang of the criteria 
+// TODO: Provide option to reset the search criteria
+function submitSearch() {    
+    $("#tbl-criteria").html(searchCriteria.String());
     const table = $("#result-table-content").empty();
     const criteria = JSON.stringify(searchCriteria);
     console.log(criteria);
+
     $.post("/data/search", criteria).done(function (data) {
         console.log(data);
         displaySearchResults(table, data);

@@ -102,7 +102,6 @@ func makeRouter() *gin.Engine {
 
 	// dynamic views
 	r.GET("/", homeViewHandler)
-	r.GET("/about", aboutViewHandler)
 
 	// data queries returning JSON
 	data := r.Group("/data")

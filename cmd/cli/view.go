@@ -25,11 +25,3 @@ func homeViewHandler(c *gin.Context) {
 
 	c.HTML(http.StatusOK, "home", d)
 }
-
-func aboutViewHandler(c *gin.Context) {
-	d := gin.H{
-		"version": version,
-	}
-
-	c.HTML(http.StatusOK, "about", d)
-}
