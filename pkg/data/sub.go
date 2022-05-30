@@ -65,10 +65,10 @@ var (
 )
 
 type Substitution struct {
-	Prop string `json:"prop"`
-	Old  string `json:"old"`
-	New  string `json:"new"`
-	Rows int64  `json:"rows"`
+	Prop    string `json:"prop"`
+	Old     string `json:"old"`
+	New     string `json:"new"`
+	Records int64  `json:"records"`
 }
 
 func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
@@ -100,7 +100,7 @@ func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 		return errors.Wrap(err, "failed to get rows affected")
 	}
 
-	sub.Rows = rows
+	sub.Records = rows
 
 	return nil
 }
