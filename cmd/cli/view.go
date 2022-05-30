@@ -19,6 +19,8 @@ func faveIcon(c *gin.Context) {
 func homeViewHandler(c *gin.Context) {
 	d := gin.H{
 		"version":       version,
+		"commit":        commit,
+		"build_date":    date,
 		"err":           c.Query("err"),
 		"period_months": data.EventAgeMonthsDefault,
 	}
