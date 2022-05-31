@@ -15,7 +15,8 @@ const (
 			SUM(prs) as prs,
 			SUM(pr_comments) as pr_comments,
 			SUM(issues) as issues, 
-			SUM(issue_comments) as issue_comments
+			SUM(issue_comments) as issue_comments,
+			SUM(forks) as forks
 		FROM (
 			WITH RECURSIVE dates(date) AS (
 				VALUES(?)
@@ -29,7 +30,8 @@ const (
 				CASE WHEN e.event_type = ? THEN 1 ELSE 0 END as prs,
 				CASE WHEN e.event_type = ? THEN 1 ELSE 0 END as pr_comments,
 				CASE WHEN e.event_type = ? THEN 1 ELSE 0 END as issues,
-				CASE WHEN e.event_type = ? THEN 1 ELSE 0 END as issue_comments
+				CASE WHEN e.event_type = ? THEN 1 ELSE 0 END as issue_comments,
+				CASE WHEN e.event_type = ? THEN 1 ELSE 0 END as forks
 			FROM dates 
 			LEFT JOIN event e ON dates.date = e.event_date
 			JOIN developer d ON e.username = d.username
@@ -81,6 +83,7 @@ type EventTypeSeries struct {
 	PRComments    []int     `json:"pr_comment"`
 	Issues        []int     `json:"issue"`
 	IssueComments []int     `json:"issue_comment"`
+	Forks         []int     `json:"fork"`
 	Avg           []float32 `json:"avg"`
 }
 
@@ -180,7 +183,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 	to := time.Now().UTC().Format("2006-01-02")
 
 	rows, err := stmt.Query(since, to,
-		EventTypePR, EventTypePRComment, EventTypeIssue, EventTypeIssueComment,
+		EventTypePR, EventTypePRComment, EventTypeIssue, EventTypeIssueComment, EventTypeFork,
 		org, repo, entity)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, errors.Wrap(err, "failed to execute series select statement")
@@ -193,6 +196,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		PRComments:    make([]int, 0),
 		Issues:        make([]int, 0),
 		IssueComments: make([]int, 0),
+		Forks:         make([]int, 0),
 		Avg:           make([]float32, 0),
 	}
 
@@ -200,8 +204,8 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 	var runCount int = 0
 	for rows.Next() {
 		var date string
-		var prs, prComments, issues, issueComments int
-		if err := rows.Scan(&date, &prs, &prComments, &issues, &issueComments); err != nil {
+		var prs, prComments, issues, issueComments, forks int
+		if err := rows.Scan(&date, &prs, &prComments, &issues, &issueComments, &forks); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")
 		}
 		series.Dates = append(series.Dates, date)
@@ -209,10 +213,11 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		series.PRComments = append(series.PRComments, prComments)
 		series.Issues = append(series.Issues, issues)
 		series.IssueComments = append(series.IssueComments, issueComments)
+		series.Forks = append(series.Forks, forks)
 
 		// avg
 		runCount++
-		runSum += float32(prs + prComments + issues + issueComments)
+		runSum += float32(prs + prComments + issues + issueComments + forks)
 		series.Avg = append(series.Avg, runSum/float32(len(event_types)*runCount))
 	}
 

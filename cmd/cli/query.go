@@ -62,8 +62,8 @@ var (
 
 	eventTypeFlag = &cli.StringFlag{
 		Name: "type",
-		Usage: fmt.Sprintf("Event type (%s, %s, %s, %s)",
-			data.EventTypePR, data.EventTypeIssue, data.EventTypePRComment, data.EventTypeIssueComment),
+		Usage: fmt.Sprintf("Event type (%s, %s, %s, %s, %s)",
+			data.EventTypePR, data.EventTypeIssue, data.EventTypePRComment, data.EventTypeIssueComment, data.EventTypeFork),
 		Required: false,
 	}
 

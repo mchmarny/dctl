@@ -20,6 +20,7 @@ const (
 	EventTypePRComment    string = "pr_comment"
 	EventTypeIssue        string = "issue"
 	EventTypeIssueComment string = "issue_comment"
+	EventTypeFork         string = "fork"
 
 	pageSizeDefault = 100
 	importBatchSize = 500
@@ -29,6 +30,7 @@ const (
 
 	sortField        string = "created"
 	sortCommentField string = "updated"
+	sortForkField    string = "newest"
 	sortDirection    string = "desc"
 
 	insertEventSQL = `INSERT INTO event (
@@ -46,6 +48,7 @@ var (
 		EventTypeIssue,
 		EventTypeIssueComment,
 		EventTypePRComment,
+		EventTypeFork,
 	}
 )
 
@@ -125,6 +128,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		imp.importIssueEvents,
 		imp.importIssueCommentEvents,
 		imp.importPRCommentEvents,
+		imp.importForkEvents,
 	}
 
 	if err := imp.loadState(); err != nil {
@@ -512,6 +516,48 @@ func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
 		}
 
 		e.state[EventTypePRComment].Page = opt.ListOptions.Page
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	return nil
+}
+
+func (e *EventImporter) importForkEvents(ctx context.Context) error {
+	log.Debugf("starting fork event import on page %d since %s", e.state[EventTypeFork].Page, e.state[EventTypeFork].Since.Format("2006-01-02"))
+
+	opt := &github.RepositoryListForksOptions{
+		Sort: sortForkField,
+		ListOptions: github.ListOptions{
+			PerPage: pageSizeDefault,
+			Page:    e.state[EventTypeFork].Page,
+		},
+	}
+
+	for {
+		items, resp, err := e.client.Repositories.ListForks(ctx, e.owner, e.repo, opt)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			net.PrintHTTPResponse(resp.Response)
+			return errors.Wrapf(err, "error listing forks, rate: %s", rateInfo(&resp.Rate))
+		}
+		log.Debugf("fork - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
+
+		if len(items) == 0 {
+			break
+		}
+
+		for i := range items {
+			u := items[i].UpdatedAt
+			if err := e.add(*items[i].ID, EventTypeFork, *items[i].HTMLURL, items[i].Owner, &u.Time, parseUsers(nil), nil); err != nil {
+				return errors.Wrapf(err, "error adding fork event: %s/%s", e.owner, e.repo)
+			}
+		}
+
+		e.state[EventTypeFork].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break

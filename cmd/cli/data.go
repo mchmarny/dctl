@@ -191,12 +191,14 @@ func eventSearchHandler(c *gin.Context) {
 		switch eType {
 		case "PR":
 			eType = data.EventTypePR
-		case "PR-Comments":
+		case "PR-Comment":
 			eType = data.EventTypePRComment
-		case "Issues":
+		case "Issue":
 			eType = data.EventTypeIssue
-		case "Issue-Comments":
+		case "Issue-Comment":
 			eType = data.EventTypeIssueComment
+		case "Fork":
+			eType = data.EventTypeFork
 		default:
 			eType = ""
 		}

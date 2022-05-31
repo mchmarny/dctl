@@ -3,8 +3,8 @@ const colors = [
     'rgb(176, 216, 148)',
     'rgb(250, 222, 137)',
     'rgb(253, 186, 187)',
-    'rgb(114, 90, 76)',
     'rgb(177, 148, 87)',
+    'rgb(114, 90, 76)',
     'rgb(137, 137, 250)',
     'rgb(187, 137, 253)',
     'rgb(76, 114, 90)',
@@ -370,29 +370,35 @@ function loadTimeSeriesChart(url, fn) {
                     borderWidth: 1,
                     order: 2
                 }, {
-                    label: 'PR-Comments',
+                    label: 'PR-Comment',
                     data: data.pr_comment,
                     backgroundColor: colors[1],
                     borderWidth: 1,
                     order: 3
                 }, {
-                    label: 'Issues',
+                    label: 'Issue',
                     data: data.issue,
                     backgroundColor: colors[2],
                     borderWidth: 1,
                     order: 4
                 }, {
-                    label: 'Issue-Comments',
+                    label: 'Issue-Comment',
                     data: data.issue_comment,
                     backgroundColor: colors[3],
                     borderWidth: 1,
                     order: 5
                 }, {
+                    label: 'Fork',
+                    data: data.fork,
+                    backgroundColor: colors[4],
+                    borderWidth: 1,
+                    order: 6
+                },{
                     label: 'Mean',
                     type: 'line',
                     fill: false,
                     data: data.avg,
-                    borderColor: colors[4],
+                    borderColor: colors[5],
                     order: 1,
                     borderWidth: 5,
                     showLine: true,
