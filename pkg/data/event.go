@@ -34,11 +34,11 @@ const (
 	sortDirection    string = "desc"
 
 	insertEventSQL = `INSERT INTO event (
-			id, org, repo, username, event_type, event_date, event_url, mention, labels
+			id, org, repo, username, event_type, event_date, event_url, mentions, labels
 		) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
 		ON CONFLICT(id, org, repo, username, event_type, event_date) DO UPDATE SET 
-			event_url = ?, mention = ?, labels = ?
+			event_url = ?, mentions = ?, labels = ?
 	`
 )
 
@@ -60,7 +60,7 @@ type Event struct {
 	Type     string `json:"type,omitempty"`
 	Date     string `json:"date,omitempty"`
 	URL      string `json:"url,omitempty"`
-	Mention  string `json:"mention,omitempty"`
+	Mentions string `json:"mentions,omitempty"`
 	Labels   string `json:"labels,omitempty"`
 }
 
@@ -182,7 +182,7 @@ func (e *EventImporter) qualifyTypeKey(t string) string {
 	return e.owner + "/" + e.repo + "/" + t
 }
 
-func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updated *time.Time, mention []string, labels []*github.Label) error {
+func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updated *time.Time, mentions []string, labels []string) error {
 	item := &Event{
 		ID:       id,
 		Org:      e.owner,
@@ -191,8 +191,8 @@ func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updat
 		Type:     eType,
 		Date:     parseDate(updated),
 		URL:      url,
-		Mention:  strings.Join(unique(mention), ","),
-		Labels:   strings.Join(unique(getLabels(labels)), ","),
+		Mentions: strings.Join(unique(mentions), ","),
+		Labels:   strings.Join(unique(labels), ","),
 	}
 
 	e.mu.Lock()
@@ -289,8 +289,8 @@ func (e *EventImporter) flush() error {
 	}
 
 	for i, e := range events {
-		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date, e.URL, e.Mention, e.Labels,
-			e.URL, e.Mention, e.Labels)
+		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date, e.URL, e.Mentions, e.Labels,
+			e.URL, e.Mentions, e.Labels)
 		if err != nil {
 			rollbackTransaction(tx)
 			return errors.Wrapf(err, "error inserting event[%d]: %s/%s#%d", i, e.Org, e.Repo, e.ID)
@@ -366,11 +366,12 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			mention := parseUsers(items[i].Body)
-			mention = append(mention, getUsernames(items[i].Assignee)...)
-			mention = append(mention, getUsernames(items[i].Assignees...)...)
-			mention = append(mention, getUsernames(items[i].RequestedReviewers...)...)
-			if err := e.add(*items[i].ID, EventTypePR, *items[i].HTMLURL, items[i].User, items[i].CreatedAt, mention, items[i].Labels); err != nil {
+			mentions := parseUsers(items[i].Body)
+			mentions = append(mentions, getUsernames(items[i].Assignee)...)
+			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
+			mentions = append(mentions, getUsernames(items[i].RequestedReviewers...)...)
+			if err := e.add(*items[i].ID, EventTypePR, *items[i].HTMLURL, items[i].User,
+				items[i].CreatedAt, mentions, getLabels(items[i].Labels)); err != nil {
 				return errors.Wrapf(err, "error adding pr event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -414,10 +415,11 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			mention := parseUsers(items[i].Body)
-			mention = append(mention, getUsernames(items[i].Assignee)...)
-			mention = append(mention, getUsernames(items[i].Assignees...)...)
-			if err := e.add(*items[i].ID, EventTypeIssue, *items[i].HTMLURL, items[i].User, items[i].CreatedAt, mention, items[i].Labels); err != nil {
+			mentions := parseUsers(items[i].Body)
+			mentions = append(mentions, getUsernames(items[i].Assignee)...)
+			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
+			if err := e.add(*items[i].ID, EventTypeIssue, *items[i].HTMLURL, items[i].User,
+				items[i].CreatedAt, mentions, getLabels(items[i].Labels)); err != nil {
 				return errors.Wrapf(err, "error adding issue event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -552,7 +554,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 
 		for i := range items {
 			u := items[i].UpdatedAt
-			if err := e.add(*items[i].ID, EventTypeFork, *items[i].HTMLURL, items[i].Owner, &u.Time, parseUsers(nil), nil); err != nil {
+			if err := e.add(*items[i].ID, EventTypeFork, *items[i].HTMLURL, items[i].Owner, &u.Time, nil, items[i].Topics); err != nil {
 				return errors.Wrapf(err, "error adding fork event: %s/%s", e.owner, e.repo)
 			}
 		}

@@ -50,7 +50,7 @@ const (
 			e.event_date,
 			e.event_type,
 			e.event_url,
-			e.mention,
+			e.mentions,
 			e.labels,
 			d.id as dev_id,
 			d.update_date,
@@ -69,7 +69,7 @@ const (
 		AND e.org = COALESCE(?, e.org)
 		AND e.repo = COALESCE(?, e.repo)
 		AND e.username = COALESCE(?, e.username)
-		AND e.mention LIKE COALESCE(?, e.mention)
+		AND e.mentions LIKE COALESCE(?, e.mentions)
 		AND e.labels LIKE COALESCE(?, e.labels)
 		AND d.entity = COALESCE(?, d.entity)
 		ORDER BY 1 DESC, 2, 3
@@ -94,7 +94,7 @@ type EventDetails struct {
 	EventDate  string `json:"event_date,omitempty"`
 	EventType  string `json:"event_type,omitempty"`
 	EventURL   string `json:"event_url,omitempty"`
-	Mention    string `json:"event_mention,omitempty"`
+	Mentions   string `json:"event_mentions,omitempty"`
 	Labels     string `json:"event_labels,omitempty"`
 	DevID      int64  `json:"dev_id,omitempty"`
 	Updated    string `json:"dev_update_date,omitempty"`
@@ -158,8 +158,8 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 
 	for rows.Next() {
 		e := &EventDetails{}
-		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL, &e.Mention, &e.Labels,
-			&e.DevID, &e.Updated, &e.Username, &e.Email, &e.FullName, &e.AvatarURL, &e.ProfileURL,
+		if err := rows.Scan(&e.EventID, &e.Org, &e.Repo, &e.EventDate, &e.EventType, &e.EventURL, &e.Mentions,
+			&e.Labels, &e.DevID, &e.Updated, &e.Username, &e.Email, &e.FullName, &e.AvatarURL, &e.ProfileURL,
 			&e.Entity, &e.Location); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")
 		}

@@ -170,7 +170,7 @@ dctl query events --org knative --repo serving --since 2022-01-01 --type pr --me
     "event_date": "2022-02-25",
     "event_type": "pr",
     "event_url": "https://github.com/knative/serving/pull/12668",
-    "event_mention": "julz,mattmoor",
+    "event_mentions": "julz,mattmoor",
     "event_labels": "area/api,size/m,lgtm,approved",
     "dev_id": 18562,
     "dev_update_date": "2022-05-30",
@@ -230,7 +230,7 @@ The two main tables in `dctl` schema are `developer` and `event`:
 | event_type | `TEXT`    | `false`    |
 | event_date | `TEXT`    | `false`    |
 | event_url  | `TEXT`    | `false`    |
-| mention    | `TEXT`    | `false`    |
+| mentions    | `TEXT`    | `false`    |
 | labels     | `TEXT`    | `false`    |
 
 
