@@ -17,7 +17,7 @@ import (
 const (
 	// EventTypes is a list of event types to import
 	EventTypePR           string = "pr"
-	EventTypePRComment    string = "pr_comment"
+	EventTypePRReview     string = "pr_review"
 	EventTypeIssue        string = "issue"
 	EventTypeIssueComment string = "issue_comment"
 	EventTypeFork         string = "fork"
@@ -34,26 +34,25 @@ const (
 	sortDirection    string = "desc"
 
 	insertEventSQL = `INSERT INTO event (
-			id, org, repo, username, event_type, event_date, event_url, mentions, labels
+			org, repo, username, type, date, url, mentions, labels
 		) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
-		ON CONFLICT(id, org, repo, username, event_type, event_date) DO UPDATE SET 
-			event_url = ?, mentions = ?, labels = ?
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+		ON CONFLICT(org, repo, username, type, date) DO UPDATE SET 
+			url = ?, mentions = ?, labels = ?
 	`
 )
 
 var (
-	event_types = []string{
+	EventTypes = []string{
 		EventTypePR,
 		EventTypeIssue,
 		EventTypeIssueComment,
-		EventTypePRComment,
+		EventTypePRReview,
 		EventTypeFork,
 	}
 )
 
 type Event struct {
-	ID       int64  `json:"id,omitempty"`
 	Org      string `json:"org,omitempty"`
 	Repo     string `json:"repo,omitempty"`
 	Username string `json:"username,omitempty"`
@@ -125,9 +124,9 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 
 	importers := []importer{
 		imp.importPREvents,
+		imp.importPRReviewEvents,
 		imp.importIssueEvents,
 		imp.importIssueCommentEvents,
-		imp.importPRCommentEvents,
 		imp.importForkEvents,
 	}
 
@@ -182,12 +181,11 @@ func (e *EventImporter) qualifyTypeKey(t string) string {
 	return e.owner + "/" + e.repo + "/" + t
 }
 
-func (e *EventImporter) add(id int64, eType, url string, usr *github.User, updated *time.Time, mentions []string, labels []string) error {
+func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.Time, mentions []string, labels []string) error {
 	item := &Event{
-		ID:       id,
 		Org:      e.owner,
 		Repo:     e.repo,
-		Username: trim(usr.Login),
+		Username: usr.GetLogin(),
 		Type:     eType,
 		Date:     parseDate(updated),
 		URL:      url,
@@ -216,7 +214,7 @@ func (e *EventImporter) loadState() error {
 	}
 	defer db.Close()
 
-	for _, t := range event_types {
+	for _, t := range EventTypes {
 		state, err := GetState(db, t, e.owner, e.repo, e.minEventTime)
 		if err != nil {
 			return errors.Wrapf(err, "error getting last page: %s/%s - %s", e.owner, e.repo, t)
@@ -281,19 +279,19 @@ func (e *EventImporter) flush() error {
 
 	for i, u := range devs {
 		if _, err = tx.Stmt(devStmt).Exec(u.Username,
-			u.Updated, u.ID, u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Location,
-			u.Updated, u.ID, u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Location); err != nil {
+			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
+			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
 			rollbackTransaction(tx)
 			return errors.Wrapf(err, "error inserting developer[%d]: %s", i, u.Username)
 		}
 	}
 
 	for i, e := range events {
-		_, err = tx.Stmt(eventStmt).Exec(e.ID, e.Org, e.Repo, e.Username, e.Type, e.Date, e.URL, e.Mentions, e.Labels,
-			e.URL, e.Mentions, e.Labels)
+		_, err = tx.Stmt(eventStmt).Exec(e.Org, e.Repo, e.Username, e.Type, e.Date,
+			e.URL, e.Mentions, e.Labels, e.URL, e.Mentions, e.Labels)
 		if err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting event[%d]: %s/%s#%d", i, e.Org, e.Repo, e.ID)
+			return errors.Wrapf(err, "error inserting event[%d]: %s/%s", i, e.Org, e.Repo)
 		}
 	}
 
@@ -370,8 +368,8 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			mentions = append(mentions, getUsernames(items[i].Assignee)...)
 			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
 			mentions = append(mentions, getUsernames(items[i].RequestedReviewers...)...)
-			if err := e.add(*items[i].ID, EventTypePR, *items[i].HTMLURL, items[i].User,
-				items[i].CreatedAt, mentions, getLabels(items[i].Labels)); err != nil {
+			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, mentions,
+				getLabels(items[i].Labels)); err != nil {
 				return errors.Wrapf(err, "error adding pr event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -418,8 +416,8 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			mentions := parseUsers(items[i].Body)
 			mentions = append(mentions, getUsernames(items[i].Assignee)...)
 			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
-			if err := e.add(*items[i].ID, EventTypeIssue, *items[i].HTMLURL, items[i].User,
-				items[i].CreatedAt, mentions, getLabels(items[i].Labels)); err != nil {
+			if err := e.add(EventTypeIssue, *items[i].HTMLURL, items[i].User,
+				items[i].UpdatedAt, mentions, getLabels(items[i].Labels)); err != nil {
 				return errors.Wrapf(err, "error adding issue event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -469,7 +467,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
+			if err := e.add(EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
 				return errors.Wrapf(err, "error adding issue comment event: %s/%s", e.owner, e.repo)
 			}
 		}
@@ -486,16 +484,16 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	return nil
 }
 
-func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
-	log.Debugf("starting pr comment event import on page %d since %s", e.state[EventTypePRComment].Page, e.state[EventTypePRComment].Since.Format("2006-01-02"))
+func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
+	log.Debugf("starting pr comment event import on page %d since %s", e.state[EventTypePRReview].Page, e.state[EventTypePRReview].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListCommentsOptions{
 		Sort:      sortField,
 		Direction: sortCommentField,
-		Since:     e.state[EventTypePRComment].Since,
+		Since:     e.state[EventTypePRReview].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypePRComment].Page,
+			Page:    e.state[EventTypePRReview].Page,
 		},
 	}
 
@@ -512,12 +510,12 @@ func (e *EventImporter) importPRCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(*items[i].ID, EventTypePRComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
+			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
 				return errors.Wrapf(err, "error adding PR comment event: %s/%s", e.owner, e.repo)
 			}
 		}
 
-		e.state[EventTypePRComment].Page = opt.ListOptions.Page
+		e.state[EventTypePRReview].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -553,8 +551,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			u := items[i].UpdatedAt
-			if err := e.add(*items[i].ID, EventTypeFork, *items[i].HTMLURL, items[i].Owner, &u.Time, nil, items[i].Topics); err != nil {
+			if err := e.add(EventTypeFork, *items[i].HTMLURL, items[i].Owner, &items[i].UpdatedAt.Time, nil, items[i].Topics); err != nil {
 				return errors.Wrapf(err, "error adding fork event: %s/%s", e.owner, e.repo)
 			}
 		}

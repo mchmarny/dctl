@@ -31,7 +31,7 @@ var (
 	}
 
 	subTypeFlag = &cli.StringFlag{
-		Name:  "sub",
+		Name:  "type",
 		Usage: fmt.Sprintf("Substitution type [%s]", strings.Join(data.UpdatableProperties, ",")),
 	}
 
@@ -72,7 +72,7 @@ var (
 			{
 				Name:    "substitutions",
 				Aliases: []string{"s"},
-				Usage:   "Create a global data substitutions (e.g. standardize location or entity name)",
+				Usage:   "Create a global data substitutions (e.g. standardize entity name)",
 				Action:  cmdSubstitutes,
 				Flags: []cli.Flag{
 					subTypeFlag,

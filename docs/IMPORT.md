@@ -4,7 +4,7 @@ The following data import operations are currently supported:
 
 * `events` - Imports GitHub repo event data (PRs, comments, issues, etc)
 * `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
-* `substitutions` - Create a global data substitute (e.g. standardize location or entity name)
+* `substitutions` - Create a global data substitute (e.g. standardize entity name)
 * `updates` - Update all previously imported org, repos, and affiliations 
 
 The `dctl` CLI comes with an embedded [sqlite](https://www.sqlite.org/index.html) database. All imported data is persisted locally so all your queries are fast and subsequent imports only download the new data. 
@@ -31,7 +31,7 @@ When completed, `dctl` will return a summary of the import:
     "knative/serving/issue": 5,
     "knative/serving/issue_comment": 2,
     "knative/serving/pr": 100,
-    "knative/serving/pr_comment": 79
+    "knative/serving/pr_review": 79
   },
   "duration": "4.794015292s"
 }
@@ -80,10 +80,10 @@ Just like before, to get a more immediate feedback during import use the --debug
 
 ## Standardize imported data using substitutions
 
-To  Standardize imported data (e.g. standardize location or entity name) you can use the substitute operation to create global data substitutions. For example, to replace all instances of `INTERNATIONAL BUSINESS MACHINES` with `IBM` you would execute the following operation: 
+To  Standardize imported data (e.g. standardize entity name) you can use the substitute operation to create global data substitutions. For example, to replace all instances of `INTERNATIONAL BUSINESS MACHINES` with `IBM` you would execute the following operation: 
 
 ```shell
-dctl import substitutions --sub entity --old "INTERNATIONAL BUSINESS MACHINES" --new IBM
+dctl import substitutions --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new IBM
 ```
 
 > Note, these substitutions will be applied to the already imported data as well as saved and apply after each new import and update operation.
@@ -92,10 +92,10 @@ The response will look something like this:
 
 ```json
 {
-  "prop":"entity",
-  "old":"INTERNATIONAL BUSINESS MACHINES",
-  "new":"IBM",
-  "rows":0
+  "prop": "entity",
+  "old": "INTERNATIONAL BUSINESS MACHINES",
+  "new": "IBM",
+  "rows": 0
 }
 ```
 
@@ -119,7 +119,7 @@ The response will look something like this:
     "knative/serving/issue": 11,
     "knative/serving/issue_comment": 38,
     "knative/serving/pr": 100,
-    "knative/serving/pr_comment": 83,
+    "knative/serving/pr_review": 83,
     ...
   },
   "updated": {

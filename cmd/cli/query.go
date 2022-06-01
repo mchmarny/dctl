@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mchmarny/dctl/pkg/data"
 	"github.com/mchmarny/dctl/pkg/net"
@@ -60,10 +61,15 @@ var (
 		Required: false,
 	}
 
+	eventEntityFlag = &cli.StringFlag{
+		Name:     "entity",
+		Usage:    "Event entity (company name or affiliated organization)",
+		Required: false,
+	}
+
 	eventTypeFlag = &cli.StringFlag{
-		Name: "type",
-		Usage: fmt.Sprintf("Event type (%s, %s, %s, %s, %s)",
-			data.EventTypePR, data.EventTypeIssue, data.EventTypePRComment, data.EventTypeIssueComment, data.EventTypeFork),
+		Name:     "type",
+		Usage:    fmt.Sprintf("Event type (%s)", strings.Join(data.EventTypes, ", ")),
 		Required: false,
 	}
 
@@ -162,6 +168,7 @@ var (
 					eventTypeFlag,
 					eventSinceFlag,
 					eventAuthorFlag,
+					eventEntityFlag,
 					eventMentionFlag,
 					eventLabelFlag,
 					queryLimitFlag,
@@ -208,6 +215,7 @@ func cmdQueryEvents(c *cli.Context) error {
 	org := c.String(orgNameFlag.Name)
 	repo := c.String(repoNameFlag.Name)
 	author := c.String(eventAuthorFlag.Name)
+	entity := c.String(eventEntityFlag.Name)
 	since := c.String(eventSinceFlag.Name)
 	etype := c.String(eventTypeFlag.Name)
 	mention := c.String(eventMentionFlag.Name)
@@ -222,6 +230,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		"org":     org,
 		"repo":    repo,
 		"author":  author,
+		"entity":  entity,
 		"since":   since,
 		"type":    etype,
 		"limit":   limit,
@@ -230,14 +239,15 @@ func cmdQueryEvents(c *cli.Context) error {
 	}).Debug("query events")
 
 	q := &data.EventSearchCriteria{
-		Org:       optional(org),
-		Repo:      optional(repo),
-		Username:  optional(author),
-		EventType: optional(etype),
-		FromDate:  optional(since),
-		Mention:   optional(mention),
-		Label:     optional(label),
-		PageSize:  limit,
+		Org:      optional(org),
+		Repo:     optional(repo),
+		Username: optional(author),
+		Entity:   optional(entity),
+		Type:     optional(etype),
+		FromDate: optional(since),
+		Mention:  optional(mention),
+		Label:    optional(label),
+		PageSize: limit,
 	}
 
 	db := getDBOrFail()
@@ -265,11 +275,6 @@ func cmdQueryEntities(c *cli.Context) error {
 	if limit == 0 || limit > queryResultLimitDefault {
 		limit = queryResultLimitDefault
 	}
-
-	log.WithFields(log.Fields{
-		"val":   val,
-		"limit": limit,
-	}).Debug("query developers")
 
 	db := getDBOrFail()
 	defer db.Close()
@@ -336,11 +341,6 @@ func cmdQueryDevelopers(c *cli.Context) error {
 	if limit == 0 || limit > queryResultLimitDefault {
 		limit = queryResultLimitDefault
 	}
-
-	log.WithFields(log.Fields{
-		"val":   val,
-		"limit": limit,
-	}).Debug("query developer")
 
 	db := getDBOrFail()
 	defer db.Close()

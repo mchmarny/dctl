@@ -20,30 +20,19 @@ var (
 func mapUserToDeveloper(u *github.User) *Developer {
 	return &Developer{
 		Username:   trim(u.Login),
-		Updated:    toDate(u.UpdatedAt),
-		ID:         *u.ID,
 		FullName:   trim(u.Name),
 		Email:      trim(u.Email),
 		AvatarURL:  trim(u.AvatarURL),
 		ProfileURL: trim(u.HTMLURL),
 		Entity:     trim(u.Company),
-		Location:   trim(u.Location),
 	}
 }
 
 func mapGitHubUserToDeveloperListItem(u *github.User) *DeveloperListItem {
 	return &DeveloperListItem{
-		Username:    trim(u.Login),
-		Entity:      trim(u.Company),
-		UpdatedDate: toDate(u.UpdatedAt),
+		Username: trim(u.Login),
+		Entity:   trim(u.Company),
 	}
-}
-
-func toDate(t *github.Timestamp) string {
-	if t == nil {
-		return time.Now().UTC().Format("2006-01-02")
-	}
-	return t.Time.Format("2006-01-02")
 }
 
 func trim(s *string) string {

@@ -34,8 +34,7 @@ The response will look something like this:
 [
   {
     "username": "mchmarny",
-    "entity": "GOOGLE",
-    "update_date": "2022-05-30"
+    "entity": "GOOGLE"
   },
   ...    
 ]
@@ -52,14 +51,11 @@ dctl query developer detail --name mchmarny
 ```json
 {
   "username": "mchmarny",
-  "update_date": "2022-05-30",
-  "id": 175854,
   "full_name": "Mark Chmarny",
   "email": "mark@chmarny.com",
   "avatar_url": "https://avatars.githubusercontent.com/u/175854?v=4",
   "profile_url": "https://github.com/mchmarny",
   "current_entity": "GOOGLE",
-  "location": "Portland, OR",
   "organizations": [
     {
       "url": "https://api.github.com/orgs/knative",
@@ -111,8 +107,7 @@ dctl query entity detail --name GOOGLE
     "developers": [
         {
             "username": "mchmarny",
-            "entity": "GOOGLE",
-            "update_date": "2022-05-14"
+            "entity": "GOOGLE"
         },
         ...
     ]
@@ -148,7 +143,7 @@ Query events provides a number of filter options:
 
 * `org` - Name of the GitHub organization or user
 * `repo` - Name of the GitHub repository
-* `type` - Event type (pr, issue, pr_comment, issue_comment)
+* `type` - Event type (pr, pr_review, issue, issue_comment, fork)
 * `author` - Event author (GitHub username)
 * `since` - Event since date (YYYY-MM-DD)
 * `label` - GitHub label (like query on issues and PRs)
@@ -164,22 +159,22 @@ dctl query events --org knative --repo serving --since 2022-01-01 --type pr --me
 ```json
 [
   {
-    "event_id": 863026555,
-    "event_org": "knative",
-    "event_repo": "serving",
-    "event_date": "2022-02-25",
-    "event_type": "pr",
-    "event_url": "https://github.com/knative/serving/pull/12668",
-    "event_mentions": "julz,mattmoor",
-    "event_labels": "area/api,size/m,lgtm,approved",
-    "dev_id": 18562,
-    "dev_update_date": "2022-05-30",
-    "dev_username": "dprotaso",
-    "dev_full_name": "Dave Protasowski",
-    "dev_avatar_url": "https://avatars.githubusercontent.com/u/18562?v=4",
-    "dev_profile_url": "https://github.com/dprotaso",
-    "dev_entity": "VMWARE",
-    "dev_location": "Toronto ON"
+    "event": {
+      "org": "knative",
+      "repo": "serving",
+      "date": "2022-02-25",
+      "type": "pr",
+      "url": "https://github.com/knative/serving/pull/12668",
+      "mentions": "julz,mattmoor",
+      "labels": "area/api,size/m,lgtm,approved",
+    },
+    "developer": {
+      "username": "dprotaso",
+      "full_name": "Dave Protasowski",
+      "avatar": "https://avatars.githubusercontent.com/u/18562?v=4",
+      "url": "https://github.com/dprotaso",
+      "entity": "VMWARE",
+    }
   },  
   ...
 ]
@@ -210,27 +205,23 @@ The two main tables in `dctl` schema are `developer` and `event`:
 | `Columns`     | `Type`    | `Nullable` |
 | ------------- | --------- | ---------- |
 | username      | `TEXT`    | `false`    |
-| update_date   | `TEXT`    | `false`    |
-| id            | `INTEGER` | `false`    |
 | full_name     | `TEXT`    | `true`     |
 | email         | `TEXT`    | `true`     |
 | avatar_url    | `TEXT`    | `true`     |
 | profile_url   | `TEXT`    | `true`     |
 | entity        | `TEXT`    | `true`     |
-| location      | `TEXT`    | `true`     |
 
-#### Table: `event` (PK: `id`, `org`, `repo`, `username`, `event_type`, `event_date`)
+#### Table: `event` (PK: `org`, `repo`, `username`, `type`, `date`)
 
 | `Columns`  | `Type`    | `Nullable` |
 | ---------- | --------- | ---------- |
-| id         | `INTEGER` | `false`    |
 | org        | `TEXT`    | `false`    |
 | repo       | `TEXT`    | `false`    |
 | username   | `TEXT`    | `false`    |
-| event_type | `TEXT`    | `false`    |
-| event_date | `TEXT`    | `false`    |
-| event_url  | `TEXT`    | `false`    |
-| mentions    | `TEXT`    | `false`    |
+| type       | `TEXT`    | `false`    |
+| date       | `TEXT`    | `false`    |
+| url        | `TEXT`    | `false`    |
+| mentions   | `TEXT`    | `false`    |
 | labels     | `TEXT`    | `false`    |
 
 

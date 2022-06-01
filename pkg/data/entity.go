@@ -12,7 +12,7 @@ import (
 const (
 	queryEntitySQL = `SELECT 
 			entity,  
-			COUNT(DISTINCT username) as developers  
+			COUNT(*) as developers  
 		FROM developer
 		WHERE entity LIKE ?  
 		GROUP BY 
@@ -23,14 +23,13 @@ const (
 
 	selectEntityDevelopersSQL = `SELECT 
 			username,
-			COALESCE(entity, '') AS entity,
-			update_date 
+			COALESCE(entity, '') AS entity
 		FROM developer 
 		WHERE entity = ? 
 		ORDER BY 1
 	`
 
-	selectEntityLike = `SELECT d.entity, COUNT(DISTINCT e.id) as event_count  
+	selectEntityLike = `SELECT d.entity, COUNT(*) as event_count  
 		FROM developer d
 		JOIN event e ON d.username = e.username 
 		WHERE d.entity like ?

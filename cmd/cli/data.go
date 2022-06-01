@@ -131,8 +131,7 @@ func eventDataHandler(c *gin.Context) {
 	repo := c.Query("r")
 	entity := c.Query("e")
 
-	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')",
-		org, repo, entity, months)
+	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')", org, repo, entity, months)
 
 	if orgStr, repoStr, ok := parseRepo(&repo); ok {
 		org = *orgStr
@@ -186,13 +185,13 @@ func eventSearchHandler(c *gin.Context) {
 
 	// hack to reverse the chart label formatting
 	// TODO: fix this in the frontend
-	if q.EventType != nil {
-		eType := *q.EventType
+	if q.Type != nil {
+		eType := *q.Type
 		switch eType {
 		case "PR":
 			eType = data.EventTypePR
-		case "PR-Comment":
-			eType = data.EventTypePRComment
+		case "PR-Review":
+			eType = data.EventTypePRReview
 		case "Issue":
 			eType = data.EventTypeIssue
 		case "Issue-Comment":
@@ -203,7 +202,7 @@ func eventSearchHandler(c *gin.Context) {
 			eType = ""
 		}
 		if eType != "" {
-			q.EventType = &eType
+			q.Type = &eType
 		}
 	}
 

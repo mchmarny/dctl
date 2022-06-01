@@ -17,11 +17,11 @@ const colors = [
     'rgb(76, 100, 114)'
 ];
 
-const searchCriteriaView = ["from", "to", "event_type", "org", "repo", "entity", "user"];
+const searchCriteriaView = ["from", "to", "type", "org", "repo", "entity", "user"];
 const searchCriteria = {
     "from": null,
     "to": null,
-    "event_type": null,
+    "type": null,
     "org": null,
     "repo": null,
     "user": null,
@@ -226,7 +226,7 @@ function onTimeSeriesChartSelect(label, val) {
     searchCriteria.from = label + "-01";
     searchCriteria.to = label + "-31";
     if (val != "Mean") {
-        searchCriteria.event_type = val;
+        searchCriteria.type = val;
     }
     submitSearch();
 }
@@ -281,14 +281,14 @@ function displaySearchResults(table, data) {
     }
     $.each(data, function (key, item) {
         $("<tr>")
-            .append(`<td>${item.event_date}</td>`)
-            .append(`<td><a href="https://github.com/${item.event_org}/${item.event_repo}" class="link" 
-                target="_blank">${item.event_org}/${item.event_repo}</a></td>`)
-            .append(`<td><a href="${item.event_url}" class="link" 
-                target="_blank">${item.event_type}</a></td>`)
-            .append(`<td><a href="https://github.com/${item.dev_username}" class="link" 
-                target="_blank">${item.dev_username}</a> ${parseOptional(item.dev_full_name, " - ")}</td>`)
-            .append(`<td>${parseOptional(item.dev_entity)}</td>`)
+            .append(`<td>${item.event.date}</td>`)
+            .append(`<td><a href="https://github.com/${item.event.org}/${item.event.repo}" class="link" 
+                target="_blank">${item.event.org}/${item.event.repo}</a></td>`)
+            .append(`<td><a href="${item.event.url}" class="link" 
+                target="_blank">${item.event.type}</a></td>`)
+            .append(`<td><a href="https://github.com/${item.developer.username}" class="link" 
+                target="_blank">${item.developer.username}</a> ${parseOptional(item.developer.full_name, " - ")}</td>`)
+            .append(`<td>${parseOptional(item.developer.entity)}</td>`)
             .appendTo(table);
     });
     $(".init-hide").show();
@@ -370,8 +370,8 @@ function loadTimeSeriesChart(url, fn) {
                     borderWidth: 1,
                     order: 2
                 }, {
-                    label: 'PR-Comment',
-                    data: data.pr_comment,
+                    label: 'PR-Review',
+                    data: data.pr_review,
                     backgroundColor: colors[1],
                     borderWidth: 1,
                     order: 3

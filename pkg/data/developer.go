@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -14,37 +13,28 @@ import (
 const (
 	insertDeveloperSQL = `INSERT INTO developer (
 			username,
-			update_date,
-			id,
 			full_name,
 			email,
-			avatar_url,
-			profile_url,
-			entity,
-			location
+			avatar,
+			url,
+			entity
 		) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
+		VALUES (?, ?, ?, ?, ?, ?) 
 		ON CONFLICT(username) DO UPDATE SET 
-			update_date = ?,
-			id = ?,
 			full_name = ?,
 			email = ?,
-			avatar_url = ?,
-			profile_url = ?,
-			entity = ?,
-			location = ?
+			avatar = ?,
+			url = ?,
+			entity = ?
 	`
 
 	selectDeveloperSQL = `SELECT
 			username,
-			update_date,
-			id,
 			full_name,
 			email,
-			avatar_url,
-			profile_url,
-			entity,
-			location
+			avatar,
+			url,
+			entity
 		FROM developer
 		WHERE username = ?
 	`
@@ -59,8 +49,7 @@ const (
 
 	queryDeveloperSQL = `SELECT 
 			username,
-			COALESCE(entity, '') AS entity,
-			update_date
+			COALESCE(entity, '') AS entity
 		FROM developer
 		WHERE username LIKE ? 
 		OR email LIKE ? 
@@ -75,21 +64,17 @@ const (
 
 type Developer struct {
 	Username      string `json:"username,omitempty"`
-	Updated       string `json:"update_date,omitempty"`
-	ID            int64  `json:"id,omitempty"`
 	FullName      string `json:"full_name,omitempty"`
 	Email         string `json:"email,omitempty"`
-	AvatarURL     string `json:"avatar_url,omitempty"`
-	ProfileURL    string `json:"profile_url,omitempty"`
-	Entity        string `json:"current_entity,omitempty"`
-	Location      string `json:"location,omitempty"`
+	AvatarURL     string `json:"avatar,omitempty"`
+	ProfileURL    string `json:"url,omitempty"`
+	Entity        string `json:"entity,omitempty"`
 	Organizations []*Org `json:"organizations,omitempty"`
 }
 
 type DeveloperListItem struct {
-	Username    string `json:"username,omitempty"`
-	Entity      string `json:"entity,omitempty"`
-	UpdatedDate string `json:"update_date,omitempty"`
+	Username string `json:"username,omitempty"`
+	Entity   string `json:"entity,omitempty"`
 }
 
 func GetDeveloperUsernames(db *sql.DB) ([]string, error) {
@@ -150,18 +135,15 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 
 	for i, u := range devs {
 		if _, err = tx.Stmt(userStmt).Exec(u.Username,
-			u.Updated, u.ID, u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Location,
-			u.Updated, u.ID, u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Location); err != nil {
+			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
+			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
 			log.WithFields(log.Fields{
 				"user":    u.Username,
-				"updated": u.Updated,
-				"id":      u.ID,
 				"name":    u.FullName,
 				"email":   u.Email,
 				"avatar":  u.AvatarURL,
 				"profile": u.ProfileURL,
 				"entity":  u.Entity,
-				"loc":     u.Location,
 			}).Errorf("failed to insert developer[%d]: %v", i, err)
 			rollbackTransaction(tx)
 			return errors.Wrapf(err, "error inserting developer[%d]: %s", i, u.Username)
@@ -204,9 +186,6 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 
 	printDevDeltas(dbDev, ghDev, cDev)
 
-	// update the date
-	dbDev.Updated = time.Now().UTC().Format("2006-01-02")
-
 	// always update from GH first (in case they changed their name)
 	if ghDev.Email != "" {
 		dbDev.Email = ghDev.Email
@@ -217,7 +196,7 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 	}
 
 	if ghDev.AvatarURL != "" {
-		dbDev.Location = ghDev.Location
+		dbDev.AvatarURL = ghDev.AvatarURL
 	}
 
 	dbDev.Entity = cleanEntityName(ghDev.Entity)
@@ -261,8 +240,7 @@ func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 	row := stmt.QueryRow(username)
 
 	u := &Developer{}
-	if err = row.Scan(&u.Username, &u.Updated, &u.ID, &u.FullName,
-		&u.Email, &u.AvatarURL, &u.ProfileURL, &u.Entity, &u.Location); err != nil {
+	if err = row.Scan(&u.Username, &u.FullName, &u.Email, &u.AvatarURL, &u.ProfileURL, &u.Entity); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -276,7 +254,7 @@ func mapDeveloperListItem(rows *sql.Rows) ([]*DeveloperListItem, error) {
 	list := make([]*DeveloperListItem, 0)
 	for rows.Next() {
 		u := &DeveloperListItem{}
-		if err := rows.Scan(&u.Username, &u.Entity, &u.UpdatedDate); err != nil {
+		if err := rows.Scan(&u.Username, &u.Entity); err != nil {
 			if err == sql.ErrNoRows {
 				return list, nil
 			}

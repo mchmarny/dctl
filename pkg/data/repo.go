@@ -8,11 +8,10 @@ import (
 
 	"github.com/google/go-github/v45/github"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
-	selectRepoLike = `SELECT org, repo, COUNT(DISTINCT id) as event_count  
+	selectRepoLike = `SELECT org, repo, COUNT(*) as event_count  
 		FROM event 
 		WHERE repo like ?
 		GROUP BY org, repo
@@ -104,17 +103,10 @@ func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*Repo,
 	}
 
 	opt := &github.RepositoryListOptions{}
-	items, resp, err := github.NewClient(client).Repositories.List(ctx, org, opt)
+	items, _, err := github.NewClient(client).Repositories.List(ctx, org, opt)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to list repositories for: %s", org)
 	}
-
-	log.WithFields(log.Fields{
-		"org":         org,
-		"status":      resp.Status,
-		"status_code": resp.StatusCode,
-		"count":       len(items),
-	}).Debug("list repositories")
 
 	list := make([]*Repo, 0)
 	for _, r := range items {

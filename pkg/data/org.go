@@ -20,11 +20,11 @@ const (
 		FROM (  
 			SELECT 
 				d.entity,
-				COUNT(distinct e.id) as events
+				COUNT(*) as events
 			FROM developer d
 			JOIN event e ON d.username = e.username
 			WHERE (d.entity <> '' OR d.entity is null) 
-			AND e.event_date >= ?
+			AND e.date >= ?
 			AND d.entity = COALESCE(?, d.entity)
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
@@ -40,10 +40,10 @@ const (
 		FROM (  
 			SELECT 
 				d.username,
-				COUNT(distinct e.id) as events
+				COUNT(*) as events
 			FROM developer d
 			JOIN event e ON d.username = e.username
-			WHERE e.event_date >= ?
+			WHERE e.date >= ?
 			AND d.entity = COALESCE(?, d.entity)
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
@@ -53,7 +53,7 @@ const (
 		ORDER BY 2 DESC 
 	`
 
-	selectOrgLike = `SELECT org, COUNT(DISTINCT repo) as repo_count, COUNT(DISTINCT id) as event_count  
+	selectOrgLike = `SELECT org, COUNT(DISTINCT repo) as repo_count, COUNT(*) as event_count  
 		FROM event 
 		WHERE org like ?
 		GROUP BY org
@@ -213,16 +213,7 @@ func GetUserOrgs(ctx context.Context, client *http.Client, username string, limi
 		opt.PerPage = limit
 	}
 
-	items, resp, err := github.NewClient(client).Organizations.List(ctx, username, opt)
-
-	log.WithFields(log.Fields{
-		"username":    username,
-		"status":      resp.Status,
-		"status_code": resp.StatusCode,
-		"count":       len(items),
-		"limit":       opt.PerPage,
-	}).Debug("got repositories")
-
+	items, _, err := github.NewClient(client).Organizations.List(ctx, username, opt)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to list repositories for: %s", username)
 	}

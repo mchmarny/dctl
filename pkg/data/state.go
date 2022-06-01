@@ -9,11 +9,11 @@ import (
 
 var (
 	stateQueries = map[string]string{
-		"developer":  "SELECT COUNT(*) FROM developer",
-		"identity":   "SELECT COUNT(*) FROM identity",
-		"entity":     "SELECT COUNT(*) FROM entity",
-		"event":      "SELECT COUNT(*) FROM event",
-		"event_type": "SELECT COUNT(DISTINCT event_type) FROM event",
+		"developer": "SELECT COUNT(*) FROM developer",
+		"identity":  "SELECT COUNT(*) FROM identity",
+		"entity":    "SELECT COUNT(*) FROM entity",
+		"event":     "SELECT COUNT(*) FROM event",
+		"type":      "SELECT COUNT(DISTINCT type) FROM event",
 	}
 
 	insertState = `INSERT INTO state (query, org, repo, page, since) VALUES (?, ?, ?, ?, ?)

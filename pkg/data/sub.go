@@ -17,7 +17,7 @@ const (
 
 var (
 	UpdatableProperties = []string{
-		"entity", "location",
+		"entity",
 	}
 
 	entityNoise = map[string]bool{
