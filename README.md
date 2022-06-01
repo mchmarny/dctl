@@ -2,7 +2,7 @@
 
 `dctl` is an open source project aiming to provide a quick insight into the activity of a single repo or an entire GitHub organization. Some of the questions it can help you answer:
             
-* Volume of collaboration events over time (PR, issue, and their comments)
+* Volume of collaboration events over time (forks, PRs, PR reviews, issue, and issue comments)
 * Number of developers and their entity affiliation per period (company or organization)
 
 > The list of additional insight being worked on is available [here](https://github.com/mchmarny/dctl/issues?q=is%3Aissue+is%3Aopen+label%3Ainsight)
