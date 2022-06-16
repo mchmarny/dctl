@@ -19,19 +19,20 @@ var (
 
 func mapUserToDeveloper(u *github.User) *Developer {
 	return &Developer{
-		Username:   trim(u.Login),
-		FullName:   trim(u.Name),
-		Email:      trim(u.Email),
-		AvatarURL:  trim(u.AvatarURL),
-		ProfileURL: trim(u.HTMLURL),
-		Entity:     trim(u.Company),
+		Username:   u.GetLogin(),
+		ID:         u.GetID(),
+		FullName:   u.GetName(),
+		Email:      u.GetEmail(),
+		AvatarURL:  u.GetAvatarURL(),
+		ProfileURL: u.GetHTMLURL(),
+		Entity:     u.GetCompany(),
 	}
 }
 
 func mapGitHubUserToDeveloperListItem(u *github.User) *DeveloperListItem {
 	return &DeveloperListItem{
-		Username: trim(u.Login),
-		Entity:   trim(u.Company),
+		Username: u.GetLogin(),
+		Entity:   u.GetCompany(),
 	}
 }
 

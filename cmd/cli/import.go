@@ -94,7 +94,7 @@ type EventImportResult struct {
 	Org      string         `json:"org,omitempty"`
 	Repos    []string       `json:"repos,omitempty"`
 	Duration string         `json:"duration,omitempty"`
-	Imported map[string]int `json:"imported,omitempty"`
+	Imported map[string]int `json:"events,omitempty"`
 }
 
 type EventUpdateResult struct {

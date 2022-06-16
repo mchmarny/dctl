@@ -27,7 +27,7 @@ When completed, `dctl` will return a summary of the import:
   "repos": [
     "serving"
   ],
-  "imported": {
+  "events": {
     "knative/serving/issue": 5,
     "knative/serving/issue_comment": 2,
     "knative/serving/pr": 100,
@@ -115,7 +115,7 @@ The response will look something like this:
 ```json
 {
   "duration": "1m16.1696975s",
-  "imported": {
+  "events": {
     "knative/serving/issue": 11,
     "knative/serving/issue_comment": 38,
     "knative/serving/pr": 100,

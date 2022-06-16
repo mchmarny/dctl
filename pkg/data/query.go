@@ -142,11 +142,14 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 			Event:     &Event{},
 			Developer: &Developer{},
 		}
+		var mentions, labels string
 		if err := rows.Scan(&e.Event.Org, &e.Event.Repo, &e.Event.Date, &e.Event.Type, &e.Event.URL,
-			&e.Event.Mentions, &e.Event.Labels, &e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
+			&mentions, &labels, &e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
 			&e.Developer.AvatarURL, &e.Developer.ProfileURL, &e.Developer.Entity); err != nil {
 			return nil, errors.Wrapf(err, "failed to scan row")
 		}
+		e.Event.Mentions = slice(mentions)
+		e.Event.Labels = slice(labels)
 		list = append(list, e)
 	}
 

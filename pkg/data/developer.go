@@ -13,13 +13,14 @@ import (
 const (
 	insertDeveloperSQL = `INSERT INTO developer (
 			username,
+			id,
 			full_name,
 			email,
 			avatar,
 			url,
 			entity
 		) 
-		VALUES (?, ?, ?, ?, ?, ?) 
+		VALUES (?, ?, ?, ?, ?, ?, ?) 
 		ON CONFLICT(username) DO UPDATE SET 
 			full_name = ?,
 			email = ?,
@@ -30,6 +31,7 @@ const (
 
 	selectDeveloperSQL = `SELECT
 			username,
+			id, 
 			full_name,
 			email,
 			avatar,
@@ -64,6 +66,7 @@ const (
 
 type Developer struct {
 	Username      string `json:"username,omitempty"`
+	ID            int64  `json:"id,omitempty"`
 	FullName      string `json:"full_name,omitempty"`
 	Email         string `json:"email,omitempty"`
 	AvatarURL     string `json:"avatar,omitempty"`
@@ -134,11 +137,12 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 	}
 
 	for i, u := range devs {
-		if _, err = tx.Stmt(userStmt).Exec(u.Username,
+		if _, err = tx.Stmt(userStmt).Exec(u.Username, u.ID,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
 			log.WithFields(log.Fields{
 				"user":    u.Username,
+				"id":      u.ID,
 				"name":    u.FullName,
 				"email":   u.Email,
 				"avatar":  u.AvatarURL,
@@ -240,7 +244,7 @@ func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 	row := stmt.QueryRow(username)
 
 	u := &Developer{}
-	if err = row.Scan(&u.Username, &u.FullName, &u.Email, &u.AvatarURL, &u.ProfileURL, &u.Entity); err != nil {
+	if err = row.Scan(&u.Username, &u.ID, &u.FullName, &u.Email, &u.AvatarURL, &u.ProfileURL, &u.Entity); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
