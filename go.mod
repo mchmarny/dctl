@@ -8,7 +8,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.4
-	github.com/urfave/cli/v2 v2.10.2
+	github.com/urfave/cli/v2 v2.11.0
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	modernc.org/sqlite v1.17.3
 )
