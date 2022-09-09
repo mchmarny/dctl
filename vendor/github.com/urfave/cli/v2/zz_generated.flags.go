@@ -280,6 +280,8 @@ type TimestampFlag struct {
 	EnvVars []string
 
 	Layout string
+
+	Timezone *time.Location
 }
 
 // String returns a readable representation of this value (for usage defaults)
@@ -325,6 +327,8 @@ type BoolFlag struct {
 
 	Aliases []string
 	EnvVars []string
+
+	Count *int
 }
 
 // String returns a readable representation of this value (for usage defaults)
@@ -415,6 +419,8 @@ type IntFlag struct {
 
 	Aliases []string
 	EnvVars []string
+
+	Base int
 }
 
 // String returns a readable representation of this value (for usage defaults)
@@ -460,6 +466,8 @@ type Int64Flag struct {
 
 	Aliases []string
 	EnvVars []string
+
+	Base int
 }
 
 // String returns a readable representation of this value (for usage defaults)
@@ -597,6 +605,8 @@ type UintFlag struct {
 
 	Aliases []string
 	EnvVars []string
+
+	Base int
 }
 
 // String returns a readable representation of this value (for usage defaults)
@@ -642,6 +652,8 @@ type Uint64Flag struct {
 
 	Aliases []string
 	EnvVars []string
+
+	Base int
 }
 
 // String returns a readable representation of this value (for usage defaults)
