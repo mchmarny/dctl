@@ -45,7 +45,7 @@ cli: tidy ## Builds CLI binary
 .PHONY: cli
 
 dist: test lint ## Runs test, lint before building distributables
-	goreleaser release --snapshot --rm-dist --timeout 10m0s
+	goreleaser release --snapshot --clean --timeout 10m0s
 .PHONY: dist
 
 server: cli ## Builds CLI and runs the server

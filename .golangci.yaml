@@ -4,49 +4,24 @@ linters-settings:
   funlen:
     lines: 150
     statements: 100
-  gci:
-    local-prefixes: github.com/golangci/golangci-lint
   goconst:
     min-len: 2
     min-occurrences: 2
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
   gocyclo:
     min-complexity: 25
-  goimports:
-    local-prefixes: github.com/golangci/golangci-lint
-  golint:
-    min-confidence: 0
-  govet:
-    check-shadowing: true
   lll:
     line-length: 250
-  maligned:
-    suggest-new: true
   misspell:
     locale: US
   nolintlint:
-    allow-leading-space: false # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: true # don't require an explanation for nolint directives
-    require-specific: true # don't require nolint directives to be specific about which linter is being skipped
+    allow-unused: false
+    require-explanation: true
+    require-specific: true
 
 linters:
   disable-all: true
   enable:
-    - deadcode
-    - depguard
+    - unused
     - dogsled
     - dupl
     - errcheck
@@ -56,7 +31,6 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - gomnd
     - goprintffuncname
     - gosec
     - govet
@@ -64,41 +38,20 @@ linters:
     - misspell
     - nakedret
     - nolintlint
-    - exportloopref
-    # - structcheck
+    - copyloopvar
     - typecheck
     - unconvert
-    - varcheck
     - whitespace
-    - errcheck
-    - gomnd
-    - deadcode
 
 issues:
-  exclude:
-    # - G404
-    # - G101
-
-  # exclude-rules:
-  #   - path: cmd/app/oauth.go
-  #     linters:
-  #       - some-linter
+  exclude-dirs:
+    - tests
+    - tools
+    - vendor
 
 run:
   concurrency: 4
   timeout: 5m
   issues-exit-code: 5
   tests: true
-
-  skip-dirs:
-    - tests
-    - tools
-
-  # Enables skipping of directories:
-  # - vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
-  # Default: true
-  skip-dirs-use-default: false
-  modules-download-mode: readonly
-  go: "1.18"
-
-
+  go: "1.25"
