@@ -24,9 +24,9 @@ jobs:
       run: make tidy
 
     - name: Lint Code
-      uses: golangci/golangci-lint-action@2f856675483cb8b9378ee77ee0beb67955aca9d7 # v6.5.1
+      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
       with:
-        version: v2.1.6
+        version: v2.5.0
 
     - name: Unit Test
       run: make test
