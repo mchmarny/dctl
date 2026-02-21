@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -89,7 +90,7 @@ func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 	}
 
 	res, err := stmt.Exec(sub.New, sub.Old)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("failed to execute developer property update statement: %w", err)
 	}
 
@@ -141,7 +142,7 @@ func ApplySubstitutions(db *sql.DB) ([]*Substitution, error) {
 	}
 
 	rows, err := stmt.Query()
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute substitute select statement: %w", err)
 	}
 	defer rows.Close()

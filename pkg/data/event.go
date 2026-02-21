@@ -385,7 +385,7 @@ func timestampStr(ts *github.Timestamp) *string {
 	if ts == nil {
 		return nil
 	}
-	s := ts.Time.Format("2006-01-02T15:04:05Z")
+	s := ts.Format("2006-01-02T15:04:05Z")
 	return &s
 }
 
@@ -454,7 +454,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			break
 		}
 
-		opt.Page = resp.NextPage
+		opt.ListOptions.Page = resp.NextPage
 	}
 
 	return nil
@@ -560,7 +560,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 			break
 		}
 
-		opt.Page = resp.NextPage
+		opt.ListOptions.Page = resp.NextPage
 	}
 
 	return nil
@@ -604,7 +604,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 			break
 		}
 
-		opt.Page = resp.NextPage
+		opt.ListOptions.Page = resp.NextPage
 	}
 
 	return nil
@@ -646,7 +646,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 			break
 		}
 
-		opt.Page = resp.NextPage
+		opt.ListOptions.Page = resp.NextPage
 	}
 
 	return nil

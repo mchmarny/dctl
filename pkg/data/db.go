@@ -39,14 +39,11 @@ func Init(dbFilePath string) error {
 	}
 	defer db.Close()
 
-	if err := runMigrations(db); err != nil {
-		return fmt.Errorf("running migrations: %w", err)
+	if migErr := runMigrations(db); migErr != nil {
+		return fmt.Errorf("running migrations: %w", migErr)
 	}
 
-	entityRegEx, err = regexp.Compile(nonAlphaNumRegex)
-	if err != nil {
-		return fmt.Errorf("compiling entity regex: %w", err)
-	}
+	entityRegEx = regexp.MustCompile(nonAlphaNumRegex)
 
 	return nil
 }
@@ -107,12 +104,12 @@ func runMigrations(db *sql.DB) error {
 		}
 
 		if _, err := tx.Exec(string(content)); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("executing migration %s: %w", name, err)
 		}
 
 		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", ver); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("recording migration %d: %w", ver, err)
 		}
 

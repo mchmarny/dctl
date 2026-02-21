@@ -63,7 +63,7 @@ func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -102,8 +102,8 @@ func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*Repo,
 		return nil, errors.New("org is required")
 	}
 
-	opt := &github.RepositoryListOptions{}
-	items, _, err := github.NewClient(client).Repositories.List(ctx, org, opt)
+	opt := &github.RepositoryListByUserOptions{}
+	items, _, err := github.NewClient(client).Repositories.ListByUser(ctx, org, opt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list repositories for: %s: %w", org, err)
 	}

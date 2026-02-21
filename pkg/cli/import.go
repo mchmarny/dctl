@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -246,8 +246,8 @@ func cmdImportAll(c *cli.Context) error {
 	// 0. clear state if fresh
 	if c.Bool(freshFlag.Name) {
 		for _, r := range repos {
-			if err := data.ClearState(cfg.DB, org, r); err != nil {
-				slog.Error("failed to clear state", "org", org, "repo", r, "error", err)
+			if clearErr := data.ClearState(cfg.DB, org, r); clearErr != nil {
+				slog.Error("failed to clear state", "org", org, "repo", r, "error", clearErr)
 			}
 		}
 		slog.Info("cleared pagination state", "org", org, "repos", len(repos))
@@ -256,9 +256,9 @@ func cmdImportAll(c *cli.Context) error {
 	// 1. events
 	for _, r := range repos {
 		slog.Info("importing events", "org", org, "repo", r)
-		m, err := data.ImportEvents(cfg.DBPath, token, org, r, months)
-		if err != nil {
-			slog.Error("failed to import events", "org", org, "repo", r, "error", err)
+		m, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
+		if importErr != nil {
+			slog.Error("failed to import events", "org", org, "repo", r, "error", importErr)
 			continue
 		}
 		for k, v := range m {

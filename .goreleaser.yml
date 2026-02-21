@@ -4,16 +4,16 @@ project_name: dctl
 
 builds:
   - binary: "{{.ProjectName}}"
-    dir: ./cmd/cli
+    dir: ./cmd/dctl
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
     ldflags:
       - -s -w
-        -X main.version={{.Version}}
-        -X main.commit={{.ShortCommit}}
-        -X main.date={{.CommitDate}}
+        -X github.com/mchmarny/dctl/pkg/cli.version={{.Version}}
+        -X github.com/mchmarny/dctl/pkg/cli.commit={{.ShortCommit}}
+        -X github.com/mchmarny/dctl/pkg/cli.date={{.CommitDate}}
     goos:
       - darwin
       - linux
@@ -37,6 +37,23 @@ archives:
 
 checksum:
   name_template: "checksums-sha256.txt"
+
+sboms:
+  - artifacts: binary
+
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
+report_sizes: true
 
 snapshot:
   version_template: "{{.Tag}}-next"

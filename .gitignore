@@ -20,3 +20,4 @@ cosign.*
 # Configs
 pkg/config/config.yaml
 
+.claude/settings.local.json

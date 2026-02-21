@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -177,7 +177,7 @@ var (
 	}
 )
 
-func writeEmpty(c *cli.Context) error {
+func writeEmpty(_ *cli.Context) error {
 	_, err := os.Stdout.Write([]byte("{}"))
 	return err
 }

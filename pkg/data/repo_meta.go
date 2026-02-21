@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -107,7 +108,7 @@ func GetRepoMetas(db *sql.DB, org, repo *string) ([]*RepoMeta, error) {
 	}
 
 	rows, err := db.Query(selectRepoMetaSQL, org, repo)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query repo meta: %w", err)
 	}
 	defer rows.Close()

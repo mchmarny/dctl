@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -76,7 +77,7 @@ func ImportReleases(dbPath, token, owner, repo string) error {
 			name := r.GetName()
 			var publishedAt string
 			if r.PublishedAt != nil {
-				publishedAt = r.PublishedAt.Time.Format("2006-01-02T15:04:05Z")
+				publishedAt = r.PublishedAt.Format("2006-01-02T15:04:05Z")
 			}
 			pre := 0
 			if r.GetPrerelease() {
@@ -136,7 +137,7 @@ func GetReleaseCadence(db *sql.DB, org, repo *string, months int) (*ReleaseCaden
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectReleaseCadenceSQL, org, repo, since)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query release cadence: %w", err)
 	}
 	defer rows.Close()

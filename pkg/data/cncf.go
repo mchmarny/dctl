@@ -212,7 +212,7 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 				if strings.Contains(address, "users.noreply.github.com") {
 					continue
 				}
-				p.Identities = append(p.Identities, strings.Replace(strings.TrimSpace(address), "!", "@", -1))
+				p.Identities = append(p.Identities, strings.ReplaceAll(strings.TrimSpace(address), "!", "@"))
 			}
 
 			continue

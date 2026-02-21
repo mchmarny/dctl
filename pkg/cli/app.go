@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"database/sql"
@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/mchmarny/dctl/pkg/data"
-	"github.com/urfave/cli/v2"
+	urfave "github.com/urfave/cli/v2"
 )
 
 const (
@@ -21,21 +21,31 @@ const (
 )
 
 var (
-	name    = "dctl"
 	version = "v0.0.1-default"
 	commit  = ""
 	date    = ""
 
-	debugFlag = &cli.BoolFlag{
+	debugFlag = &urfave.BoolFlag{
 		Name:  "debug",
 		Usage: "Prints verbose logs (optional, default: false)",
 	}
 
-	dbFilePathFlag = &cli.StringFlag{
+	dbFilePathFlag = &urfave.StringFlag{
 		Name:  "db",
 		Usage: "Path to the Sqlite database file",
 	}
 )
+
+// Execute creates and runs the CLI application.
+func Execute() {
+	initLogging(false)
+
+	app := newApp()
+	if err := app.Run(os.Args); err != nil {
+		slog.Error("fatal error", "error", err)
+		os.Exit(1)
+	}
+}
 
 type appConfig struct {
 	DBPath string
@@ -43,29 +53,27 @@ type appConfig struct {
 	DB     *sql.DB
 }
 
-func getConfig(c *cli.Context) *appConfig {
+func getConfig(c *urfave.Context) *appConfig {
 	return c.App.Metadata[appConfigKey].(*appConfig)
 }
 
-func main() {
-	initLogging(false)
-
-	app := &cli.App{
+func newApp() *urfave.App {
+	return &urfave.App{
 		Name:     "dctl",
 		Version:  fmt.Sprintf("%s (%s - %s)", version, commit, date),
 		Compiled: time.Now(),
 		Usage:    "CLI for quick insight into the GitHub org/repo activity",
-		Flags: []cli.Flag{
+		Flags: []urfave.Flag{
 			debugFlag,
 			dbFilePathFlag,
 		},
-		Commands: []*cli.Command{
+		Commands: []*urfave.Command{
 			authCmd,
 			importCmd,
 			queryCmd,
 			serverCmd,
 		},
-		Before: func(c *cli.Context) error {
+		Before: func(c *urfave.Context) error {
 			if c.Bool(debugFlag.Name) {
 				initLogging(true)
 			}
@@ -91,17 +99,12 @@ func main() {
 			}
 			return nil
 		},
-		After: func(c *cli.Context) error {
+		After: func(c *urfave.Context) error {
 			if cfg, ok := c.App.Metadata[appConfigKey].(*appConfig); ok && cfg.DB != nil {
 				cfg.DB.Close()
 			}
 			return nil
 		},
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		slog.Error("fatal error", "error", err)
-		os.Exit(1)
 	}
 }
 
@@ -122,7 +125,7 @@ func getHomeDir() string {
 	}
 	slog.Debug("home dir", "path", home)
 
-	dirName := "." + name
+	dirName := ".dctl"
 	dirPath := filepath.Join(home, dirName)
 	if _, err := os.Stat(dirPath); errors.Is(err, os.ErrNotExist) {
 		slog.Debug("creating dir", "path", dirPath)

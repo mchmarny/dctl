@@ -14,7 +14,7 @@ import (
 const (
 	deviceCodeURL = "https://github.com/login/device/code"
 	accessCodeURL = "https://github.com/login/oauth/access_token"
-	deviceScopes  = "" // public_repo read:repo read:org read:user read:org_hook read:public_key read:gpg_key read:notifications read:gist write:gpg_key write:notifications write:public_key write:gist write:repo write:org write:user write:org_hook
+	deviceScopes  = "" // no scopes requested (read-only public access)
 	grantType     = "urn:ietf:params:oauth:grant-type:device_code"
 )
 

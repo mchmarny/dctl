@@ -25,7 +25,7 @@ func checkRateLimit(resp *github.Response) {
 		return
 	}
 
-	jitter := time.Duration(rand.IntN(2000)) * time.Millisecond
+	jitter := time.Duration(rand.IntN(2000)) * time.Millisecond //nolint:gosec // jitter for rate limit backoff, not security-sensitive
 	total := wait + jitter
 
 	slog.Info("rate limit approaching, waiting",

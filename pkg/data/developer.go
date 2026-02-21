@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -96,7 +97,7 @@ func getDBSlice(db *sql.DB, sqlQuery string) ([]string, error) {
 	list := make([]string, 0)
 
 	rows, err := stmt.Query()
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute series select statement: %w", err)
 	}
 	defer rows.Close()
@@ -247,7 +248,7 @@ func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 
 	u := &Developer{}
 	if err = row.Scan(&u.Username, &u.FullName, &u.Email, &u.AvatarURL, &u.ProfileURL, &u.Entity); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to scan row: %w", err)
@@ -261,7 +262,7 @@ func mapDeveloperListItem(rows *sql.Rows) ([]*DeveloperListItem, error) {
 	for rows.Next() {
 		u := &DeveloperListItem{}
 		if err := rows.Scan(&u.Username, &u.Entity); err != nil {
-			if err == sql.ErrNoRows {
+			if errors.Is(err, sql.ErrNoRows) {
 				return list, nil
 			}
 			return nil, fmt.Errorf("failed to scan row: %w", err)
@@ -284,7 +285,7 @@ func SearchDevelopers(db *sql.DB, val string, limit int) ([]*DeveloperListItem, 
 
 	val = fmt.Sprintf("%%%s%%", val)
 	rows, err := stmt.Query(val, val, val, limit)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()

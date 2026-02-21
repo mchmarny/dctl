@@ -44,7 +44,7 @@ cd dctl
 make build
 ```
 
-See [docs/BUILD.md](docs/BUILD.md) for details.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ## Quick start
 
@@ -130,9 +130,34 @@ GitHub API --> dctl import --> SQLite --> dctl server --> localhost:8080
                                     \--> dctl query --> JSON (stdout)
 ```
 
+## Verification
+
+Release binaries are signed and attested in CI. No private keys — everything uses keyless [Sigstore](https://www.sigstore.dev/) OIDC via GitHub Actions.
+
+### Verify checksum signature
+
+```shell
+cosign verify-blob \
+  --certificate checksums-sha256.txt.pem \
+  --signature checksums-sha256.txt.sig \
+  --certificate-identity-regexp 'github.com/mchmarny/dctl' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums-sha256.txt
+```
+
+### Verify build provenance
+
+```shell
+gh attestation verify <binary> -R mchmarny/dctl
+```
+
+### Inspect SBOM
+
+Each binary has a corresponding SBOM (SPDX JSON) attached to the release.
+
 ## Contributing
 
-Contributions are welcome. Please open an issue before submitting large changes.
+Contributions are welcome. Please open an issue before submitting large changes. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines and [DEVELOPMENT.md](DEVELOPMENT.md) for setup.
 
 1. Fork and clone the repository
 2. Create a feature branch

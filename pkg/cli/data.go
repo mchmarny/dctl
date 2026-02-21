@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"database/sql"
@@ -27,7 +27,9 @@ type SeriesData[T any] struct {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		slog.Error("failed to encode JSON response", "error", err)
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, msg string) {
@@ -151,7 +153,7 @@ func eventDataAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func queryParamInt(r *http.Request, key string, def int) int {
+func queryParamInt(r *http.Request, key string, def int) int { //nolint:unparam // key kept generic for reuse
 	v := r.URL.Query().Get(key)
 	if v == "" {
 		return def

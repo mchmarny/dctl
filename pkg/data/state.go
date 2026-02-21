@@ -47,7 +47,7 @@ func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error
 	var since int64
 	err = row.Scan(&since, &s.Page)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return s, nil
 		}
 		return nil, fmt.Errorf("failed to scan row: %w", err)
@@ -130,7 +130,7 @@ func getCount(db *sql.DB, stmt *sql.Stmt) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("failed to scan row: %w", err)

@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -173,7 +174,7 @@ func GetContributorRetention(db *sql.DB, org, repo *string, months int) (*Retent
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectRetentionSQL, org, repo, since, org, repo, since)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query contributor retention: %w", err)
 	}
 	defer rows.Close()
@@ -209,7 +210,7 @@ func GetPRReviewRatio(db *sql.DB, org, repo *string, months int) (*PRReviewRatio
 		EventTypePR, EventTypePRReview,
 		org, repo, since,
 		EventTypePR, EventTypePRReview)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query PR review ratio: %w", err)
 	}
 	defer rows.Close()
@@ -249,7 +250,7 @@ func getVelocitySeries(db *sql.DB, query string, org, repo *string, months int) 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(query, org, repo, since)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query velocity series: %w", err)
 	}
 	defer rows.Close()

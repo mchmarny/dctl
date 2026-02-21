@@ -1,9 +1,10 @@
-package main
+package cli
 
 import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -89,7 +90,7 @@ func cmdStartServer(c *cli.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), serverShutdownWaitSeconds*time.Second)
 	defer cancel()
 
-	if err := s.Shutdown(ctx); err != nil && err != http.ErrServerClosed {
+	if err := s.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("error shutting down server", "error", err)
 	}
 	return nil

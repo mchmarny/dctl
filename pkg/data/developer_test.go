@@ -9,11 +9,7 @@ import (
 )
 
 func TestCleanEntity(t *testing.T) {
-	var err error
-	entityRegEx, err = regexp.Compile(nonAlphaNumRegex)
-	if err != nil {
-		t.Fatal(err)
-	}
+	entityRegEx = regexp.MustCompile(nonAlphaNumRegex)
 
 	tests := map[string]string{
 		"Google LLC":           "GOOGLE",

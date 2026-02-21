@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"html/template"
@@ -15,7 +15,9 @@ func faviconHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "image/x-icon")
-	w.Write(file)
+	if _, err = w.Write(file); err != nil {
+		slog.Error("failed to write favicon", "error", err)
+	}
 }
 
 func homeViewHandler(tmpl *template.Template) http.HandlerFunc {

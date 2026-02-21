@@ -65,7 +65,7 @@ func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -98,7 +98,7 @@ func GetEntity(db *sql.DB, val string) (*EntityResult, error) {
 	}
 
 	rows, err := stmt.Query(val)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -129,7 +129,7 @@ func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 
 	val = fmt.Sprintf("%%%s%%", val)
 	rows, err := stmt.Query(val, limit)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -162,7 +162,7 @@ func CleanEntities(db *sql.DB) error {
 
 	m := make(map[string]string)
 	rows, err := stmt.Query()
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()

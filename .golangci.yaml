@@ -1,57 +1,145 @@
-linters-settings:
-  dupl:
-    threshold: 175
-  funlen:
-    lines: 150
-    statements: 100
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocyclo:
-    min-complexity: 25
-  lll:
-    line-length: 250
-  misspell:
-    locale: US
-  nolintlint:
-    allow-unused: false
-    require-explanation: true
-    require-specific: true
-
-linters:
-  disable-all: true
-  enable:
-    - unused
-    - dogsled
-    - dupl
-    - errcheck
-    - funlen
-    - gochecknoinits
-    - goconst
-    - gocyclo
-    - gofmt
-    - goimports
-    - goprintffuncname
-    - gosec
-    - govet
-    - lll
-    - misspell
-    - nakedret
-    - nolintlint
-    - copyloopvar
-    - typecheck
-    - unconvert
-    - whitespace
-
-issues:
-  exclude-dirs:
-    - tests
-    - tools
-    - vendor
+version: "2"
 
 run:
-  concurrency: 4
-  timeout: 5m
-  issues-exit-code: 5
-  tests: true
   go: "1.25"
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true
+  sort-order:
+    - linter
+    - severity
+    - file
+
+linters:
+  enable:
+    # Bug detection
+    - bodyclose       # HTTP response body must be closed
+    - copyloopvar     # Loop variable capture issues
+    - errorlint       # Error wrapping and comparison
+    - nilerr          # Return nil after error check
+    - staticcheck     # Advanced static analysis
+    # - sqlclosecheck # Unclosed sql.Rows (disabled: data layer needs stmt.Close refactor)
+
+    # Code quality
+    - dogsled         # Too many blank identifiers
+    - dupl            # Duplicate code detection
+    - funlen          # Function length
+    - goconst         # Repeated strings
+    - gocritic        # Opinionated checks
+    - gocyclo         # Cyclomatic complexity
+    - govet           # Go vet checks
+    - ineffassign     # Useless assignments
+    - misspell        # Spelling
+    - nakedret        # Naked returns
+    - unconvert       # Unnecessary conversions
+    - unparam         # Unused parameters
+    - unused          # Unused code
+    - whitespace      # Whitespace issues
+
+    # Security
+    - gosec           # Security checks
+
+    # HTTP/Context
+    # - noctx         # HTTP requests without context (disabled: data layer needs context refactor)
+
+    # Dependency management
+    - depguard        # Ban deprecated/unwanted packages
+
+    # Style
+    - nolintlint      # Require nolint justification
+    - lll             # Line length
+
+  settings:
+    dupl:
+      threshold: 200
+
+    funlen:
+      lines: 150
+      statements: 80
+      ignore-comments: true
+
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+
+    gocyclo:
+      min-complexity: 20
+
+    govet:
+      enable:
+        - shadow
+
+    lll:
+      line-length: 200
+
+    misspell:
+      locale: US
+
+    nolintlint:
+      allow-unused: false
+      require-explanation: true
+      require-specific: true
+
+    unparam:
+      check-exported: false
+
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          deny:
+            - pkg: io/ioutil
+              desc: "Deprecated since Go 1.16. Use io and os packages instead."
+            - pkg: math/rand$
+              desc: "Use math/rand/v2 or crypto/rand instead."
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Relaxed rules for test files
+      - linters:
+          - dupl
+          - errcheck
+          - funlen
+          - goconst
+          - gocyclo
+          - gosec
+        path: _test\.go
+      # Relaxed rules for main entry point
+      - linters:
+          - funlen
+        path: cmd/.*/main\.go
+      # QF1008: removing embedded field from selector causes ambiguity in github API types
+      - linters:
+          - staticcheck
+        text: "QF1008"
+    paths:
+      - vendor$
+      - tools$
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - vendor$
+      - tools$

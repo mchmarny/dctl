@@ -99,7 +99,7 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 	}
 
 	rows, err := stmt.Query()
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -137,7 +137,7 @@ func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []s
 	}
 
 	rows, err := stmt.Query(qArgs...)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -181,7 +181,7 @@ func GetOrgLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
