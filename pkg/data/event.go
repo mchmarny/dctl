@@ -360,6 +360,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing prs, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
+		checkRateLimit(resp)
 		slog.Debug("pr events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -415,6 +416,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing issues, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
+		checkRateLimit(resp)
 		slog.Debug("issue events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -469,6 +471,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing issue comments, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
+		checkRateLimit(resp)
 		slog.Debug("issue comment events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -512,6 +515,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing pr comments, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
+		checkRateLimit(resp)
 		slog.Debug("pr review events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -553,6 +557,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing forks, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
+		checkRateLimit(resp)
 		slog.Debug("fork events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
