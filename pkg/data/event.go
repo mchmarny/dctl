@@ -12,7 +12,7 @@ import (
 
 	"log/slog"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/dctl/pkg/net"
 )
 
@@ -322,6 +322,13 @@ func rollbackTransaction(tx *sql.Tx) {
 	}
 }
 
+func timestampToTime(ts *github.Timestamp) *time.Time {
+	if ts == nil {
+		return nil
+	}
+	return &ts.Time
+}
+
 func (e *EventImporter) isEventBatchValidAge(first *time.Time, last *time.Time) bool {
 	if first == nil || last == nil {
 		return false
@@ -360,7 +367,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		}
 
 		// PR list has no since option so break manually when both 1st and last event are older than the min.
-		if !e.isEventBatchValidAge(items[0].CreatedAt, items[len(items)-1].CreatedAt) {
+		if !e.isEventBatchValidAge(timestampToTime(items[0].CreatedAt), timestampToTime(items[len(items)-1].CreatedAt)) {
 			slog.Debug("pr - all returned events older than min", "min_event_time", e.minEventTime.Format("2006-01-02"))
 			break
 		}
@@ -370,7 +377,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			mentions = append(mentions, getUsernames(items[i].Assignee)...)
 			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
 			mentions = append(mentions, getUsernames(items[i].RequestedReviewers...)...)
-			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, mentions,
+			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), mentions,
 				getLabels(items[i].Labels)); err != nil {
 				return fmt.Errorf("error adding pr event: %s/%s: %w", e.owner, e.repo, err)
 			}
@@ -419,7 +426,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			mentions = append(mentions, getUsernames(items[i].Assignee)...)
 			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
 			if err := e.add(EventTypeIssue, *items[i].HTMLURL, items[i].User,
-				items[i].UpdatedAt, mentions, getLabels(items[i].Labels)); err != nil {
+				timestampToTime(items[i].UpdatedAt), mentions, getLabels(items[i].Labels)); err != nil {
 				return fmt.Errorf("error adding issue event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
@@ -430,7 +437,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			break
 		}
 
-		opt.Page = resp.NextPage
+		opt.ListOptions.Page = resp.NextPage
 	}
 
 	return nil
@@ -469,7 +476,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
+			if err := e.add(EventTypeIssueComment, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil); err != nil {
 				return fmt.Errorf("error adding issue comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
@@ -512,7 +519,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
+			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil); err != nil {
 				return fmt.Errorf("error adding PR comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}

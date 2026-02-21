@@ -11,7 +11,7 @@ import (
 
 	"log/slog"
 
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v83/github"
 )
 
 const (
