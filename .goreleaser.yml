@@ -43,15 +43,13 @@ sboms:
 
 signs:
   - cmd: cosign
-    signature: "${artifact}.bundle"
-    certificate: "${artifact}.pem"
+    signature: "${artifact}.sigstore.json"
     args:
       - sign-blob
       - "--bundle=${signature}"
       - "${artifact}"
       - "--yes"
     artifacts: checksum
-    output: true
 
 report_sizes: true
 
