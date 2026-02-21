@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	affilFileURL              = "https://raw.githubusercontent.com/cncf/gitdm/master/developers_affiliations%d.txt"
-	numOfAffilFilesToDownload = 100
+	affilFileURL = "https://raw.githubusercontent.com/cncf/gitdm/master/developers_affiliations%d.txt"
 )
 
 type CNCFDeveloper struct {
@@ -77,7 +76,7 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 		return nil, fmt.Errorf("error getting developers from db: %w", err)
 	}
 
-	cncfDevs, err := GetCNCFEntityAffiliations()
+	cncfDevs, err := GetCNCFEntityAffiliations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting CNCF affiliations: %w", err)
 	}
@@ -108,26 +107,34 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 	return res, nil
 }
 
-func GetCNCFEntityAffiliations() (map[string]*CNCFDeveloper, error) {
+func GetCNCFEntityAffiliations(ctx context.Context) (map[string]*CNCFDeveloper, error) {
 	start := time.Now()
-	urls := make([]string, 0)
-	for i := 1; i <= numOfAffilFilesToDownload; i++ {
-		urls = append(urls, fmt.Sprintf(affilFileURL, i))
-	}
-
-	completed := 0
 	devs := make(map[string]*CNCFDeveloper)
-	for i, url := range urls {
+	completed := 0
+
+	for i := 1; ; i++ {
+		select {
+		case <-ctx.Done():
+			return devs, ctx.Err()
+		default:
+		}
+
+		url := fmt.Sprintf(affilFileURL, i)
 		ok, err := loadAffiliations(url, devs)
 		if err != nil {
-			return devs, fmt.Errorf("import affiliation from URS %d - %s: %w", i, url, err)
+			return devs, fmt.Errorf("loading affiliation file %d (%s): %w", i, url, err)
 		}
-		completed++
 		if !ok {
 			break
 		}
+		completed++
 	}
-	slog.Debug("downloaded and processed files", "count", completed, "duration", time.Since(start).String())
+
+	slog.Debug("CNCF affiliations loaded",
+		"files", completed,
+		"developers", len(devs),
+		"duration", time.Since(start).String(),
+	)
 
 	return devs, nil
 }
