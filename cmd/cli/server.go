@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,17 +19,17 @@ const (
 	serverShutdownWaitSeconds = 5
 	serverTimeoutSeconds      = 300
 	serverMaxHeaderBytes      = 20
-	serverPortDevault         = 8080
+	serverPortDefault         = 8080
 )
 
 var (
 	//go:embed assets/* templates/*
-	f embed.FS
+	embedFS embed.FS
 
 	portFlag = &cli.IntFlag{
 		Name:     "port",
 		Usage:    "Port on which the server will listen",
-		Value:    serverPortDevault,
+		Value:    serverPortDefault,
 		Required: false,
 	}
 
@@ -49,10 +48,10 @@ func cmdStartServer(c *cli.Context) error {
 	port := c.Int(portFlag.Name)
 	address := fmt.Sprintf("127.0.0.1:%d", port)
 
-	r := makeRouter()
+	mux := makeRouter()
 	s := &http.Server{
 		Addr:           address,
-		Handler:        r,
+		Handler:        mux,
 		ReadTimeout:    serverTimeoutSeconds * time.Second,
 		WriteTimeout:   serverTimeoutSeconds * time.Second,
 		MaxHeaderBytes: 1 << serverMaxHeaderBytes,
@@ -80,36 +79,24 @@ func cmdStartServer(c *cli.Context) error {
 	return nil
 }
 
-func makeRouter() *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
+func makeRouter() *http.ServeMux {
+	tmpl := template.Must(template.New("").ParseFS(embedFS, "templates/*.html"))
 
-	var r *gin.Engine
-	if debug {
-		r = gin.Default()
-	} else {
-		r = gin.New()
-		r.Use(gin.Recovery())
-	}
+	mux := http.NewServeMux()
 
-	// templates
-	r.SetHTMLTemplate(template.Must(template.New("").ParseFS(f, "templates/*.html")))
+	// Static files
+	mux.Handle("GET /static/", http.FileServerFS(embedFS))
+	mux.HandleFunc("GET /favicon.ico", faviconHandler)
 
-	// enables '/static/assets/img/logo.png'
-	r.StaticFS("/static", http.FS(f))
+	// Views
+	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl))
 
-	// // statics resources
-	r.GET("favicon.ico", faveIcon)
+	// Data API
+	mux.HandleFunc("GET /data/query", queryAPIHandler)
+	mux.HandleFunc("GET /data/type", eventDataAPIHandler)
+	mux.HandleFunc("GET /data/entity", entityDataAPIHandler)
+	mux.HandleFunc("GET /data/developer", developerDataAPIHandler)
+	mux.HandleFunc("POST /data/search", eventSearchAPIHandler)
 
-	// dynamic views
-	r.GET("/", homeViewHandler)
-
-	// data queries returning JSON
-	data := r.Group("/data")
-	data.GET("/query", queryHandler)
-	data.GET("/type", eventDataHandler)
-	data.GET("/entity", entityDataHandler)
-	data.GET("/developer", developerDataHandler)
-	data.POST("/search", eventSearchHandler)
-
-	return r
+	return mux
 }
