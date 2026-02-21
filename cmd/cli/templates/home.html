@@ -14,12 +14,13 @@
 
     <section class="search-and-user">
         <form id="home-search-form">
-            <input type="search" placeholder="select an org..." id="search-bar">
+            <input type="search" placeholder="org:name, repo:name, or entity:name" id="search-bar" autocomplete="off">
             <button type="submit" aria-label="submit form">
                 <svg aria-hidden="true">
                     <use xlink:href="#search"></use>
                 </svg>
             </button>
+            <div id="ac-dropdown" class="ac-dropdown"></div>
         </form>
     </section>
 
@@ -39,12 +40,19 @@
             </div>
         </article>
         <article>
-            <div class="tbl">
+            <div class="tbl" style="position:relative;">
                 <div class="content-header">
                     Top Entities (Company or Org)
                 </div>
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="left-chart"></canvas>
+                </div>
+                <div id="entity-popover" class="entity-popover">
+                    <div class="entity-popover-header">
+                        <span id="entity-popover-title"></span>
+                        <button id="entity-popover-close" class="modal-close">&times;</button>
+                    </div>
+                    <ul id="entity-popover-list"></ul>
                 </div>
             </div>
 
@@ -63,6 +71,88 @@
             </div>
                     
             
+        </article>
+
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Project Health
+                </div>
+                <div class="tbl-chart tbl-home insights-summary">
+                    <div class="insight-card">
+                        <span class="insight-label">Bus Factor</span>
+                        <span class="insight-val" id="bus-factor-val">—</span>
+                        <span class="insight-desc">Min developers producing 50% of contributions</span>
+                    </div>
+                    <div class="insight-card">
+                        <span class="insight-label">Pony Factor</span>
+                        <span class="insight-val" id="pony-factor-val">—</span>
+                        <span class="insight-desc">Min organizations producing 50% of contributions</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Contributor Retention
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="retention-chart"></canvas>
+                </div>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    PR Review Ratio
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="pr-ratio-chart"></canvas>
+                </div>
+            </div>
+        </article>
+
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Repository Metadata
+                </div>
+                <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
+                    <span class="insight-label">No metadata imported yet</span>
+                </div>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Release Cadence
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="release-cadence-chart"></canvas>
+                </div>
+            </div>
+        </article>
+
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Time to Close (Issues)
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="time-to-close-chart"></canvas>
+                </div>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Time to Merge (PRs)
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="time-to-merge-chart"></canvas>
+                </div>
+            </div>
         </article>
 
         <article class="init-hide">
@@ -86,10 +176,10 @@
                         </thead>
                         <tbody id="result-table-content"></tbody>
                     </table>
-                    <dev class="result-pager">
-                        <a href="#" id="prev-page">Prev</a> | 
+                    <div class="result-pager">
+                        <a href="#" id="prev-page">Prev</a> |
                         <a href="#" id="next-page">Next</a>
-                    </dev>
+                    </div>
                 </div>            
             </div>
         </article>

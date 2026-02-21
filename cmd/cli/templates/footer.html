@@ -3,7 +3,18 @@
     Version {{ .version }} ({{ .commit }} - {{ .build_date }})
   </footer>
 </section>
-  <div id="error-dialog" title="Error"><p></p></div>
+  <div id="error-modal" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>Error</span>
+        <button class="modal-close" id="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="error-modal-body"><p></p></div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-primary" id="modal-ok-btn">OK</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
 {{ end }}

@@ -7,8 +7,14 @@ on:
   pull_request:
     branches:
       - main
-  
-jobs:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
   test:
     uses: ./.github/workflows/test-on-call.yaml

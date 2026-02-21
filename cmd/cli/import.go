@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -48,6 +49,11 @@ var (
 		Required: true,
 	}
 
+	freshFlag = &cli.BoolFlag{
+		Name:  "fresh",
+		Usage: "Clear pagination state and re-import from scratch",
+	}
+
 	importCmd = &cli.Command{
 		Name:    "import",
 		Aliases: []string{"i"},
@@ -62,6 +68,7 @@ var (
 					orgNameFlag,
 					repoNameFlag,
 					monthsFlag,
+					freshFlag,
 				},
 			},
 			{
@@ -86,6 +93,38 @@ var (
 				Aliases: []string{"u"},
 				Usage:   "Update all previously imported org, repos, and affiliations",
 				Action:  cmdUpdate,
+			},
+			{
+				Name:    "all",
+				Aliases: []string{"al"},
+				Usage:   "Import everything (events, affiliations, metadata, releases) for a given org",
+				Action:  cmdImportAll,
+				Flags: []cli.Flag{
+					orgNameFlag,
+					repoNameFlag,
+					monthsFlag,
+					freshFlag,
+				},
+			},
+			{
+				Name:    "metadata",
+				Aliases: []string{"m"},
+				Usage:   "Import repository metadata (stars, forks, language, license, etc)",
+				Action:  cmdImportMetadata,
+				Flags: []cli.Flag{
+					orgNameFlag,
+					repoNameFlag,
+				},
+			},
+			{
+				Name:    "releases",
+				Aliases: []string{"r"},
+				Usage:   "Import repository releases and tags",
+				Action:  cmdImportReleases,
+				Flags: []cli.Flag{
+					orgNameFlag,
+					repoNameFlag,
+				},
 			},
 		},
 	}
@@ -142,8 +181,129 @@ func cmdUpdate(c *cli.Context) error {
 	}
 	res.Substituted = sub
 
+	// also update repo metadata
+	if err := data.ImportAllRepoMeta(cfg.DBPath, token); err != nil {
+		slog.Error("failed to import repo metadata", "error", err)
+	}
+
+	// also update releases
+	if err := data.ImportAllReleases(cfg.DBPath, token); err != nil {
+		slog.Error("failed to import releases", "error", err)
+	}
+
 	if err := getEncoder().Encode(res); err != nil {
 		return fmt.Errorf("error encoding list: %+v: %w", res, err)
+	}
+
+	return nil
+}
+
+type ImportAllResult struct {
+	Org          string                        `json:"org"`
+	Repos        []string                      `json:"repos"`
+	Duration     string                        `json:"duration"`
+	Events       map[string]int                `json:"events,omitempty"`
+	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty"`
+	Substituted  []*data.Substitution          `json:"substituted,omitempty"`
+}
+
+func cmdImportAll(c *cli.Context) error {
+	start := time.Now()
+	org := c.String(orgNameFlag.Name)
+	repo := c.String(repoNameFlag.Name)
+	months := c.Int(monthsFlag.Name)
+
+	token, err := getGitHubToken()
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub token: %w", err)
+	}
+
+	if org == "" || token == "" {
+		return cli.ShowSubcommandHelp(c)
+	}
+
+	cfg := getConfig(c)
+
+	// resolve repos
+	var repos []string
+	if repo == "" {
+		ctx := context.Background()
+		client := net.GetOAuthClient(ctx, token)
+		repos, err = data.GetOrgRepoNames(ctx, client, org)
+		if err != nil {
+			return fmt.Errorf("failed to get org %s repos: %w", org, err)
+		}
+	} else {
+		repos = strings.Split(repo, ",")
+	}
+
+	res := &ImportAllResult{
+		Org:    org,
+		Repos:  repos,
+		Events: make(map[string]int),
+	}
+
+	// 0. clear state if fresh
+	if c.Bool(freshFlag.Name) {
+		for _, r := range repos {
+			if err := data.ClearState(cfg.DB, org, r); err != nil {
+				slog.Error("failed to clear state", "org", org, "repo", r, "error", err)
+			}
+		}
+		slog.Info("cleared pagination state", "org", org, "repos", len(repos))
+	}
+
+	// 1. events
+	for _, r := range repos {
+		slog.Info("importing events", "org", org, "repo", r)
+		m, err := data.ImportEvents(cfg.DBPath, token, org, r, months)
+		if err != nil {
+			slog.Error("failed to import events", "org", org, "repo", r, "error", err)
+			continue
+		}
+		for k, v := range m {
+			res.Events[k] += v
+		}
+	}
+
+	// 2. affiliations
+	slog.Info("importing affiliations")
+	a, err := importAffiliations(cfg.DB)
+	if err != nil {
+		slog.Error("failed to import affiliations", "error", err)
+	} else {
+		res.Affiliations = a
+	}
+
+	// 3. substitutions
+	slog.Info("applying substitutions")
+	sub, err := data.ApplySubstitutions(cfg.DB)
+	if err != nil {
+		slog.Error("failed to apply substitutions", "error", err)
+	} else {
+		res.Substituted = sub
+	}
+
+	// 4. metadata
+	for _, r := range repos {
+		slog.Info("importing metadata", "org", org, "repo", r)
+		if err := data.ImportRepoMeta(cfg.DBPath, token, org, r); err != nil {
+			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", err)
+		}
+	}
+
+	// 5. releases
+	for _, r := range repos {
+		slog.Info("importing releases", "org", org, "repo", r)
+		if err := data.ImportReleases(cfg.DBPath, token, org, r); err != nil {
+			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
+		}
+	}
+
+	res.Duration = time.Since(start).String()
+
+	if err := getEncoder().Encode(res); err != nil {
+		return fmt.Errorf("error encoding result: %w", err)
 	}
 
 	return nil
@@ -177,6 +337,16 @@ func cmdImportEvents(c *cli.Context) error {
 	}
 
 	cfg := getConfig(c)
+
+	if c.Bool(freshFlag.Name) {
+		for _, r := range repos {
+			if err := data.ClearState(cfg.DB, org, r); err != nil {
+				return fmt.Errorf("failed to clear state for %s/%s: %w", org, r, err)
+			}
+		}
+		slog.Info("cleared pagination state", "org", org, "repos", len(repos))
+	}
+
 	res := &EventImportResult{
 		Org:      org,
 		Repos:    repos,
@@ -235,6 +405,62 @@ func cmdImportAffiliations(c *cli.Context) error {
 		return fmt.Errorf("error encoding list: %+v: %w", res, err)
 	}
 
+	return nil
+}
+
+func cmdImportMetadata(c *cli.Context) error {
+	org := c.String(orgNameFlag.Name)
+	repo := c.String(repoNameFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub token: %w", err)
+	}
+
+	if token == "" {
+		return cli.ShowSubcommandHelp(c)
+	}
+
+	cfg := getConfig(c)
+
+	if org != "" && repo != "" {
+		if err := data.ImportRepoMeta(cfg.DBPath, token, org, repo); err != nil {
+			return fmt.Errorf("failed to import repo metadata: %w", err)
+		}
+	} else {
+		if err := data.ImportAllRepoMeta(cfg.DBPath, token); err != nil {
+			return fmt.Errorf("failed to import all repo metadata: %w", err)
+		}
+	}
+
+	fmt.Println("metadata import complete")
+	return nil
+}
+
+func cmdImportReleases(c *cli.Context) error {
+	org := c.String(orgNameFlag.Name)
+	repo := c.String(repoNameFlag.Name)
+	token, err := getGitHubToken()
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub token: %w", err)
+	}
+
+	if token == "" {
+		return cli.ShowSubcommandHelp(c)
+	}
+
+	cfg := getConfig(c)
+
+	if org != "" && repo != "" {
+		if err := data.ImportReleases(cfg.DBPath, token, org, repo); err != nil {
+			return fmt.Errorf("failed to import releases: %w", err)
+		}
+	} else {
+		if err := data.ImportAllReleases(cfg.DBPath, token); err != nil {
+			return fmt.Errorf("failed to import all releases: %w", err)
+		}
+	}
+
+	fmt.Println("release import complete")
 	return nil
 }
 

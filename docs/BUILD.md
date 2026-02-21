@@ -1,25 +1,51 @@
-# Build `dctl`
+# Building dctl
 
-> The only requirement to build `dctl` locally is [Go](https://go.dev/) v1.18 or better. 
+## Prerequisites
 
-To build `dctl` you will need to first clone the repository: 
+- [Go](https://go.dev/) 1.25+
+- [goreleaser](https://goreleaser.com/) (for cross-platform builds)
 
-```shell
-git clone git@github.com:mchmarny/dctl.git
-```
-
-Then navigate into the directory and build the distributable locally: 
+## Clone
 
 ```shell
-make cli
+git clone https://github.com/mchmarny/dctl.git
+cd dctl
 ```
 
-The resulting binary can be found in `bin` directory or just run locally like this:
+## Build
+
+Build for your current platform:
 
 ```shell
-bin/dctl
+make build
 ```
 
-## Disclaimer
+The binary is in `./dist`. To install it to `/usr/local/bin`:
 
-This is my personal project and it does not represent my employer. I take no responsibility for issues caused by this code. I do my best to ensure that everything works, but if something goes wrong, my apologies is all you will get.
+```shell
+make local
+```
+
+## Test
+
+```shell
+make test
+```
+
+## Full qualification (test + lint + vulnerability scan)
+
+```shell
+make qualify
+```
+
+## Run locally (development)
+
+```shell
+make server
+```
+
+## Available Makefile targets
+
+```shell
+make help
+```

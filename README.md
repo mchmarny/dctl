@@ -1,78 +1,144 @@
 # dctl
 
-`dctl` is an open source project aiming to provide a quick insight into the activity of a single repo or an entire GitHub organization. Some of the questions it can help you answer:
-            
-* Volume of collaboration events over time (forks, PRs, PR reviews, issue, and issue comments)
-* Number of developers and their entity affiliation per period (company or organization)
+[![test](https://github.com/mchmarny/dctl/actions/workflows/test-on-push.yaml/badge.svg)](https://github.com/mchmarny/dctl/actions/workflows/test-on-push.yaml)
+[![analyze](https://github.com/mchmarny/dctl/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/mchmarny/dctl/actions/workflows/codeql-analysis.yml)
+[![release](https://img.shields.io/github/v/release/mchmarny/dctl)](https://github.com/mchmarny/dctl/releases/latest)
+[![license](https://img.shields.io/github/license/mchmarny/dctl)](LICENSE)
 
-> The list of additional insight being worked on is available [here](https://github.com/mchmarny/dctl/issues?q=is%3Aissue+is%3Aopen+label%3Ainsight)
+Community health analytics for GitHub organizations and repositories. `dctl` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard.
 
 ![](docs/img/screenshot.png)
 
-> Hope you find this tool helpful. [Let me know](https://twitter.com/mchmarny) if you have any questions.
+## Features
 
-## Install 
+- **Activity trends** -- monthly event volume (PRs, reviews, issues, comments, forks) with total and 3-month moving average
+- **Bus factor / pony factor** -- minimum developers or organizations producing 50% of contributions
+- **Contributor retention** -- new vs returning contributors per month
+- **PR review ratio** -- PRs to reviews per month with ratio trend line
+- **Time to close / merge** -- average days to close issues and merge PRs
+- **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers
+- **Repository metadata** -- stars, forks, open issues, language, license
+- **Release cadence** -- monthly release counts (total vs stable)
+- **Unified search** -- `org:name`, `repo:name`, or `entity:name` prefix syntax
 
-On Max and Linux you can install `dctl` with [Homebrew](https://brew.sh/):
+## Install
+
+### Homebrew (macOS / Linux)
 
 ```shell
 brew tap mchmarny/dctl
 brew install dctl
 ```
 
-All new release will be automatically picked up with `brew upgrade`.
+### Binary releases
 
-`dctl` also provides pre-build releases for Mac, Linux, and Windows for both, AMD and ARM. See [releases](https://github.com/mchmarny/dctl/releases) to download the supported distributable for your platform/architecture combination. Alternatively, you can build your own version, see [BUILD.md](docs/BUILD.md) for details.
+Pre-built binaries for macOS, Linux, and Windows (amd64/arm64) are available on the [releases](https://github.com/mchmarny/dctl/releases/latest) page.
 
-## Why
+### Build from source
 
-One of the core principles on which `dctl` is built is that open source contributions are more than just PRs. And, while GitHub does provide repo-level activity charts and Grafana has a [plugin for GitHub](https://grafana.com/grafana/plugins/grafana-github-datasource/) (e.g. [CNCF Grafana Dashboard](https://k8s.devstats.cncf.io/)), there isn't really anything out there that's both, free and simple to use that provides that data.
+Requires [Go](https://go.dev/) 1.25+.
 
-## How
+```shell
+git clone https://github.com/mchmarny/dctl.git
+cd dctl
+make build
+```
 
-`dctl` imports all contribution metadata for a specific repo(s) using the [GitHub API](https://docs.github.com/en/rest), and augments that data with developer affiliations from sources like [CNCF](https://github.com/cncf/gitdm). More about importing data [here](docs/IMPORT.md).
+See [docs/BUILD.md](docs/BUILD.md) for details.
 
-Once downloaded, `dctl` exposes that data using a local UI with an option to drill-down on different aspects of the project activity (screenshot above). The instructions on how to start the integrated server and access the UI in your browser are located [here](docs/SERVER.md).
+## Quick start
 
-`dctl` can also be used to query the imported data in CLI and output JSON payloads for subsequent postprocessing in another tool (e.g. [jq](https://stedolan.github.io/jq/)). More about the CLI query option [here](docs/QUERY.md)
+### 1. Authenticate
 
-Whichever way you decide to use `dctl`, you will be able to use time period, contribution type, and developer name filters to further scope your data and identify specific trends with direct links to the original detail in GitHub for additional context. 
-
-And, since all this data is cached locally in [sqlite](https://www.sqlite.org/index.html) DB, you can even use another tool to further customized your queries using SQL without the need to re-download data. More about that [here](docs/QUERY.md)
-
-## Usage 
-
-`dctl` is a dual-purpose utility that can be either used as a CLI and as a server that can be accessed locally with your browser:
-
-* [Authenticating to GitHub](#authentication)
-* [Importing Data](docs/IMPORT.md)
-* [Querying Data](docs/QUERY.md)
-* [Using Server](docs/SERVER.md)
-
-## Authentication 
-
-To import data, `dctl` users GitHub API. While you can use GitHub API without authentication, to avoid throttling, and to get access to the higher API rate limits, `dctl` uses OAuth-based authentication to obtain a GitHub user token:
-
-> `dctl` doesn't ask for any access scopes, so the resulting token has only access to already public data
-
-To authenticate to GitHub using `dctl`:
+`dctl` uses GitHub's device flow for OAuth. The token is read-only (no scopes requested) and stored in your OS keychain.
 
 ```shell
 dctl auth
 ```
 
-The result should look something like this: 
+### 2. Import data
+
+Import everything for an org (events, affiliations, metadata, releases):
 
 ```shell
-1). Copy this code: E123-4567
-2). Navigate to this URL in your browser to authenticate: https://github.com/login/device
-3). Hit enter to complete the process:
+dctl import all --org <org>
 ```
 
-Follow these steps. Once you enter the provided code in the GitHub UI prompt and hit enter, `dctl` will persist the token in your home directory for all subsequent queries. Should you need to, you can revoke that token in your [GitHub Settings](https://docs.github.com/en/developers/apps/managing-oauth-apps/deleting-an-oauth-app). 
+Or target a specific repo:
 
-Once authenticated, try [importing some data](docs/IMPORT.md).
+```shell
+dctl import all --org <org> --repo <repo>
+```
 
-## Disclaimer
+Use `--fresh` to clear pagination state and re-import from scratch:
 
-This is my personal project and it does not represent my employer. I take no responsibility for issues caused by this code. I do my best to ensure that everything works, but if something goes wrong, my apologies is all you will get.
+```shell
+dctl import all --org <org> --fresh
+```
+
+See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
+
+### 3. View dashboard
+
+```shell
+dctl server
+```
+
+Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
+
+Use the search bar with prefix syntax to scope the dashboard:
+
+| Prefix | Example | Scope |
+|--------|---------|-------|
+| `org:` | `org:nvidia` | All repos in an organization |
+| `repo:` | `repo:skyhook` | Single repository |
+| `entity:` | `entity:google` | Company/org affiliation |
+
+No prefix defaults to org search.
+
+### 4. Query via CLI
+
+`dctl` also exposes data as JSON for scripting:
+
+```shell
+dctl query events --org knative --repo serving --type pr --since 2024-01-01
+dctl query developer list --like mark
+dctl query entity detail --name GOOGLE
+```
+
+See [docs/QUERY.md](docs/QUERY.md) for all query options.
+
+## Data sources
+
+| Source | Data |
+|--------|------|
+| [GitHub API](https://docs.github.com/en/rest) | PRs, issues, comments, reviews, forks, repo metadata, releases |
+| [cncf/gitdm](https://github.com/cncf/gitdm) | Developer-to-company affiliations |
+
+Entity names are normalized automatically. Use `dctl import substitutions` to correct misattributions:
+
+```shell
+dctl import substitutions --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new "IBM"
+```
+
+## Architecture
+
+All data is stored locally in a [SQLite](https://www.sqlite.org/) database (`~/.dctl/data.db`). No data leaves your machine. The dashboard is a local-only HTTP server with no external dependencies at runtime.
+
+```
+GitHub API --> dctl import --> SQLite --> dctl server --> localhost:8080
+                                    \--> dctl query --> JSON (stdout)
+```
+
+## Contributing
+
+Contributions are welcome. Please open an issue before submitting large changes.
+
+1. Fork and clone the repository
+2. Create a feature branch
+3. Run `make qualify` (tests, lint, vulnerability scan)
+4. Submit a pull request
+
+## License
+
+[Apache 2.0](LICENSE)

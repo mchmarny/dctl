@@ -39,10 +39,6 @@ func Init(dbFilePath string) error {
 	}
 	defer db.Close()
 
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		return fmt.Errorf("enabling WAL mode: %w", err)
-	}
-
 	if err := runMigrations(db); err != nil {
 		return fmt.Errorf("running migrations: %w", err)
 	}
@@ -135,6 +131,19 @@ func GetDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %s: %w", path, err)
 	}
+
+	// WAL mode on every connection (not just Init) so concurrent readers don't block.
+	if _, err := conn.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("enabling WAL mode: %w", err)
+	}
+
+	// Wait up to 5s when the DB is locked instead of failing immediately.
+	if _, err := conn.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("setting busy timeout: %w", err)
+	}
+
 	return conn, nil
 }
 

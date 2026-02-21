@@ -49,6 +49,13 @@ const (
 			e.url,
 			e.mentions,
 			e.labels,
+			e.state,
+			e.number,
+			e.created_at,
+			e.closed_at,
+			e.merged_at,
+			e.additions,
+			e.deletions,
 			d.username,
 			d.email,
 			d.full_name,
@@ -78,7 +85,8 @@ type EventTypeSeries struct {
 	Issues        []int     `json:"issue"`
 	IssueComments []int     `json:"issue_comment"`
 	Forks         []int     `json:"fork"`
-	Avg           []float32 `json:"avg"`
+	Total         []int     `json:"total"`
+	Trend         []float32 `json:"trend"`
 }
 
 type EventDetails struct {
@@ -141,7 +149,10 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 			Developer: &Developer{},
 		}
 		if err := rows.Scan(&e.Event.Org, &e.Event.Repo, &e.Event.Date, &e.Event.Type, &e.Event.URL,
-			&e.Event.Mentions, &e.Event.Labels, &e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
+			&e.Event.Mentions, &e.Event.Labels,
+			&e.Event.State, &e.Event.Number, &e.Event.CreatedAt, &e.Event.ClosedAt, &e.Event.MergedAt,
+			&e.Event.Additions, &e.Event.Deletions,
+			&e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
 			&e.Developer.AvatarURL, &e.Developer.ProfileURL, &e.Developer.Entity); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
@@ -179,11 +190,10 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		Issues:        make([]int, 0),
 		IssueComments: make([]int, 0),
 		Forks:         make([]int, 0),
-		Avg:           make([]float32, 0),
+		Total:         make([]int, 0),
+		Trend:         make([]float32, 0),
 	}
 
-	var runSum float32 = 0
-	var runCount int = 0
 	for rows.Next() {
 		var date string
 		var prs, prComments, issues, issueComments, forks int
@@ -196,11 +206,21 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		series.Issues = append(series.Issues, issues)
 		series.IssueComments = append(series.IssueComments, issueComments)
 		series.Forks = append(series.Forks, forks)
+		series.Total = append(series.Total, prs+prComments+issues+issueComments+forks)
+	}
 
-		// avg
-		runCount++
-		runSum += float32(prs + prComments + issues + issueComments + forks)
-		series.Avg = append(series.Avg, runSum/float32(len(EventTypes)*runCount))
+	// 3-month moving average trend line
+	const window = 3
+	for i := range series.Total {
+		start := i - window + 1
+		if start < 0 {
+			start = 0
+		}
+		var sum float32
+		for j := start; j <= i; j++ {
+			sum += float32(series.Total[j])
+		}
+		series.Trend = append(series.Trend, sum/float32(i-start+1))
 	}
 
 	return series, nil

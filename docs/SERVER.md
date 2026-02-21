@@ -1,62 +1,60 @@
-# dctl - server
+# Dashboard
 
-> Assumes you have already [authenticated](../README.md)
+> Assumes you have already [imported data](IMPORT.md).
 
-Once the data has been imported, the easiest way to view it is to start a local server: 
+## Start
 
 ```shell
 dctl server
 ```
 
-The result should be the information with the address:
+This starts a local HTTP server and opens your browser to `http://127.0.0.1:8080`.
 
-```shell
-INFO    server started on 127.0.0.1:8080
-```
+| Flag | Description |
+|------|-------------|
+| `--port` | Change the listen port (default: 8080) |
+| `--no-browser` | Don't auto-open the browser |
 
-At this point you can use your browser to navigate to [127.0.0.1:8080](http://127.0.0.1:8080) to view the data. 
+## Search
 
-> You can change the port on which the server starts by providing the `--port` flag. 
+The search bar uses prefix syntax to scope the dashboard:
 
-## Usage 
+| Prefix | Example | Scope |
+|--------|---------|-------|
+| `org:` | `org:nvidia` | All repos in an organization |
+| `repo:` | `repo:skyhook` | Single repository |
+| `entity:` | `entity:google` | Company/org affiliation |
 
-The `dctl` server UI provides three scopes by which you can query your imported data. 
-
-* Organization - Collection of multiple repositories
-* Repository - Specific repo view of the downloaded data
-* Affiliation - Developer entity view across all org/repos
-
-Each view provides all downloaded data view by default, and offers a quick search bar to help you locate org, repo, or entity.
-
-![](img/searchbar.png)
+Typing without a prefix defaults to org search. Clearing the search bar resets to the all-data view.
 
 ## Charts
 
-Whichever scope you use, there will be three charts illustrating the data you selected. Let's review each one of the charts: 
+All charts are interactive. Click on data points to filter the event search results.
 
-> Note, these charts are also "clickable" which means you can for example click on a specific month in your timeline to filter the result only to that month, or click on entity to further filter that month's data to only the developers associated to that entity.  
+### Monthly Activity
+Stacked bar chart of event types (PRs, reviews, issues, comments, forks) with a total line and 3-month moving average trend line.
 
-### Timeline 
+### Top Entities / Top Collaborators
+Entity and developer contribution distribution. Click an entity to see its affiliated developers in a popover. Legend items can be clicked to exclude them.
 
-This is a timeline of the monthly contributions split by (PR, Issue, and their comments)
+### Project Health
+Bus factor and pony factor: the minimum number of developers (or organizations) producing 50% of all contributions.
 
-![](img/timeline.png)
+### Contributor Retention
+Stacked bar chart showing new vs returning contributors per month.
 
-### Entity & Developer
+### PR Review Ratio
+Monthly PR and review counts with the ratio on a secondary axis.
 
-This is a chart of the top entity affiliations represented by all the developers, and chart of the top individual developers who contributed to the imported repos. 
+### Repository Metadata
+Aggregated stars, forks, open issues, primary language, license, and repo count.
 
-![](img/entitydev.png)
+### Release Cadence
+Monthly release counts split by total vs stable (non-prerelease).
 
+### Time to Close / Time to Merge
+Average days to close issues and merge PRs per month, with volume overlay.
 
-> Note, in both the entity and developer case, the `top` represents the volume of the contribution events, not on the actual size of the contribution (e.g. PR). 
+## Events table
 
-## Events
-
-Based on the scope, search, and chart selection, the events table will display a list of downloaded events that are matching your selection. The repo, event type, and developer name are directly linked to the detail in GitHub (e.g. profile, PR, Issue, etc).
-
-![](img/events.png)
-
-### Disclaimer
-
-This is my personal project and it does not represent my employer. I take no responsibility for issues caused by this code. I do my best to ensure that everything works, but if something goes wrong, my apologies is all you will get.
+Filtered by scope, search, and chart clicks. Each row links directly to the PR, issue, or developer profile on GitHub. Paginated with prev/next controls.

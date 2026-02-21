@@ -3,49 +3,30 @@ name: test
 on:
   workflow_call:
 
-jobs:
+permissions:
+  contents: read
 
+jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 15
     steps:
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: "1.25"
-
-    - name: Cache Go Modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+    - name: Setup Go
+      uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
       with:
-        fetch-depth: 2
+        go-version-file: go.mod
+        cache: true
 
     - name: Tidy Modules
-      run: |
-        make tidy
-
-    - name: Config Lint
-      id: golangci_config
-      uses: andstor/file-existence-action@v3
-      with:
-        files: .golangci.yaml
+      run: make tidy
 
     - name: Lint Code
-      if: steps.golangci_config.outputs.files_exists == 'true'
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@2f856675483cb8b9378ee77ee0beb67955aca9d7 # v6.5.1
       with:
-        version: latest
+        version: v2.1.6
 
     - name: Unit Test
-      run: |
-        make test
+      run: make test

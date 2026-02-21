@@ -214,6 +214,179 @@ func eventSearchAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsSummaryAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+		entity := r.URL.Query().Get("e")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetInsightsSummary(db, optional(org), optional(repo), optional(entity), months)
+		if err != nil {
+			slog.Error("failed to get insights summary", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying insights summary")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsRetentionAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetContributorRetention(db, optional(org), optional(repo), months)
+		if err != nil {
+			slog.Error("failed to get contributor retention", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying contributor retention")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsPRRatioAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetPRReviewRatio(db, optional(org), optional(repo), months)
+		if err != nil {
+			slog.Error("failed to get PR review ratio", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying PR review ratio")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func entityDevelopersAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		entity := r.URL.Query().Get("e")
+		if entity == "" {
+			writeError(w, http.StatusBadRequest, "entity parameter required")
+			return
+		}
+
+		res, err := data.GetEntity(db, entity)
+		if err != nil {
+			slog.Error("failed to get entity developers", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying entity developers")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsRepoMetaAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetRepoMetas(db, optional(org), optional(repo))
+		if err != nil {
+			slog.Error("failed to get repo metadata", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying repo metadata")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsReleaseCadenceAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetReleaseCadence(db, optional(org), optional(repo), months)
+		if err != nil {
+			slog.Error("failed to get release cadence", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying release cadence")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsTimeToMergeAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetTimeToMerge(db, optional(org), optional(repo), months)
+		if err != nil {
+			slog.Error("failed to get time to merge", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying time to merge")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsTimeToCloseAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+
+		if orgStr, repoStr, ok := parseRepo(optional(repo)); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetTimeToClose(db, optional(org), optional(repo), months)
+		if err != nil {
+			slog.Error("failed to get time to close", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying time to close")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func parseRepo(repo *string) (*string, *string, bool) {
 	if repo == nil {
 		return nil, nil, false

@@ -1,8 +1,6 @@
-project_name: dctl
+version: 2
 
-before:
-  hooks:
-    - go mod tidy
+project_name: dctl
 
 builds:
   - binary: "{{.ProjectName}}"
@@ -12,9 +10,10 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}}
-      - -s -w -X main.commit={{.ShortCommit}}
-      - -s -w -X main.date={{.CommitDate}}
+      - -s -w
+        -X main.version={{.Version}}
+        -X main.commit={{.ShortCommit}}
+        -X main.date={{.CommitDate}}
     goos:
       - darwin
       - linux
@@ -32,14 +31,15 @@ release:
   prerelease: auto
 
 archives:
-  - format: binary
+  - formats:
+      - binary
     name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
 
 checksum:
   name_template: "checksums-sha256.txt"
 
 snapshot:
-  name_template: "{{.Tag}}-next"
+  version_template: "{{.Tag}}-next"
 
 changelog:
   sort: asc
@@ -53,7 +53,7 @@ changelog:
 brews:
   -
     goarm: 7
-    tap:
+    repository:
       owner: mchmarny
       name: homebrew-dctl
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
@@ -62,17 +62,7 @@ brews:
       name: github-actions
       email: github-actions@github.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    folder: Formula
+    directory: Formula
     homepage: "https://github.com/mchmarny/dctl"
     description: "Simple utility to provide insight into repo activity."
     license: "Apache-2.0"
-    # test: |
-    #   system "#{bin}/dctl --version"
-    #   ...
-
-    # Custom install script for brew.
-    # Default is 'bin.install "program"'.
-    # install: |
-    #   bin.install "dctl"
-    #   ...
-

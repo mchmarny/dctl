@@ -29,8 +29,13 @@ func seedTestData(t *testing.T, db *sql.DB) {
 	}
 
 	for _, e := range events {
-		_, err = tx.Stmt(stmt).Exec(e.Org, e.Repo, e.Username, e.Type, e.Date,
-			e.URL, e.Mentions, e.Labels, e.URL, e.Mentions, e.Labels)
+		_, err = tx.Stmt(stmt).Exec(
+			e.Org, e.Repo, e.Username, e.Type, e.Date,
+			e.URL, e.Mentions, e.Labels,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.URL, e.Mentions, e.Labels,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+		)
 		require.NoError(t, err)
 	}
 	require.NoError(t, tx.Commit())

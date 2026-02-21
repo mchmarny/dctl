@@ -37,9 +37,9 @@ const (
 
 	selectDeveloperPercent = `SELECT
 			username,
-			ROUND(100.0 * events / (SUM(events) OVER ())) AS percent 
-		FROM (  
-			SELECT 
+			ROUND(100.0 * events / (SUM(events) OVER ())) AS percent
+		FROM (
+			SELECT
 				d.username,
 				COUNT(*) as events
 			FROM developer d
@@ -49,9 +49,10 @@ const (
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
 			AND d.username NOT IN (%s)
+			AND d.username NOT LIKE '%%[bot]'
 			GROUP BY d.username
-		) dt 
-		ORDER BY 2 DESC 
+		) dt
+		ORDER BY 2 DESC
 	`
 
 	selectOrgLike = `SELECT org, COUNT(DISTINCT repo) as repo_count, COUNT(*) as event_count  

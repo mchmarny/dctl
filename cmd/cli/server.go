@@ -9,7 +9,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -34,6 +36,12 @@ var (
 		Required: false,
 	}
 
+	noBrowserFlag = &cli.BoolFlag{
+		Name:    "no-browser",
+		Aliases: []string{"nb"},
+		Usage:   "Do not open browser automatically",
+	}
+
 	serverCmd = &cli.Command{
 		Name:    "server",
 		Aliases: []string{"s"},
@@ -41,6 +49,7 @@ var (
 		Action:  cmdStartServer,
 		Flags: []cli.Flag{
 			portFlag,
+			noBrowserFlag,
 		},
 	}
 )
@@ -68,7 +77,12 @@ func cmdStartServer(c *cli.Context) error {
 		}
 	}()
 
-	slog.Info("server started", "address", address)
+	url := fmt.Sprintf("http://%s", address)
+	slog.Info("server started", "address", url)
+
+	if !c.Bool(noBrowserFlag.Name) {
+		openBrowser(url)
+	}
 
 	<-done
 
@@ -87,7 +101,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Static files
-	mux.Handle("GET /static/", http.FileServerFS(embedFS))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(embedFS)))
 	mux.HandleFunc("GET /favicon.ico", faviconHandler)
 
 	// Views
@@ -99,6 +113,36 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /data/entity", entityDataAPIHandler(db))
 	mux.HandleFunc("GET /data/developer", developerDataAPIHandler(db))
 	mux.HandleFunc("POST /data/search", eventSearchAPIHandler(db))
+	mux.HandleFunc("GET /data/entity/developers", entityDevelopersAPIHandler(db))
+
+	// Insights API
+	mux.HandleFunc("GET /data/insights/summary", insightsSummaryAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/retention", insightsRetentionAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/pr-ratio", insightsPRRatioAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/time-to-merge", insightsTimeToMergeAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/time-to-close", insightsTimeToCloseAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/repo-meta", insightsRepoMetaAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/release-cadence", insightsReleaseCadenceAPIHandler(db))
 
 	return mux
+}
+
+func openBrowser(url string) {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = "open"
+	case "linux":
+		cmd = "xdg-open"
+	default: // windows
+		cmd = "rundll32"
+		args = []string{"url.dll,FileProtocolHandler"}
+	}
+
+	args = append(args, url)
+	if err := exec.Command(cmd, args...).Start(); err != nil {
+		slog.Error("failed to open browser", "error", err)
+	}
 }

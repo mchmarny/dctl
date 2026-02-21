@@ -1,145 +1,95 @@
-# dctl - import
+# Importing data
 
-The following data import operations are currently supported: 
+All data is stored locally in an embedded [SQLite](https://www.sqlite.org/) database. Subsequent imports only download new data since the last run.
 
-* `events` - Imports GitHub repo event data (PRs, comments, issues, etc)
-* `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
-* `substitutions` - Create a global data substitute (e.g. standardize entity name)
-* `updates` - Update all previously imported org, repos, and affiliations 
+> All commands assume you have already [authenticated](../README.md#1-authenticate).
 
-The `dctl` CLI comes with an embedded [sqlite](https://www.sqlite.org/index.html) database. All imported data is persisted locally so all your queries are fast and subsequent imports only download the new data. 
+## Import all (recommended)
 
-## Import GitHub Events
-
-> Assumes you have already [authenticated](../README.md)
+Import events, affiliations, substitutions, metadata, and releases in one command:
 
 ```shell
-dctl import events --org <organization> --repo <repository>
+dctl import all --org <org>
 ```
 
-> By default, `dctl` will download data for the last 6 months. Provide `--months` flag to download less or more data.
-
-When completed, `dctl` will return a summary of the import: 
-
-```json
-{
-  "org": "knative",
-  "repos": [
-    "serving"
-  ],
-  "imported": {
-    "knative/serving/issue": 5,
-    "knative/serving/issue_comment": 2,
-    "knative/serving/pr": 100,
-    "knative/serving/pr_review": 79
-  },
-  "duration": "4.794015292s"
-}
-```
-
-To import data for all repos in a specific organization simply omit the `--repo` flag:
+Target a specific repo:
 
 ```shell
-dctl import events --org <organization>
+dctl import all --org <org> --repo <repo>
 ```
 
-To get a more immediate feedback during import use the debug flag:
+Force a full re-import (clears pagination state):
 
 ```shell
-dctl --debug import events --org <organization> --repo <repository>
+dctl import all --org <org> --fresh
 ```
 
-## Update Developer Entity Affiliation
+By default, `dctl` downloads the last 6 months of data. Use `--months` to adjust:
 
-> Assumes you have already authenticated and imported data
+```shell
+dctl import all --org <org> --months 12
+```
 
-Developers on GitHub often don't include their company or organization affiliation, and when they do, they tend to do it in all kinds of creative ways (you'd be surprized how many different IBMs and Googles are out there). To clean this data up, `dctl` provides:
+## Individual import commands
 
-* `affiliations` - Updates imported developer entity/identity with CNCF and GitHub data
+### Events
 
-To update affiliations using [CNCF developer affiliation files](https://github.com/cncf/gitdm):
+Import GitHub activity data (PRs, reviews, issues, comments, forks):
+
+```shell
+dctl import events --org <org> --repo <repo>
+```
+
+Omit `--repo` to import all repos in the org. Use `--fresh` to re-import from page 1.
+
+### Affiliations
+
+Enrich developer profiles with company affiliations from [cncf/gitdm](https://github.com/cncf/gitdm) and GitHub profile data:
 
 ```shell
 dctl import affiliations
 ```
 
-> Alternatively you can provide the `--url` parameter to import a specific `developers_affiliations.txt` file 
+### Substitutions
 
-When completed, `dctl` will output the results (in this example, out of the `3756` unique developers that were already imported into the local database, `459` were updated based on the `38984` CNCF affiliations): 
-
-```json
-{
-    "duration": "1m4.576478333s",
-    "db_devs": 3756,
-    "cncf_devs": 38984,
-    "mapped_devs": 459
-}
-```
-
-Just like before, to get a more immediate feedback during import use the --debug flag.
-
-## Standardize imported data using substitutions
-
-To  Standardize imported data (e.g. standardize entity name) you can use the substitute operation to create global data substitutions. For example, to replace all instances of `INTERNATIONAL BUSINESS MACHINES` with `IBM` you would execute the following operation: 
+Create entity name mappings to normalize inconsistent affiliations:
 
 ```shell
-dctl import substitutions --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new IBM
+dctl import substitutions --type entity --old "GOOGLE LLC" --new "GOOGLE"
 ```
 
-> Note, these substitutions will be applied to the already imported data as well as saved and apply after each new import and update operation.
+Substitutions are saved and re-applied on every subsequent import.
 
-The response will look something like this:
+### Metadata
 
-```json
-{
-  "prop": "entity",
-  "old": "INTERNATIONAL BUSINESS MACHINES",
-  "new": "IBM",
-  "rows": 0
-}
+Import repository metadata (stars, forks, language, license):
+
+```shell
+dctl import metadata --org <org> --repo <repo>
 ```
 
-## Update all previously imported data
+Omit flags to import metadata for all previously imported repos.
 
-Once you configured the GitHub organizations and repositories for which you want to track metrics, you just need to run the `updates` command and `dctl` will automatically update the data, reconcile affiliations, and apply the substitutions. 
+### Releases
+
+Import release tags and publish dates:
+
+```shell
+dctl import releases --org <org> --repo <repo>
+```
+
+### Updates
+
+Re-import all previously configured orgs/repos plus affiliations and substitutions:
 
 ```shell
 dctl import updates
 ```
 
-> Just like with all the other operations you can include the `--debug` flag to get more immediate feedback on the update progress.
+## Debug output
 
-The response will look something like this:
+Add `--debug` to any command for verbose logging:
 
-
-```json
-{
-  "duration": "1m16.1696975s",
-  "imported": {
-    "knative/serving/issue": 11,
-    "knative/serving/issue_comment": 38,
-    "knative/serving/pr": 100,
-    "knative/serving/pr_review": 83,
-    ...
-  },
-  "updated": {
-    "duration": "47.540827625s",
-    "db_devs": 795,
-    "cncf_devs": 38988,
-    "mapped_devs": 313
-  },
-  "substituted": [
-    {
-      "prop": "entity",
-      "old": "GOOGLE LLC",
-      "new": "GOOGLE",
-      "rows": 0
-    },
-    ...
-  ]
-}
+```shell
+dctl --debug import all --org <org>
 ```
-
-## Disclaimer
-
-This is my personal project and it does not represent my employer. I take no responsibility for issues caused by this code. I do my best to ensure that everything works, but if something goes wrong, my apologies is all you will get.

@@ -84,6 +84,19 @@ func SaveState(db *sql.DB, query, org, repo string, state *State) error {
 	return nil
 }
 
+func ClearState(db *sql.DB, org, repo string) error {
+	if db == nil {
+		return errDBNotInitialized
+	}
+
+	q := "DELETE FROM state WHERE org = ? AND repo = ?"
+	if _, err := db.Exec(q, org, repo); err != nil {
+		return fmt.Errorf("failed to clear state for %s/%s: %w", org, repo, err)
+	}
+
+	return nil
+}
+
 // GetDataState returns the current state of the database.
 func GetDataState(db *sql.DB) (map[string]int64, error) {
 	if db == nil {
