@@ -2,12 +2,13 @@ package auth
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/mchmarny/dctl/pkg/net"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -49,7 +50,7 @@ func GetDeviceCode(clientID string) (*DeviceCode, error) {
 
 	req, err := http.NewRequest(http.MethodPost, deviceCodeURL, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	q := req.URL.Query()
@@ -62,27 +63,27 @@ func GetDeviceCode(clientID string) (*DeviceCode, error) {
 
 	client, err := net.GetHTTPClient()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get http client")
+		return nil, fmt.Errorf("failed to get http client: %w", err)
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send request")
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		body := ""
-		if b, err := ioutil.ReadAll(res.Body); err == nil {
+		if b, err := io.ReadAll(res.Body); err == nil {
 			body = string(b)
 		}
 
-		return nil, errors.Errorf("failed to get device code: %s - %s - %s", res.Status, req.URL, body)
+		return nil, fmt.Errorf("failed to get device code: %s - %s - %s", res.Status, req.URL, body)
 	}
 
 	var dc DeviceCode
 	if err := json.NewDecoder(res.Body).Decode(&dc); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	return &dc, nil
@@ -104,7 +105,7 @@ func GetToken(clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
 
 	req, err := http.NewRequest(http.MethodPost, accessCodeURL, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	q := req.URL.Query()
@@ -118,19 +119,19 @@ func GetToken(clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
 
 	client, err := net.GetHTTPClient()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get http client")
+		return nil, fmt.Errorf("failed to get http client: %w", err)
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send request")
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
 	defer res.Body.Close()
 
 	var t AccessTokenResponse
 	if err := json.NewDecoder(res.Body).Decode(&t); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if time.Now().UTC().After(expiresAt) {

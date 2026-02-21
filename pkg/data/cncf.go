@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"github.com/mchmarny/dctl/pkg/net"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -68,17 +68,17 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 	}
 
 	if client == nil {
-		return nil, errors.Errorf("client is required")
+		return nil, fmt.Errorf("client is required")
 	}
 
 	dbDevs, err := GetDeveloperUsernames(db)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting developers from db")
+		return nil, fmt.Errorf("error getting developers from db: %w", err)
 	}
 
 	cncfDevs, err := GetCNCFEntityAffiliations()
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting CNCF affiliations")
+		return nil, fmt.Errorf("error getting CNCF affiliations: %w", err)
 	}
 
 	start := time.Now()
@@ -90,7 +90,7 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 	for _, u := range dbDevs {
 		if dev, ok := cncfDevs[u]; ok {
 			if err := UpdateDeveloper(ctx, db, client, u, dev); err != nil {
-				return nil, errors.Wrapf(err, "error updating developer %s", u)
+				return nil, fmt.Errorf("error updating developer %s: %w", u, err)
 			}
 			res.MappedDevs++
 			continue
@@ -99,7 +99,7 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 
 	// run this on the end to update the user entities that were not part of the above process
 	if err := CleanEntities(db); err != nil {
-		return nil, errors.Wrap(err, "error cleaning entities")
+		return nil, fmt.Errorf("error cleaning entities: %w", err)
 	}
 
 	res.Duration = time.Since(start).String()
@@ -119,7 +119,7 @@ func GetCNCFEntityAffiliations() (map[string]*CNCFDeveloper, error) {
 	for i, url := range urls {
 		ok, err := loadAffiliations(url, devs)
 		if err != nil {
-			return devs, errors.Wrapf(err, "import affiliation from URS %d - %s", i, url)
+			return devs, fmt.Errorf("import affiliation from URS %d - %s: %w", i, url, err)
 		}
 		completed++
 		if !ok {
@@ -138,23 +138,23 @@ func loadAffiliations(url string, devs map[string]*CNCFDeveloper) (bool, error) 
 
 	f, err := os.CreateTemp("", "affils")
 	if err != nil {
-		return false, errors.Wrapf(err, "error creating temp file")
+		return false, fmt.Errorf("error creating temp file: %w", err)
 	}
 
 	path := f.Name()
 	log.Debugf("downloading %s to %s", url, path)
 	if err = net.Download(url, path); err != nil {
-		if err == net.ErrorURLNotFound {
+		if errors.Is(err, net.ErrorURLNotFound) {
 			log.Debugf("url not found: %s", url)
 			return false, nil // return raw error
 		}
-		return false, errors.Wrapf(err, "error downloading file: %s", url)
+		return false, fmt.Errorf("error downloading file: %s: %w", url, err)
 	}
 	defer os.Remove(f.Name())
 
 	log.Debugf("extracting %s", path)
 	if err := extractAffiliations(path, devs); err != nil {
-		return false, errors.Wrapf(err, "error extracting file: %s", path)
+		return false, fmt.Errorf("error extracting file: %s: %w", path, err)
 	}
 
 	return true, nil
@@ -167,7 +167,7 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 
 	f, err := os.Open(path)
 	if err != nil {
-		return errors.Wrapf(err, "error opening file: %s", path)
+		return fmt.Errorf("error opening file: %s: %w", path, err)
 	}
 	defer f.Close()
 
@@ -176,7 +176,7 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 	var p *CNCFDeveloper
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
-			return errors.Wrapf(err, "error reading file: %s", path)
+			return fmt.Errorf("error reading file: %s: %w", path, err)
 		}
 
 		// skip empty and comment lines
@@ -248,7 +248,7 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return errors.Wrapf(err, "error reading file: %s", path)
+		return fmt.Errorf("error reading file: %s: %w", path, err)
 	}
 
 	return nil

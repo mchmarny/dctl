@@ -2,10 +2,10 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,13 +61,13 @@ func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 	stmt, err := db.Prepare(selectEntityLike)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare entity like statement")
+		return nil, fmt.Errorf("failed to prepare entity like statement: %w", err)
 	}
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -76,7 +76,7 @@ func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 		var name string
 		var count int
 		if err := rows.Scan(&name, &count); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		e := &ListItem{
 			Value: name,
@@ -95,18 +95,18 @@ func GetEntity(db *sql.DB, val string) (*EntityResult, error) {
 
 	stmt, err := db.Prepare(selectEntityDevelopersSQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare developer entity affiliation statement")
+		return nil, fmt.Errorf("failed to prepare developer entity affiliation statement: %w", err)
 	}
 
 	rows, err := stmt.Query(val)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
 	list, err := mapDeveloperListItem(rows)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to map developer list")
+		return nil, fmt.Errorf("failed to map developer list: %w", err)
 	}
 
 	r := &EntityResult{
@@ -125,13 +125,13 @@ func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 
 	stmt, err := db.Prepare(queryEntitySQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare developer entity statement")
+		return nil, fmt.Errorf("failed to prepare developer entity statement: %w", err)
 	}
 
 	val = fmt.Sprintf("%%%s%%", val)
 	rows, err := stmt.Query(val, limit)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -140,7 +140,7 @@ func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 		var name string
 		var count int
 		if err := rows.Scan(&name, &count); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, &CountedItem{
 			Name:  name,
@@ -158,43 +158,43 @@ func CleanEntities(db *sql.DB) error {
 
 	stmt, err := db.Prepare(selectEntityNamesSQL)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare developer query statement")
+		return fmt.Errorf("failed to prepare developer query statement: %w", err)
 	}
 
 	m := make(map[string]string)
 	rows, err := stmt.Query()
 	if err != nil && err != sql.ErrNoRows {
-		return errors.Wrap(err, "failed to execute select statement")
+		return fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var name string
 		if err = rows.Scan(&name); err != nil {
-			return errors.Wrap(err, "failed to scan row")
+			return fmt.Errorf("failed to scan row: %w", err)
 		}
 		m[name] = cleanEntityName(name)
 	}
 
 	updateStmt, err := db.Prepare(updateEntityNamesSQL)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare entity update statement")
+		return fmt.Errorf("failed to prepare entity update statement: %w", err)
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		return errors.Wrap(err, "failed to begin transaction")
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	for old, new := range m {
 		if _, err = tx.Stmt(updateStmt).Exec(new, old); err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error updating entity %s to %s", old, new)
+			return fmt.Errorf("error updating entity %s to %s: %w", old, new, err)
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed to commit transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

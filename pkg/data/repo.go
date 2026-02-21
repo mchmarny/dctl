@@ -3,11 +3,11 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/google/go-github/v45/github"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -58,13 +58,13 @@ func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 	stmt, err := db.Prepare(selectRepoLike)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare repo like statement")
+		return nil, fmt.Errorf("failed to prepare repo like statement: %w", err)
 	}
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -73,7 +73,7 @@ func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 		var org, repo string
 		var count int
 		if err := rows.Scan(&org, &repo, &count); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		e := &ListItem{
 			Value: fmt.Sprintf("%s/%s", org, repo),
@@ -105,7 +105,7 @@ func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*Repo,
 	opt := &github.RepositoryListOptions{}
 	items, _, err := github.NewClient(client).Repositories.List(ctx, org, opt)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list repositories for: %s", org)
+		return nil, fmt.Errorf("failed to list repositories for: %s: %w", org, err)
 	}
 
 	list := make([]*Repo, 0)

@@ -3,13 +3,13 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/go-github/v45/github"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -93,12 +93,12 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 
 	stmt, err := db.Prepare(selectAllOrgRepos)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare developer percentages statement")
+		return nil, fmt.Errorf("failed to prepare developer percentages statement: %w", err)
 	}
 
 	rows, err := stmt.Query()
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -106,7 +106,7 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 	for rows.Next() {
 		e := &OrgRepoItem{}
 		if err := rows.Scan(&e.Org, &e.Repo); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, e)
 	}
@@ -131,12 +131,12 @@ func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []s
 
 	stmt, err := db.Prepare(fmt.Sprintf(sqlStr, strings.Join(params, ",")))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare percentages statement")
+		return nil, fmt.Errorf("failed to prepare percentages statement: %w", err)
 	}
 
 	rows, err := stmt.Query(qArgs...)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -144,7 +144,7 @@ func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []s
 	for rows.Next() {
 		e := &CountedItem{}
 		if err := rows.Scan(&e.Name, &e.Count); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, e)
 	}
@@ -174,13 +174,13 @@ func GetOrgLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 	stmt, err := db.Prepare(selectOrgLike)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare org like statement")
+		return nil, fmt.Errorf("failed to prepare org like statement: %w", err)
 	}
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -189,7 +189,7 @@ func GetOrgLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 		e := &ListItem{}
 		var repoCount, eventCount int
 		if err := rows.Scan(&e.Value, &repoCount, &eventCount); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		e.Text = fmt.Sprintf("%s (%d repos, %d events)", e.Value, repoCount, eventCount)
 		list = append(list, e)
@@ -215,7 +215,7 @@ func GetUserOrgs(ctx context.Context, client *http.Client, username string, limi
 
 	items, _, err := github.NewClient(client).Organizations.List(ctx, username, opt)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list repositories for: %s", username)
+		return nil, fmt.Errorf("failed to list repositories for: %s: %w", username, err)
 	}
 
 	list := make([]*Org, 0)

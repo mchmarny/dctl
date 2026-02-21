@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -92,21 +91,21 @@ func getDBSlice(db *sql.DB, sqlQuery string) ([]string, error) {
 
 	stmt, err := db.Prepare(sqlQuery)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare sql statement")
+		return nil, fmt.Errorf("failed to prepare sql statement: %w", err)
 	}
 
 	list := make([]string, 0)
 
 	rows, err := stmt.Query()
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute series select statement")
+		return nil, fmt.Errorf("failed to execute series select statement: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var u string
 		if err := rows.Scan(&u); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, u)
 	}
@@ -125,12 +124,12 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 
 	userStmt, err := db.Prepare(insertDeveloperSQL)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare developer insert statement")
+		return fmt.Errorf("failed to prepare developer insert statement: %w", err)
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		return errors.Wrap(err, "failed to begin transaction")
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	for i, u := range devs {
@@ -146,12 +145,12 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 				"entity":  u.Entity,
 			}).Errorf("failed to insert developer[%d]: %v", i, err)
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting developer[%d]: %s", i, u.Username)
+			return fmt.Errorf("error inserting developer[%d]: %s: %w", i, u.Username, err)
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed to commit transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -164,7 +163,7 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 
 	dbDev, err := GetDeveloper(db, username)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get developer %s", username)
+		return fmt.Errorf("failed to get developer %s: %w", username, err)
 	}
 	if dbDev == nil {
 		return nil
@@ -172,16 +171,16 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 
 	// make sure the DB dev == CNCF dev
 	if dbDev.Username != cDev.Username {
-		return errors.Errorf("username mismatch (CNCF): %s != %s", dbDev.Username, cDev.Username)
+		return fmt.Errorf("username mismatch (CNCF): %s != %s", dbDev.Username, cDev.Username)
 	}
 
 	ghDev, err := GetGitHubDeveloper(ctx, client, username)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get github developer %s", username)
+		return fmt.Errorf("failed to get github developer %s: %w", username, err)
 	}
 
 	if dbDev.Username != ghDev.Username {
-		return errors.Errorf("username mismatch (GitHub): %s != %s", dbDev.Username, ghDev.Username)
+		return fmt.Errorf("username mismatch (GitHub): %s != %s", dbDev.Username, ghDev.Username)
 	}
 
 	printDevDeltas(dbDev, ghDev, cDev)
@@ -215,7 +214,7 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 
 	// update the DB
 	if err := SaveDevelopers(db, []*Developer{dbDev}); err != nil {
-		return errors.Wrapf(err, "failed to save developer %s", username)
+		return fmt.Errorf("failed to save developer %s: %w", username, err)
 	}
 
 	return nil
@@ -234,7 +233,7 @@ func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 
 	stmt, err := db.Prepare(selectDeveloperSQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare developer select statement")
+		return nil, fmt.Errorf("failed to prepare developer select statement: %w", err)
 	}
 
 	row := stmt.QueryRow(username)
@@ -244,7 +243,7 @@ func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, errors.Wrap(err, "failed to scan row")
+		return nil, fmt.Errorf("failed to scan row: %w", err)
 	}
 
 	return u, nil
@@ -258,7 +257,7 @@ func mapDeveloperListItem(rows *sql.Rows) ([]*DeveloperListItem, error) {
 			if err == sql.ErrNoRows {
 				return list, nil
 			}
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, u)
 	}
@@ -273,13 +272,13 @@ func SearchDevelopers(db *sql.DB, val string, limit int) ([]*DeveloperListItem, 
 
 	stmt, err := db.Prepare(queryDeveloperSQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare developer query statement")
+		return nil, fmt.Errorf("failed to prepare developer query statement: %w", err)
 	}
 
 	val = fmt.Sprintf("%%%s%%", val)
 	rows, err := stmt.Query(val, val, val, limit)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute select statement")
+		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -293,23 +292,23 @@ func UpdateDeveloperNames(db *sql.DB, devs map[string]string) error {
 
 	updateStmt, err := db.Prepare(updateDeveloperNamesSQL)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare entity update statement")
+		return fmt.Errorf("failed to prepare entity update statement: %w", err)
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		return errors.Wrap(err, "failed to begin transaction")
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	for username, name := range devs {
 		if _, err = tx.Stmt(updateStmt).Exec(name, username); err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error updating full name for %s to %s", username, name)
+			return fmt.Errorf("error updating full name for %s to %s: %w", username, name, err)
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed to commit transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

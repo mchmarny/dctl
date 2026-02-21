@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/mchmarny/dctl/pkg/auth"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,7 +26,7 @@ var (
 func cmdInitAuthFlow(c *cli.Context) error {
 	code, err := auth.GetDeviceCode(clientID)
 	if err != nil {
-		return errors.Wrap(err, "failed to get device code")
+		return fmt.Errorf("failed to get device code: %w", err)
 	}
 
 	fmt.Printf("1). Copy this code: %s\n", code.UserCode)
@@ -38,16 +36,16 @@ func cmdInitAuthFlow(c *cli.Context) error {
 
 	_, err = fmt.Scanln()
 	if err != nil {
-		return errors.Wrap(err, "failed to read user input")
+		return fmt.Errorf("failed to read user input: %w", err)
 	}
 
 	token, err := auth.GetToken(clientID, code)
 	if err != nil {
-		return errors.Wrap(err, "failed to get token")
+		return fmt.Errorf("failed to get token: %w", err)
 	}
 
 	if err = saveGitHubToken(token.AccessToken); err != nil {
-		return errors.Wrap(err, "failed to save token")
+		return fmt.Errorf("failed to save token: %w", err)
 	}
 
 	fmt.Printf("Token saved to: %s\n", path.Join(getHomeDir(), tokenFileName))
@@ -59,12 +57,12 @@ func saveGitHubToken(token string) error {
 	tokenPath := path.Join(getHomeDir(), tokenFileName)
 	f, err := os.Create(tokenPath)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create token file: %s", tokenPath)
+		return fmt.Errorf("failed to create token file: %s: %w", tokenPath, err)
 	}
 	defer f.Close()
 
 	if _, err = f.WriteString(token); err != nil {
-		return errors.Wrapf(err, "failed to write token to file: %s", tokenPath)
+		return fmt.Errorf("failed to write token to file: %s: %w", tokenPath, err)
 	}
 
 	return nil
@@ -72,9 +70,9 @@ func saveGitHubToken(token string) error {
 
 func getGitHubToken() (string, error) {
 	tokenPath := path.Join(getHomeDir(), tokenFileName)
-	b, err := ioutil.ReadFile(tokenPath)
+	b, err := os.ReadFile(tokenPath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to read token file: %s", tokenPath)
+		return "", fmt.Errorf("failed to read token file: %s: %w", tokenPath, err)
 	}
 
 	return string(b), nil

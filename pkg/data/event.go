@@ -3,6 +3,8 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -10,7 +12,6 @@ import (
 
 	"github.com/google/go-github/v45/github"
 	"github.com/mchmarny/dctl/pkg/net"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -73,13 +74,13 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 
 	db, err := GetDB(dbPath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting DB: %s", dbPath)
+		return nil, fmt.Errorf("error getting DB: %s: %w", dbPath, err)
 	}
 	defer db.Close()
 
 	list, err := GetAllOrgRepos(db)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting org/repo list")
+		return nil, fmt.Errorf("error getting org/repo list: %w", err)
 	}
 
 	results := make(map[string]int)
@@ -131,7 +132,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	}
 
 	if err := imp.loadState(); err != nil {
-		return nil, errors.Wrapf(err, "error loading last page state: %s/%s", owner, repo)
+		return nil, fmt.Errorf("error loading last page state: %s/%s: %w", owner, repo, err)
 	}
 
 	log.Debugf("importing events for %s/%s", owner, repo)
@@ -158,7 +159,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	wg.Wait()
 
 	if err := imp.flush(); err != nil {
-		return nil, errors.Wrapf(err, "error flushing final events: %s/%s", imp.owner, imp.repo)
+		return nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
 	}
 
 	return imp.counts, nil
@@ -201,7 +202,7 @@ func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.T
 
 	if len(e.list) >= importBatchSize {
 		if err := e.flush(); err != nil {
-			return errors.Wrap(err, "error flushing events")
+			return fmt.Errorf("error flushing events: %w", err)
 		}
 	}
 	return nil
@@ -210,14 +211,14 @@ func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.T
 func (e *EventImporter) loadState() error {
 	db, err := GetDB(e.dbPath)
 	if err != nil {
-		return errors.Wrapf(err, "error getting DB: %s", e.dbPath)
+		return fmt.Errorf("error getting DB: %s: %w", e.dbPath, err)
 	}
 	defer db.Close()
 
 	for _, t := range EventTypes {
 		state, err := GetState(db, t, e.owner, e.repo, e.minEventTime)
 		if err != nil {
-			return errors.Wrapf(err, "error getting last page: %s/%s - %s", e.owner, e.repo, t)
+			return fmt.Errorf("error getting last page: %s/%s - %s: %w", e.owner, e.repo, t, err)
 		}
 		e.state[t] = state
 	}
@@ -253,28 +254,28 @@ func (e *EventImporter) flush() error {
 
 	db, err := GetDB(e.dbPath)
 	if err != nil {
-		return errors.Wrapf(err, "error getting DB: %s", e.dbPath)
+		return fmt.Errorf("error getting DB: %s: %w", e.dbPath, err)
 	}
 	defer db.Close()
 
 	eventStmt, err := db.Prepare(insertEventSQL)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare event insert statement")
+		return fmt.Errorf("failed to prepare event insert statement: %w", err)
 	}
 
 	devStmt, err := db.Prepare(insertDeveloperSQL)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare developer insert statement")
+		return fmt.Errorf("failed to prepare developer insert statement: %w", err)
 	}
 
 	stateStmt, err := db.Prepare(insertState)
 	if err != nil {
-		return errors.Wrapf(err, "failed to prepare state insert statement")
+		return fmt.Errorf("failed to prepare state insert statement: %w", err)
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		return errors.Wrap(err, "failed to begin transaction")
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	for i, u := range devs {
@@ -282,7 +283,7 @@ func (e *EventImporter) flush() error {
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting developer[%d]: %s", i, u.Username)
+			return fmt.Errorf("error inserting developer[%d]: %s: %w", i, u.Username, err)
 		}
 	}
 
@@ -291,7 +292,7 @@ func (e *EventImporter) flush() error {
 			e.URL, e.Mentions, e.Labels, e.URL, e.Mentions, e.Labels)
 		if err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting event[%d]: %s/%s", i, e.Org, e.Repo)
+			return fmt.Errorf("error inserting event[%d]: %s/%s: %w", i, e.Org, e.Repo, err)
 		}
 	}
 
@@ -300,13 +301,13 @@ func (e *EventImporter) flush() error {
 		_, err = tx.Stmt(stateStmt).Exec(t, e.owner, e.repo, p.Page, since, p.Page, since)
 		if err != nil {
 			rollbackTransaction(tx)
-			return errors.Wrapf(err, "error inserting state[%s]: %s/%s with page:%d and since:%s",
-				t, e.owner, e.repo, p.Page, p.Since.Format("2006-01-02"))
+			return fmt.Errorf("error inserting state[%s]: %s/%s with page:%d and since:%s: %w",
+				t, e.owner, e.repo, p.Page, p.Since.Format("2006-01-02"), err)
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed to commit transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	log.Debugf("successfully flushed in %s", time.Since(start).String())
@@ -349,7 +350,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		items, resp, err := e.client.PullRequests.List(ctx, e.owner, e.repo, opt)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return errors.Wrapf(err, "error listing prs, rate: %s", rateInfo(&resp.Rate))
+			return fmt.Errorf("error listing prs, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
 		log.Debugf("pr - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
 
@@ -370,7 +371,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			mentions = append(mentions, getUsernames(items[i].RequestedReviewers...)...)
 			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, mentions,
 				getLabels(items[i].Labels)); err != nil {
-				return errors.Wrapf(err, "error adding pr event: %s/%s", e.owner, e.repo)
+				return fmt.Errorf("error adding pr event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
@@ -404,7 +405,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 		items, resp, err := e.client.Issues.ListByRepo(ctx, e.owner, e.repo, opt)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return errors.Wrapf(err, "error listing issues, rate: %s", rateInfo(&resp.Rate))
+			return fmt.Errorf("error listing issues, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
 		log.Debugf("issue - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
 
@@ -418,7 +419,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			mentions = append(mentions, getUsernames(items[i].Assignees...)...)
 			if err := e.add(EventTypeIssue, *items[i].HTMLURL, items[i].User,
 				items[i].UpdatedAt, mentions, getLabels(items[i].Labels)); err != nil {
-				return errors.Wrapf(err, "error adding issue event: %s/%s", e.owner, e.repo)
+				return fmt.Errorf("error adding issue event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
@@ -458,7 +459,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 		items, resp, err := e.client.Issues.ListComments(ctx, e.owner, e.repo, nilNumber, opt)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return errors.Wrapf(err, "error listing issue comments, rate: %s", rateInfo(&resp.Rate))
+			return fmt.Errorf("error listing issue comments, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
 		log.Debugf("issue comment - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
 
@@ -468,7 +469,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 
 		for i := range items {
 			if err := e.add(EventTypeIssueComment, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
-				return errors.Wrapf(err, "error adding issue comment event: %s/%s", e.owner, e.repo)
+				return fmt.Errorf("error adding issue comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
@@ -501,7 +502,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 		items, resp, err := e.client.PullRequests.ListComments(ctx, e.owner, e.repo, nilNumber, opt)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return errors.Wrapf(err, "error listing pr comments, rate: %s", rateInfo(&resp.Rate))
+			return fmt.Errorf("error listing pr comments, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
 		log.Debugf("pr comment - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
 
@@ -511,7 +512,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 
 		for i := range items {
 			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, items[i].UpdatedAt, parseUsers(items[i].Body), nil); err != nil {
-				return errors.Wrapf(err, "error adding PR comment event: %s/%s", e.owner, e.repo)
+				return fmt.Errorf("error adding PR comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
@@ -542,7 +543,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 		items, resp, err := e.client.Repositories.ListForks(ctx, e.owner, e.repo, opt)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return errors.Wrapf(err, "error listing forks, rate: %s", rateInfo(&resp.Rate))
+			return fmt.Errorf("error listing forks, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
 		log.Debugf("fork - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
 
@@ -552,7 +553,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 
 		for i := range items {
 			if err := e.add(EventTypeFork, *items[i].HTMLURL, items[i].Owner, &items[i].UpdatedAt.Time, nil, items[i].Topics); err != nil {
-				return errors.Wrapf(err, "error adding fork event: %s/%s", e.owner, e.repo)
+				return fmt.Errorf("error adding fork event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 

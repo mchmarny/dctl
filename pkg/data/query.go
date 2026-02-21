@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -125,13 +123,13 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 
 	stmt, err := db.Prepare(selectEventSQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare event search statement")
+		return nil, fmt.Errorf("failed to prepare event search statement: %w", err)
 	}
 
 	offset := (q.Page - 1) * q.PageSize
 	rows, err := stmt.Query(q.FromDate, q.ToDate, q.Type, q.Org, q.Repo, q.Username, optionalLike(q.Mention), optionalLike(q.Label), q.Entity, q.PageSize, offset)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute event search statement")
+		return nil, fmt.Errorf("failed to execute event search statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -145,7 +143,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 		if err := rows.Scan(&e.Event.Org, &e.Event.Repo, &e.Event.Date, &e.Event.Type, &e.Event.URL,
 			&e.Event.Mentions, &e.Event.Labels, &e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
 			&e.Developer.AvatarURL, &e.Developer.ProfileURL, &e.Developer.Entity); err != nil {
-			return nil, errors.Wrapf(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, e)
 	}
@@ -160,7 +158,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 
 	stmt, err := db.Prepare(selectEventTypesSinceSQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare repo events statement")
+		return nil, fmt.Errorf("failed to prepare repo events statement: %w", err)
 	}
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
@@ -170,7 +168,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		EventTypePR, EventTypePRReview, EventTypeIssue, EventTypeIssueComment, EventTypeFork,
 		org, repo, entity)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute series select statement")
+		return nil, fmt.Errorf("failed to execute series select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -190,7 +188,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		var date string
 		var prs, prComments, issues, issueComments, forks int
 		if err := rows.Scan(&date, &prs, &prComments, &issues, &issueComments, &forks); err != nil {
-			return nil, errors.Wrapf(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		series.Dates = append(series.Dates, date)
 		series.PRs = append(series.PRs, prs)

@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/mchmarny/dctl/pkg/data"
 	"github.com/mchmarny/dctl/pkg/net"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -108,7 +109,7 @@ func cmdUpdate(c *cli.Context) error {
 	start := time.Now()
 	token, err := getGitHubToken()
 	if err != nil {
-		return errors.Wrap(err, "failed to get GitHub token")
+		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if token == "" {
@@ -119,7 +120,7 @@ func cmdUpdate(c *cli.Context) error {
 
 	m, err := data.UpdateEvents(dbFilePath, token)
 	if err != nil {
-		return errors.Wrap(err, "failed to import events")
+		return fmt.Errorf("failed to import events: %w", err)
 	}
 
 	db := getDBOrFail()
@@ -132,19 +133,19 @@ func cmdUpdate(c *cli.Context) error {
 	// also update affiliations
 	a, err := importAffiliations(db)
 	if err != nil {
-		return errors.Wrap(err, "failed to import affiliations")
+		return fmt.Errorf("failed to import affiliations: %w", err)
 	}
 	res.Updated = a
 
 	// also update substitutes
 	sub, err := data.ApplySubstitutions(db)
 	if err != nil {
-		return errors.Wrap(err, "failed to apply substitutions")
+		return fmt.Errorf("failed to apply substitutions: %w", err)
 	}
 	res.Substituted = sub
 
 	if err := getEncoder().Encode(res); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", res)
+		return fmt.Errorf("error encoding list: %+v: %w", res, err)
 	}
 
 	return nil
@@ -157,7 +158,7 @@ func cmdImportEvents(c *cli.Context) error {
 	months := c.Int(monthsFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
-		return errors.Wrap(err, "failed to get GitHub token")
+		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if org == "" || token == "" {
@@ -171,7 +172,7 @@ func cmdImportEvents(c *cli.Context) error {
 		client := net.GetOAuthClient(ctx, token)
 		repos, err = data.GetOrgRepoNames(ctx, client, org)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get org %s repos", org)
+			return fmt.Errorf("failed to get org %s repos: %w", org, err)
 		}
 	} else {
 		repos = strings.Split(repo, ",")
@@ -186,7 +187,7 @@ func cmdImportEvents(c *cli.Context) error {
 	for _, r := range repos {
 		m, err := data.ImportEvents(dbFilePath, token, org, r, months)
 		if err != nil {
-			return errors.Wrap(err, "failed to import events")
+			return fmt.Errorf("failed to import events: %w", err)
 		}
 		for k, v := range m {
 			res.Imported[k] = v
@@ -196,7 +197,7 @@ func cmdImportEvents(c *cli.Context) error {
 	res.Duration = time.Since(start).String()
 
 	if err := getEncoder().Encode(res); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", res)
+		return fmt.Errorf("error encoding list: %+v: %w", res, err)
 	}
 
 	return nil
@@ -205,7 +206,7 @@ func cmdImportEvents(c *cli.Context) error {
 func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 	token, err := getGitHubToken()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get GitHub token")
+		return nil, fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if token == "" {
@@ -217,7 +218,7 @@ func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 
 	res, err := data.UpdateDevelopersWithCNCFEntityAffiliations(ctx, db, client)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to import affiliations")
+		return nil, fmt.Errorf("failed to import affiliations: %w", err)
 	}
 
 	return res, nil
@@ -229,11 +230,11 @@ func cmdImportAffiliations(c *cli.Context) error {
 
 	res, err := importAffiliations(db)
 	if err != nil {
-		return errors.Wrap(err, "failed to import affiliations")
+		return fmt.Errorf("failed to import affiliations: %w", err)
 	}
 
 	if err := getEncoder().Encode(res); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", res)
+		return fmt.Errorf("error encoding list: %+v: %w", res, err)
 	}
 
 	return nil
@@ -253,11 +254,11 @@ func cmdSubstitutes(c *cli.Context) error {
 
 	res, err := data.SaveAndApplyDeveloperSub(db, sub, old, new)
 	if err != nil {
-		return errors.Wrap(err, "failed to update names from apache foundation")
+		return fmt.Errorf("failed to update names from apache foundation: %w", err)
 	}
 
 	if err := getEncoder().Encode(res); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", res)
+		return fmt.Errorf("error encoding list: %+v: %w", res, err)
 	}
 
 	return nil

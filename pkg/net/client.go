@@ -2,11 +2,11 @@ package net
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"time"
 
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 )
 
@@ -14,7 +14,7 @@ import (
 func GetHTTPClient() (*http.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create cookie jar")
+		return nil, fmt.Errorf("failed to create cookie jar: %w", err)
 	}
 
 	return &http.Client{

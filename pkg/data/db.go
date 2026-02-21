@@ -3,10 +3,11 @@ package data
 import (
 	"database/sql"
 	"embed"
+	"errors"
+	"fmt"
 	"os"
 	"regexp"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	_ "modernc.org/sqlite"
 )
@@ -34,17 +35,17 @@ func Init(dbFilePath string) error {
 	if _, err := os.Stat(dbFilePath); errors.Is(err, os.ErrNotExist) {
 		db, err := GetDB(dbFilePath)
 		if err != nil {
-			return errors.Wrapf(err, "error opening database: %s", dbFilePath)
+			return fmt.Errorf("error opening database: %s: %w", dbFilePath, err)
 		}
 		defer db.Close()
 
 		log.Debug("creating db schema...")
 		b, err := f.ReadFile("sql/ddl.sql")
 		if err != nil {
-			return errors.Wrap(err, "failed to read the schema creation file")
+			return fmt.Errorf("failed to read the schema creation file: %w", err)
 		}
 		if _, err := db.Exec(string(b)); err != nil {
-			return errors.Wrapf(err, "failed to create database schema in: %s", dbFilePath)
+			return fmt.Errorf("failed to create database schema in: %s: %w", dbFilePath, err)
 		}
 		log.Debug("db schema created")
 	}
@@ -52,7 +53,7 @@ func Init(dbFilePath string) error {
 	var err error
 	entityRegEx, err = regexp.Compile(nonAlphaNumRegex)
 	if err != nil {
-		return errors.Wrap(err, "failed to compile entity regex")
+		return fmt.Errorf("failed to compile entity regex: %w", err)
 	}
 
 	return nil
@@ -61,7 +62,7 @@ func Init(dbFilePath string) error {
 func GetDB(path string) (*sql.DB, error) {
 	conn, err := sql.Open("sqlite", path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open database: %s", path)
+		return nil, fmt.Errorf("failed to open database: %s: %w", path, err)
 	}
 	return conn, nil
 }

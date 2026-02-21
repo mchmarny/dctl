@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"errors"
+
 	"github.com/mchmarny/dctl/pkg/data"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

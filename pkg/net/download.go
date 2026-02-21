@@ -1,12 +1,12 @@
 package net
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -33,7 +33,7 @@ func getResp(url string) (resp *http.Response, err error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating HTTP Get request")
+		return nil, fmt.Errorf("error creating HTTP Get request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", clientAgent)
@@ -52,7 +52,7 @@ func Download(url string, filepath string) error {
 
 	resp, err := getResp(url)
 	if err != nil {
-		return errors.Wrap(err, "error creating HTTP Get request")
+		return fmt.Errorf("error creating HTTP Get request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -61,12 +61,12 @@ func Download(url string, filepath string) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("error downloading file (status: %d - %s): %s", resp.StatusCode, resp.Status, url)
+		return fmt.Errorf("error downloading file (status: %d - %s): %s", resp.StatusCode, resp.Status, url)
 	}
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "error saving downloaded content to file")
+		return fmt.Errorf("error saving downloaded content to file: %w", err)
 	}
 
 	return nil

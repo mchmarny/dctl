@@ -8,7 +8,6 @@ import (
 
 	"github.com/mchmarny/dctl/pkg/data"
 	"github.com/mchmarny/dctl/pkg/net"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -201,11 +200,11 @@ func cmdQueryEntity(c *cli.Context) error {
 
 	ent, err := data.GetEntity(db, val)
 	if err != nil {
-		return errors.Wrap(err, "failed to query entity")
+		return fmt.Errorf("failed to query entity: %w", err)
 	}
 
 	if err := getEncoder().Encode(ent); err != nil {
-		return errors.Wrapf(err, "error encoding: %+v", ent)
+		return fmt.Errorf("error encoding: %+v: %w", ent, err)
 	}
 
 	return nil
@@ -255,11 +254,11 @@ func cmdQueryEvents(c *cli.Context) error {
 
 	list, err := data.SearchEvents(db, q)
 	if err != nil {
-		return errors.Wrap(err, "failed to query events")
+		return fmt.Errorf("failed to query events: %w", err)
 	}
 
 	if err := getEncoder().Encode(list); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", list)
+		return fmt.Errorf("error encoding list: %+v: %w", list, err)
 	}
 
 	return nil
@@ -281,11 +280,11 @@ func cmdQueryEntities(c *cli.Context) error {
 
 	list, err := data.QueryEntities(db, val, limit)
 	if err != nil {
-		return errors.Wrap(err, "failed to query entities")
+		return fmt.Errorf("failed to query entities: %w", err)
 	}
 
 	if err := getEncoder().Encode(list); err != nil {
-		return errors.Wrapf(err, "error encoding list: %+v", list)
+		return fmt.Errorf("error encoding list: %+v: %w", list, err)
 	}
 
 	return nil
@@ -295,7 +294,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	val := c.String(ghUserNameQueryFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
-		return errors.Wrap(err, "failed to get GitHub token")
+		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if val == "" || token == "" {
@@ -308,7 +307,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	log.WithFields(log.Fields{"name": val}).Debug("query developer data...")
 	dev, err := data.GetDeveloper(db, val)
 	if err != nil {
-		return errors.Wrap(err, "failed to query developer")
+		return fmt.Errorf("failed to query developer: %w", err)
 	}
 
 	if dev == nil || dev.Username == "" {
@@ -321,11 +320,11 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	log.WithFields(log.Fields{"name": dev.Username}).Debug("query developer gh organizations...")
 	dev.Organizations, err = data.GetUserOrgs(ctx, client, dev.Username, queryResultLimitDefault)
 	if err != nil {
-		return errors.Wrap(err, "failed to query orgs")
+		return fmt.Errorf("failed to query orgs: %w", err)
 	}
 
 	if err := getEncoder().Encode(dev); err != nil {
-		return errors.Wrapf(err, "error encoding: %+v", dev)
+		return fmt.Errorf("error encoding: %+v: %w", dev, err)
 	}
 
 	return nil
@@ -347,11 +346,11 @@ func cmdQueryDevelopers(c *cli.Context) error {
 
 	list, err := data.SearchDevelopers(db, val, limit)
 	if err != nil {
-		return errors.Wrap(err, "error quering CNCF developer")
+		return fmt.Errorf("error quering CNCF developer: %w", err)
 	}
 
 	if err := getEncoder().Encode(list); err != nil {
-		return errors.Wrapf(err, "error encoding: %+v", list)
+		return fmt.Errorf("error encoding: %+v: %w", list, err)
 	}
 
 	return nil
@@ -361,7 +360,7 @@ func cmdQueryOrgRepos(c *cli.Context) error {
 	org := c.String(orgNameFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
-		return errors.Wrap(err, "failed to get GitHub token")
+		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if org == "" || token == "" {
@@ -372,11 +371,11 @@ func cmdQueryOrgRepos(c *cli.Context) error {
 	client := net.GetOAuthClient(ctx, token)
 	list, err := data.GetOrgRepos(ctx, client, org)
 	if err != nil {
-		return errors.Wrap(err, "failed to query repos")
+		return fmt.Errorf("failed to query repos: %w", err)
 	}
 
 	if err := getEncoder().Encode(list); err != nil {
-		return errors.Wrapf(err, "error encoding: %+v", list)
+		return fmt.Errorf("error encoding: %+v: %w", list, err)
 	}
 
 	return nil

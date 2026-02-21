@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/go-github/v45/github"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -63,7 +63,7 @@ func GetGitHubDeveloper(ctx context.Context, client *http.Client, username strin
 
 	usr, resp, err := github.NewClient(client).Users.Get(ctx, username)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list repositories for: %s", username)
+		return nil, fmt.Errorf("failed to list repositories for: %s: %w", username, err)
 	}
 
 	log.Debugf("got details for user: %s, %s", username, rateInfo(&resp.Rate))
@@ -83,7 +83,7 @@ func SearchGitHubUsers(ctx context.Context, client *http.Client, query string, l
 	}
 	list, resp, err := github.NewClient(client).Search.Users(ctx, query, opts)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to search users for: %s", query)
+		return nil, fmt.Errorf("failed to search users for: %s: %w", query, err)
 	}
 
 	if list == nil || len(list.Users) == 0 {

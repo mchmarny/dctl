@@ -3,8 +3,6 @@ package data
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -82,22 +80,22 @@ func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 
 	// CHeck if contains
 	if !Contains(UpdatableProperties, sub.Prop) {
-		return errors.Errorf("invalid property: %s (permitted options: %v)", sub.Prop, UpdatableProperties)
+		return fmt.Errorf("invalid property: %s (permitted options: %v)", sub.Prop, UpdatableProperties)
 	}
 
 	stmt, err := db.Prepare(fmt.Sprintf(updateDeveloperPropertySQL, sub.Prop, sub.Prop))
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare sql statement")
+		return fmt.Errorf("failed to prepare sql statement: %w", err)
 	}
 
 	res, err := stmt.Exec(sub.New, sub.Old)
 	if err != nil && err != sql.ErrNoRows {
-		return errors.Wrap(err, "failed to execute developer property update statement")
+		return fmt.Errorf("failed to execute developer property update statement: %w", err)
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		return errors.Wrap(err, "failed to get rows affected")
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 
 	sub.Records = rows
@@ -117,16 +115,16 @@ func SaveAndApplyDeveloperSub(db *sql.DB, prop, old, new string) (*Substitution,
 	}
 
 	if err := applyDeveloperSub(db, s); err != nil {
-		return nil, errors.Wrap(err, "failed to apply developer sub")
+		return nil, fmt.Errorf("failed to apply developer sub: %w", err)
 	}
 
 	subStmt, err := db.Prepare(insertSubSQL)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to prepare state insert statement")
+		return nil, fmt.Errorf("failed to prepare state insert statement: %w", err)
 	}
 
 	if _, err = subStmt.Exec(prop, old, new, new); err != nil {
-		return nil, errors.Wrap(err, "failed to insert state")
+		return nil, fmt.Errorf("failed to insert state: %w", err)
 	}
 
 	return s, nil
@@ -139,12 +137,12 @@ func ApplySubstitutions(db *sql.DB) ([]*Substitution, error) {
 
 	stmt, err := db.Prepare(selectSubSQL)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare sql statement")
+		return nil, fmt.Errorf("failed to prepare sql statement: %w", err)
 	}
 
 	rows, err := stmt.Query()
 	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err, "failed to execute substitute select statement")
+		return nil, fmt.Errorf("failed to execute substitute select statement: %w", err)
 	}
 	defer rows.Close()
 
@@ -152,14 +150,14 @@ func ApplySubstitutions(db *sql.DB) ([]*Substitution, error) {
 	for rows.Next() {
 		s := &Substitution{}
 		if err := rows.Scan(&s.Prop, &s.Old, &s.New); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, s)
 	}
 
 	for _, s := range list {
 		if err := applyDeveloperSub(db, s); err != nil {
-			return nil, errors.Wrap(err, "failed to apply developer sub")
+			return nil, fmt.Errorf("failed to apply developer sub: %w", err)
 		}
 	}
 

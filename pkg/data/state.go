@@ -2,9 +2,9 @@ package data
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 var (
@@ -35,7 +35,7 @@ func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error
 
 	stateStmt, err := db.Prepare(selectState)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare state select statement")
+		return nil, fmt.Errorf("failed to prepare state select statement: %w", err)
 	}
 
 	row := stateStmt.QueryRow(query, org, repo)
@@ -50,7 +50,7 @@ func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error
 		if err == sql.ErrNoRows {
 			return s, nil
 		}
-		return nil, errors.Wrap(err, "failed to scan row")
+		return nil, fmt.Errorf("failed to scan row: %w", err)
 	}
 
 	s.Since = time.Unix(since, 0).UTC()
@@ -68,17 +68,17 @@ func SaveState(db *sql.DB, query, org, repo string, state *State) error {
 	}
 
 	if query == "" || org == "" || repo == "" {
-		return errors.Errorf("query: %s, org: %s, repo: %s are all required", query, org, repo)
+		return fmt.Errorf("query: %s, org: %s, repo: %s are all required", query, org, repo)
 	}
 
 	stateStmt, err := db.Prepare(insertState)
 	if err != nil {
-		return errors.Wrapf(err, "failed to prepare state insert statement")
+		return fmt.Errorf("failed to prepare state insert statement: %w", err)
 	}
 
 	since := state.Since.Unix()
 	if _, err = stateStmt.Exec(query, org, repo, state.Page, state.Page, since, since); err != nil {
-		return errors.Wrap(err, "failed to insert state")
+		return fmt.Errorf("failed to insert state: %w", err)
 	}
 
 	return nil
@@ -94,12 +94,12 @@ func GetDataState(db *sql.DB) (map[string]int64, error) {
 	for k, v := range stateQueries {
 		stmt, err := db.Prepare(v)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error preparing %s statement", k)
+			return nil, fmt.Errorf("error preparing %s statement: %w", k, err)
 		}
 
 		count, err := getCount(db, stmt)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error getting %s count", k)
+			return nil, fmt.Errorf("error getting %s count: %w", k, err)
 		}
 		state[k] = count
 	}
@@ -120,7 +120,7 @@ func getCount(db *sql.DB, stmt *sql.Stmt) (int64, error) {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		}
-		return 0, errors.Wrap(err, "failed to scan row")
+		return 0, fmt.Errorf("failed to scan row: %w", err)
 	}
 
 	return count, nil
