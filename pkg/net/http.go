@@ -13,7 +13,7 @@ func GetJSON[T any](url string, target *T) error {
 	}
 	defer resp.Body.Close()
 	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
-		return fmt.Errorf("error decodding content: %w", err)
+		return fmt.Errorf("error decoding content: %w", err)
 	}
 	return nil
 }

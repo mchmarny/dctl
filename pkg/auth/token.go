@@ -38,7 +38,7 @@ type DeviceCode struct {
 }
 
 type AccessTokenResponse struct {
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitempty"` //nolint:gosec // G117: OAuth response struct, field name required for JSON unmarshaling
 	TokenType   string `json:"token_type,omitempty"`
 	Scope       string `json:"scope,omitempty"`
 }
@@ -66,7 +66,7 @@ func GetDeviceCode(clientID string) (*DeviceCode, error) {
 		return nil, fmt.Errorf("failed to get http client: %w", err)
 	}
 
-	res, err := client.Do(req)
+	res, err := client.Do(req) //nolint:gosec // G704: URL from constant deviceCodeURL, not user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -122,11 +122,10 @@ func GetToken(clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
 		return nil, fmt.Errorf("failed to get http client: %w", err)
 	}
 
-	res, err := client.Do(req)
+	res, err := client.Do(req) //nolint:gosec // G704: URL from constant accessCodeURL, not user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-
 	defer res.Body.Close()
 
 	var t AccessTokenResponse

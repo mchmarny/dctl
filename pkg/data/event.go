@@ -153,26 +153,26 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 
 	slog.Debug("importing events", "owner", owner, "repo", repo)
 	var wg sync.WaitGroup
-
-	errCh := make(chan error, len(importers))
-
-	go func() {
-		for err := range errCh {
-			slog.Error("import error", "error", err)
-		}
-	}()
+	var importErrors []error
+	var errMu sync.Mutex
 
 	for i := range importers {
 		wg.Add(1)
 		go func(i importer) {
 			defer wg.Done()
 			if err := i(ctx); err != nil {
-				errCh <- err
+				errMu.Lock()
+				importErrors = append(importErrors, err)
+				errMu.Unlock()
 			}
 		}(importers[i])
 	}
 
 	wg.Wait()
+
+	for _, err := range importErrors {
+		slog.Error("import error", "error", err)
+	}
 
 	if err := imp.flush(); err != nil {
 		return nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
@@ -522,6 +522,7 @@ func getStrPtr(s string) *string {
 	return &s
 }
 
+//nolint:dupl // similar loop structure but different GitHub API types (IssueComment vs PullRequestComment)
 func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	slog.Debug("starting issue comment event import", "page", e.state[EventTypeIssueComment].Page, "since", e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
 
@@ -566,6 +567,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	return nil
 }
 
+//nolint:dupl // similar loop structure but different GitHub API types (PullRequestComment vs IssueComment)
 func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 	slog.Debug("starting pr review event import", "page", e.state[EventTypePRReview].Page, "since", e.state[EventTypePRReview].Since.Format("2006-01-02"))
 

@@ -32,6 +32,7 @@ func GetOAuthClient(ctx context.Context, token string) *http.Client {
 		},
 	)
 	tc := oauth2.NewClient(ctx, ts)
+	tc.Timeout = time.Duration(timeoutInSeconds) * time.Second
 
 	return tc
 }

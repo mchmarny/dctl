@@ -173,7 +173,7 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 		return fmt.Errorf("path not set")
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // G703: path from os.CreateTemp, not user input
 	if err != nil {
 		return fmt.Errorf("error opening file: %s: %w", path, err)
 	}
@@ -200,19 +200,21 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 			}
 
 			// create new user
+			parts := strings.SplitN(line, ":", 2)
 			p = &CNCFDeveloper{
-				Username:     strings.Split(line, ":")[0],
+				Username:     parts[0],
 				Identities:   make([]string, 0),
 				Affiliations: make([]*CNCFAffiliation, 0),
 			}
 
-			addressStr := strings.Split(line, ":")[1]
-			addresses := strings.Split(addressStr, ",")
-			for _, address := range addresses {
-				if strings.Contains(address, "users.noreply.github.com") {
-					continue
+			if len(parts) > 1 {
+				addresses := strings.Split(parts[1], ",")
+				for _, address := range addresses {
+					if strings.Contains(address, "users.noreply.github.com") {
+						continue
+					}
+					p.Identities = append(p.Identities, strings.ReplaceAll(strings.TrimSpace(address), "!", "@"))
 				}
-				p.Identities = append(p.Identities, strings.ReplaceAll(strings.TrimSpace(address), "!", "@"))
 			}
 
 			continue
@@ -253,6 +255,11 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 
 		// add affiliation to the current user
 		p.Affiliations = append(p.Affiliations, f)
+	}
+
+	// add final developer
+	if p != nil {
+		devs[p.Username] = p
 	}
 
 	if err := scanner.Err(); err != nil {

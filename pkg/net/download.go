@@ -26,9 +26,9 @@ var (
 )
 
 func getResp(url string) (resp *http.Response, err error) {
-	c := http.Client{
-		Timeout:   time.Duration(timeoutInSeconds) * time.Second,
-		Transport: reqTransport,
+	c, err := GetHTTPClient()
+	if err != nil {
+		return nil, fmt.Errorf("error creating HTTP client: %w", err)
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -38,7 +38,7 @@ func getResp(url string) (resp *http.Response, err error) {
 
 	req.Header.Set("User-Agent", clientAgent)
 
-	return c.Do(req)
+	return c.Do(req) //nolint:gosec // G704: URL from internal callers, not user input
 }
 
 var ErrorURLNotFound = errors.New("URL not found")

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
@@ -177,11 +178,6 @@ var (
 	}
 )
 
-func writeEmpty(_ *cli.Context) error {
-	_, err := os.Stdout.Write([]byte("{}"))
-	return err
-}
-
 func optional(val string) *string {
 	if val == "" || val == "undefined" {
 		return nil
@@ -262,8 +258,8 @@ func cmdQueryEvents(c *cli.Context) error {
 	return nil
 }
 
-func cmdQueryEntities(c *cli.Context) error {
-	val := c.String(entityLikeQueryFlag.Name)
+func cmdQueryList[T any](c *cli.Context, flag *cli.StringFlag, fn func(*sql.DB, string, int) ([]*T, error)) error {
+	val := c.String(flag.Name)
 	if val == "" {
 		return cli.ShowSubcommandHelp(c)
 	}
@@ -275,16 +271,16 @@ func cmdQueryEntities(c *cli.Context) error {
 
 	cfg := getConfig(c)
 
-	list, err := data.QueryEntities(cfg.DB, val, limit)
+	list, err := fn(cfg.DB, val, limit)
 	if err != nil {
-		return fmt.Errorf("failed to query entities: %w", err)
+		return fmt.Errorf("failed to query %s: %w", flag.Name, err)
 	}
 
-	if err := getEncoder().Encode(list); err != nil {
-		return fmt.Errorf("error encoding list: %+v: %w", list, err)
-	}
+	return getEncoder().Encode(list)
+}
 
-	return nil
+func cmdQueryEntities(c *cli.Context) error {
+	return cmdQueryList(c, entityLikeQueryFlag, data.QueryEntities)
 }
 
 func cmdQueryDeveloper(c *cli.Context) error {
@@ -307,7 +303,8 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	}
 
 	if dev == nil || dev.Username == "" {
-		return writeEmpty(c)
+		fmt.Fprint(os.Stdout, "{}")
+		return nil
 	}
 
 	ctx := context.Background()
@@ -327,28 +324,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 }
 
 func cmdQueryDevelopers(c *cli.Context) error {
-	val := c.String(developerLikeQueryFlag.Name)
-	if val == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
-
-	limit := c.Int(queryLimitFlag.Name)
-	if limit == 0 || limit > queryResultLimitDefault {
-		limit = queryResultLimitDefault
-	}
-
-	cfg := getConfig(c)
-
-	list, err := data.SearchDevelopers(cfg.DB, val, limit)
-	if err != nil {
-		return fmt.Errorf("error quering CNCF developer: %w", err)
-	}
-
-	if err := getEncoder().Encode(list); err != nil {
-		return fmt.Errorf("error encoding: %+v: %w", list, err)
-	}
-
-	return nil
+	return cmdQueryList(c, developerLikeQueryFlag, data.SearchDevelopers)
 }
 
 func cmdQueryOrgRepos(c *cli.Context) error {

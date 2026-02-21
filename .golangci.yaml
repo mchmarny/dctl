@@ -59,7 +59,11 @@ linters:
 
   settings:
     dupl:
-      threshold: 200
+      threshold: 100
+
+    gosec:
+      excludes:
+        - G706  # slog structured logging does not interpolate values
 
     funlen:
       lines: 150

@@ -408,7 +408,7 @@ func cmdImportAffiliations(c *cli.Context) error {
 	return nil
 }
 
-func cmdImportMetadata(c *cli.Context) error {
+func runImport(c *cli.Context, single func(string, string, string, string) error, all func(string, string) error, name string) error {
 	org := c.String(orgNameFlag.Name)
 	repo := c.String(repoNameFlag.Name)
 	token, err := getGitHubToken()
@@ -423,45 +423,25 @@ func cmdImportMetadata(c *cli.Context) error {
 	cfg := getConfig(c)
 
 	if org != "" && repo != "" {
-		if err := data.ImportRepoMeta(cfg.DBPath, token, org, repo); err != nil {
-			return fmt.Errorf("failed to import repo metadata: %w", err)
+		if err := single(cfg.DBPath, token, org, repo); err != nil {
+			return fmt.Errorf("failed to import %s: %w", name, err)
 		}
 	} else {
-		if err := data.ImportAllRepoMeta(cfg.DBPath, token); err != nil {
-			return fmt.Errorf("failed to import all repo metadata: %w", err)
+		if err := all(cfg.DBPath, token); err != nil {
+			return fmt.Errorf("failed to import all %s: %w", name, err)
 		}
 	}
 
-	fmt.Println("metadata import complete")
+	fmt.Printf("%s import complete\n", name)
 	return nil
 }
 
+func cmdImportMetadata(c *cli.Context) error {
+	return runImport(c, data.ImportRepoMeta, data.ImportAllRepoMeta, "metadata")
+}
+
 func cmdImportReleases(c *cli.Context) error {
-	org := c.String(orgNameFlag.Name)
-	repo := c.String(repoNameFlag.Name)
-	token, err := getGitHubToken()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if token == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
-
-	cfg := getConfig(c)
-
-	if org != "" && repo != "" {
-		if err := data.ImportReleases(cfg.DBPath, token, org, repo); err != nil {
-			return fmt.Errorf("failed to import releases: %w", err)
-		}
-	} else {
-		if err := data.ImportAllReleases(cfg.DBPath, token); err != nil {
-			return fmt.Errorf("failed to import all releases: %w", err)
-		}
-	}
-
-	fmt.Println("release import complete")
-	return nil
+	return runImport(c, data.ImportReleases, data.ImportAllReleases, "releases")
 }
 
 func cmdSubstitutes(c *cli.Context) error {
