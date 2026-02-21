@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 
@@ -16,7 +17,8 @@ func TestMain(m *testing.M) {
 	initLogging(false)
 
 	if err := data.Init(testDir); err != nil {
-		fatalErr(err)
+		slog.Error("fatal error", "error", err)
+		os.Exit(1)
 	}
 
 	code := m.Run()

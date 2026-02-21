@@ -116,29 +116,27 @@ func cmdUpdate(c *cli.Context) error {
 		return cli.ShowSubcommandHelp(c)
 	}
 
+	cfg := getConfig(c)
 	res := &EventUpdateResult{}
 
-	m, err := data.UpdateEvents(dbFilePath, token)
+	m, err := data.UpdateEvents(cfg.DBPath, token)
 	if err != nil {
 		return fmt.Errorf("failed to import events: %w", err)
 	}
-
-	db := getDBOrFail()
-	defer db.Close()
 
 	// update final state
 	res.Imported = m
 	res.Duration = time.Since(start).String()
 
 	// also update affiliations
-	a, err := importAffiliations(db)
+	a, err := importAffiliations(cfg.DB)
 	if err != nil {
 		return fmt.Errorf("failed to import affiliations: %w", err)
 	}
 	res.Updated = a
 
 	// also update substitutes
-	sub, err := data.ApplySubstitutions(db)
+	sub, err := data.ApplySubstitutions(cfg.DB)
 	if err != nil {
 		return fmt.Errorf("failed to apply substitutions: %w", err)
 	}
@@ -178,6 +176,7 @@ func cmdImportEvents(c *cli.Context) error {
 		repos = strings.Split(repo, ",")
 	}
 
+	cfg := getConfig(c)
 	res := &EventImportResult{
 		Org:      org,
 		Repos:    repos,
@@ -185,7 +184,7 @@ func cmdImportEvents(c *cli.Context) error {
 	}
 
 	for _, r := range repos {
-		m, err := data.ImportEvents(dbFilePath, token, org, r, months)
+		m, err := data.ImportEvents(cfg.DBPath, token, org, r, months)
 		if err != nil {
 			return fmt.Errorf("failed to import events: %w", err)
 		}
@@ -225,10 +224,9 @@ func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 }
 
 func cmdImportAffiliations(c *cli.Context) error {
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
-	res, err := importAffiliations(db)
+	res, err := importAffiliations(cfg.DB)
 	if err != nil {
 		return fmt.Errorf("failed to import affiliations: %w", err)
 	}
@@ -249,10 +247,9 @@ func cmdSubstitutes(c *cli.Context) error {
 		return cli.ShowSubcommandHelp(c)
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
-	res, err := data.SaveAndApplyDeveloperSub(db, sub, old, new)
+	res, err := data.SaveAndApplyDeveloperSub(cfg.DB, sub, old, new)
 	if err != nil {
 		return fmt.Errorf("failed to update names from apache foundation: %w", err)
 	}

@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	dirMode = 0700
+	dirMode      = 0700
+	appConfigKey = "app-config"
 )
 
 var (
@@ -25,30 +26,29 @@ var (
 	commit  = ""
 	date    = ""
 
-	dbFilePath = path.Join(getHomeDir(), data.DataFileName)
-	debug      = false
-
 	debugFlag = &cli.BoolFlag{
-		Name:        "debug",
-		Usage:       "Prints verbose logs (optional, default: false)",
-		Destination: &debug,
+		Name:  "debug",
+		Usage: "Prints verbose logs (optional, default: false)",
 	}
 
 	dbFilePathFlag = &cli.StringFlag{
-		Name:        "db",
-		Usage:       "Path to the Sqlite database file",
-		Destination: &dbFilePath,
-		Value:       dbFilePath,
+		Name:  "db",
+		Usage: "Path to the Sqlite database file",
 	}
 )
 
+type appConfig struct {
+	DBPath string
+	Debug  bool
+	DB     *sql.DB
+}
+
+func getConfig(c *cli.Context) *appConfig {
+	return c.App.Metadata[appConfigKey].(*appConfig)
+}
+
 func main() {
 	initLogging(false)
-
-	var err error
-	if err = data.Init(dbFilePath); err != nil {
-		fatalErr(err)
-	}
 
 	app := &cli.App{
 		Name:     "dctl",
@@ -70,34 +70,39 @@ func main() {
 				initLogging(true)
 			}
 
-			path := c.String(dbFilePathFlag.Name)
-			if path != "" {
-				dbFilePath = path
+			dbPath := c.String(dbFilePathFlag.Name)
+			if dbPath == "" {
+				dbPath = path.Join(getHomeDir(), data.DataFileName)
+			}
+
+			if err := data.Init(dbPath); err != nil {
+				return fmt.Errorf("initializing database: %w", err)
+			}
+
+			db, err := data.GetDB(dbPath)
+			if err != nil {
+				return fmt.Errorf("opening database: %w", err)
+			}
+
+			c.App.Metadata[appConfigKey] = &appConfig{
+				DBPath: dbPath,
+				Debug:  c.Bool(debugFlag.Name),
+				DB:     db,
+			}
+			return nil
+		},
+		After: func(c *cli.Context) error {
+			if cfg, ok := c.App.Metadata[appConfigKey].(*appConfig); ok && cfg.DB != nil {
+				cfg.DB.Close()
 			}
 			return nil
 		},
 	}
 
-	err = app.Run(os.Args)
-	if err != nil {
-		fatalErr(err)
-	}
-}
-
-func fatalErr(err error) {
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		slog.Error("fatal error", "error", err)
 		os.Exit(1)
 	}
-}
-
-func getDBOrFail() *sql.DB {
-	db, err := data.GetDB(dbFilePath)
-	if err != nil {
-		slog.Error("fatal error creating DB", "error", err)
-		os.Exit(1)
-	}
-	return db
 }
 
 func initLogging(debug bool) {

@@ -34,34 +34,33 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-func queryAPIHandler(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("q")
-	v := r.URL.Query().Get("v")
+func queryAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		v := r.URL.Query().Get("v")
 
-	db := getDBOrFail()
-	defer db.Close()
+		var items []*data.ListItem
+		var err error
 
-	var items []*data.ListItem
-	var err error
+		switch v {
+		case "org":
+			items, err = data.GetOrgLike(db, q, queryResultLimitDefault)
+		case "repo":
+			items, err = data.GetRepoLike(db, q, queryResultLimitDefault)
+		case "entity":
+			items, err = data.GetEntityLike(db, q, queryResultLimitDefault)
+		default:
+			items = []*data.ListItem{}
+		}
 
-	switch v {
-	case "org":
-		items, err = data.GetOrgLike(db, q, queryResultLimitDefault)
-	case "repo":
-		items, err = data.GetRepoLike(db, q, queryResultLimitDefault)
-	case "entity":
-		items, err = data.GetEntityLike(db, q, queryResultLimitDefault)
-	default:
-		items = []*data.ListItem{}
+		if err != nil {
+			slog.Error("failed to get org like data", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying org like data")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, items)
 	}
-
-	if err != nil {
-		slog.Error("failed to get org like data", "error", err)
-		writeError(w, http.StatusInternalServerError, "error querying org like data")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, items)
 }
 
 func mapCountedItemsToSeries(res []*data.CountedItem) *SeriesData[int] {
@@ -89,17 +88,21 @@ func mapCountedItemsToSeries(res []*data.CountedItem) *SeriesData[int] {
 	return d
 }
 
-func developerDataAPIHandler(w http.ResponseWriter, r *http.Request) {
-	percentageAPIHandler(w, r, data.GetDeveloperPercentages)
+func developerDataAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		percentageAPIHandler(w, r, db, data.GetDeveloperPercentages)
+	}
 }
 
-func entityDataAPIHandler(w http.ResponseWriter, r *http.Request) {
-	percentageAPIHandler(w, r, data.GetEntityPercentages)
+func entityDataAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		percentageAPIHandler(w, r, db, data.GetEntityPercentages)
+	}
 }
 
 type percentageProvider func(db *sql.DB, entity, org, repo *string, ex []string, months int) ([]*data.CountedItem, error)
 
-func percentageAPIHandler(w http.ResponseWriter, r *http.Request, fn percentageProvider) {
+func percentageAPIHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, fn percentageProvider) {
 	months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
 	org := r.URL.Query().Get("o")
 	repo := r.URL.Query().Get("r")
@@ -113,9 +116,6 @@ func percentageAPIHandler(w http.ResponseWriter, r *http.Request, fn percentageP
 		repo = *repoStr
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
-
 	res, err := fn(db, optional(entity), optional(org), optional(repo), exclude, months)
 	if err != nil {
 		slog.Error("failed to get event type series", "error", err)
@@ -126,30 +126,29 @@ func percentageAPIHandler(w http.ResponseWriter, r *http.Request, fn percentageP
 	writeJSON(w, http.StatusOK, mapCountedItemsToSeries(res))
 }
 
-func eventDataAPIHandler(w http.ResponseWriter, r *http.Request) {
-	months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
-	org := r.URL.Query().Get("o")
-	repo := r.URL.Query().Get("r")
-	entity := r.URL.Query().Get("e")
+func eventDataAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		months := queryParamInt(r, "m", data.EventAgeMonthsDefault)
+		org := r.URL.Query().Get("o")
+		repo := r.URL.Query().Get("r")
+		entity := r.URL.Query().Get("e")
 
-	slog.Debug("event type query", "org", org, "repo", repo, "entity", entity, "months", months)
+		slog.Debug("event type query", "org", org, "repo", repo, "entity", entity, "months", months)
 
-	if orgStr, repoStr, ok := parseRepo(&repo); ok {
-		org = *orgStr
-		repo = *repoStr
+		if orgStr, repoStr, ok := parseRepo(&repo); ok {
+			org = *orgStr
+			repo = *repoStr
+		}
+
+		res, err := data.GetEventTypeSeries(db, optional(org), optional(repo), optional(entity), months)
+		if err != nil {
+			slog.Error("failed to get event type series", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying event type series")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
 	}
-
-	db := getDBOrFail()
-	defer db.Close()
-
-	res, err := data.GetEventTypeSeries(db, optional(org), optional(repo), optional(entity), months)
-	if err != nil {
-		slog.Error("failed to get event type series", "error", err)
-		writeError(w, http.StatusInternalServerError, "error querying event type series")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, res)
 }
 
 func queryParamInt(r *http.Request, key string, def int) int {
@@ -167,53 +166,52 @@ func queryParamInt(r *http.Request, key string, def int) int {
 	return i
 }
 
-func eventSearchAPIHandler(w http.ResponseWriter, r *http.Request) {
-	var q data.EventSearchCriteria
-	if err := json.NewDecoder(r.Body).Decode(&q); err != nil {
-		slog.Error("error binding json", "error", err)
-		writeError(w, http.StatusBadRequest, "error binding json")
-		return
-	}
-
-	if org, repo, ok := parseRepo(q.Repo); ok {
-		q.Org = org
-		q.Repo = repo
-	}
-
-	if q.Type != nil {
-		eType := *q.Type
-		switch eType {
-		case "PR":
-			eType = data.EventTypePR
-		case "PR-Review":
-			eType = data.EventTypePRReview
-		case "Issue":
-			eType = data.EventTypeIssue
-		case "Issue-Comment":
-			eType = data.EventTypeIssueComment
-		case "Fork":
-			eType = data.EventTypeFork
-		default:
-			eType = ""
+func eventSearchAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var q data.EventSearchCriteria
+		if err := json.NewDecoder(r.Body).Decode(&q); err != nil {
+			slog.Error("error binding json", "error", err)
+			writeError(w, http.StatusBadRequest, "error binding json")
+			return
 		}
-		if eType != "" {
-			q.Type = &eType
+
+		if org, repo, ok := parseRepo(q.Repo); ok {
+			q.Org = org
+			q.Repo = repo
 		}
+
+		if q.Type != nil {
+			eType := *q.Type
+			switch eType {
+			case "PR":
+				eType = data.EventTypePR
+			case "PR-Review":
+				eType = data.EventTypePRReview
+			case "Issue":
+				eType = data.EventTypeIssue
+			case "Issue-Comment":
+				eType = data.EventTypeIssueComment
+			case "Fork":
+				eType = data.EventTypeFork
+			default:
+				eType = ""
+			}
+			if eType != "" {
+				q.Type = &eType
+			}
+		}
+
+		slog.Debug("event search query", "query", q)
+
+		res, err := data.SearchEvents(db, &q)
+		if err != nil {
+			slog.Error("failed to execute event search", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying event type series")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
 	}
-
-	slog.Debug("event search query", "query", q)
-
-	db := getDBOrFail()
-	defer db.Close()
-
-	res, err := data.SearchEvents(db, &q)
-	if err != nil {
-		slog.Error("failed to execute event search", "error", err)
-		writeError(w, http.StatusInternalServerError, "error querying event type series")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, res)
 }
 
 func parseRepo(repo *string) (*string, *string, bool) {

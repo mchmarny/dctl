@@ -195,10 +195,9 @@ func cmdQueryEntity(c *cli.Context) error {
 		return cli.ShowSubcommandHelp(c)
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
-	ent, err := data.GetEntity(db, val)
+	ent, err := data.GetEntity(cfg.DB, val)
 	if err != nil {
 		return fmt.Errorf("failed to query entity: %w", err)
 	}
@@ -249,10 +248,9 @@ func cmdQueryEvents(c *cli.Context) error {
 		PageSize: limit,
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
-	list, err := data.SearchEvents(db, q)
+	list, err := data.SearchEvents(cfg.DB, q)
 	if err != nil {
 		return fmt.Errorf("failed to query events: %w", err)
 	}
@@ -275,10 +273,9 @@ func cmdQueryEntities(c *cli.Context) error {
 		limit = queryResultLimitDefault
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
-	list, err := data.QueryEntities(db, val, limit)
+	list, err := data.QueryEntities(cfg.DB, val, limit)
 	if err != nil {
 		return fmt.Errorf("failed to query entities: %w", err)
 	}
@@ -301,11 +298,10 @@ func cmdQueryDeveloper(c *cli.Context) error {
 		return cli.ShowSubcommandHelp(c)
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
 	slog.Debug("query developer data", "name", val)
-	dev, err := data.GetDeveloper(db, val)
+	dev, err := data.GetDeveloper(cfg.DB, val)
 	if err != nil {
 		return fmt.Errorf("failed to query developer: %w", err)
 	}
@@ -341,10 +337,9 @@ func cmdQueryDevelopers(c *cli.Context) error {
 		limit = queryResultLimitDefault
 	}
 
-	db := getDBOrFail()
-	defer db.Close()
+	cfg := getConfig(c)
 
-	list, err := data.SearchDevelopers(db, val, limit)
+	list, err := data.SearchDevelopers(cfg.DB, val, limit)
 	if err != nil {
 		return fmt.Errorf("error quering CNCF developer: %w", err)
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"fmt"
 	"html/template"
@@ -45,10 +46,11 @@ var (
 )
 
 func cmdStartServer(c *cli.Context) error {
+	cfg := getConfig(c)
 	port := c.Int(portFlag.Name)
 	address := fmt.Sprintf("127.0.0.1:%d", port)
 
-	mux := makeRouter()
+	mux := makeRouter(cfg.DB)
 	s := &http.Server{
 		Addr:           address,
 		Handler:        mux,
@@ -79,7 +81,7 @@ func cmdStartServer(c *cli.Context) error {
 	return nil
 }
 
-func makeRouter() *http.ServeMux {
+func makeRouter(db *sql.DB) *http.ServeMux {
 	tmpl := template.Must(template.New("").ParseFS(embedFS, "templates/*.html"))
 
 	mux := http.NewServeMux()
@@ -92,11 +94,11 @@ func makeRouter() *http.ServeMux {
 	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl))
 
 	// Data API
-	mux.HandleFunc("GET /data/query", queryAPIHandler)
-	mux.HandleFunc("GET /data/type", eventDataAPIHandler)
-	mux.HandleFunc("GET /data/entity", entityDataAPIHandler)
-	mux.HandleFunc("GET /data/developer", developerDataAPIHandler)
-	mux.HandleFunc("POST /data/search", eventSearchAPIHandler)
+	mux.HandleFunc("GET /data/query", queryAPIHandler(db))
+	mux.HandleFunc("GET /data/type", eventDataAPIHandler(db))
+	mux.HandleFunc("GET /data/entity", entityDataAPIHandler(db))
+	mux.HandleFunc("GET /data/developer", developerDataAPIHandler(db))
+	mux.HandleFunc("POST /data/search", eventSearchAPIHandler(db))
 
 	return mux
 }
