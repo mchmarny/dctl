@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"regexp"
+	"sort"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -18,8 +19,8 @@ const (
 )
 
 var (
-	//go:embed sql/*
-	f embed.FS
+	//go:embed sql/migrations/*.sql
+	migrationsFS embed.FS
 
 	errDBNotInitialized = errors.New("database not initialized")
 
@@ -32,28 +33,98 @@ func Init(dbFilePath string) error {
 		return errors.New("dbFilePath not specified")
 	}
 
-	if _, err := os.Stat(dbFilePath); errors.Is(err, os.ErrNotExist) {
-		db, err := GetDB(dbFilePath)
-		if err != nil {
-			return fmt.Errorf("error opening database: %s: %w", dbFilePath, err)
-		}
-		defer db.Close()
+	db, err := GetDB(dbFilePath)
+	if err != nil {
+		return fmt.Errorf("opening database %s: %w", dbFilePath, err)
+	}
+	defer db.Close()
 
-		slog.Debug("creating db schema")
-		b, err := f.ReadFile("sql/ddl.sql")
-		if err != nil {
-			return fmt.Errorf("failed to read the schema creation file: %w", err)
-		}
-		if _, err := db.Exec(string(b)); err != nil {
-			return fmt.Errorf("failed to create database schema in: %s: %w", dbFilePath, err)
-		}
-		slog.Debug("db schema created")
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return fmt.Errorf("enabling WAL mode: %w", err)
 	}
 
-	var err error
+	if err := runMigrations(db); err != nil {
+		return fmt.Errorf("running migrations: %w", err)
+	}
+
 	entityRegEx, err = regexp.Compile(nonAlphaNumRegex)
 	if err != nil {
-		return fmt.Errorf("failed to compile entity regex: %w", err)
+		return fmt.Errorf("compiling entity regex: %w", err)
+	}
+
+	return nil
+}
+
+func runMigrations(db *sql.DB) error {
+	// Bootstrap schema_version table
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_version (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+	)`); err != nil {
+		return fmt.Errorf("creating schema_version table: %w", err)
+	}
+
+	var currentVersion int
+	if err := db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_version").Scan(&currentVersion); err != nil {
+		return fmt.Errorf("reading schema version: %w", err)
+	}
+
+	entries, err := migrationsFS.ReadDir("sql/migrations")
+	if err != nil {
+		return fmt.Errorf("reading migrations dir: %w", err)
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name() < entries[j].Name()
+	})
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		parts := strings.SplitN(name, "_", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		var ver int
+		if _, err := fmt.Sscanf(parts[0], "%d", &ver); err != nil {
+			continue
+		}
+
+		if ver <= currentVersion {
+			continue
+		}
+
+		content, err := migrationsFS.ReadFile("sql/migrations/" + name)
+		if err != nil {
+			return fmt.Errorf("reading migration %s: %w", name, err)
+		}
+
+		slog.Debug("applying migration", "version", ver, "file", name)
+
+		tx, err := db.Begin()
+		if err != nil {
+			return fmt.Errorf("beginning migration tx %d: %w", ver, err)
+		}
+
+		if _, err := tx.Exec(string(content)); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("executing migration %s: %w", name, err)
+		}
+
+		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", ver); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("recording migration %d: %w", ver, err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("committing migration %d: %w", ver, err)
+		}
+
+		slog.Info("applied migration", "version", ver, "file", name)
 	}
 
 	return nil

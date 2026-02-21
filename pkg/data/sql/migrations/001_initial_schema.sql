@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS state (
     query TEXT NOT NULL,
     org TEXT NOT NULL,
     repo TEXT NOT NULL,
-    page INTEGER NOT NULL, 
-    since INTEGER NOT NULL, 
+    page INTEGER NOT NULL,
+    since INTEGER NOT NULL,
     PRIMARY KEY (query, org, repo)
 );
 
