@@ -696,7 +696,8 @@ func init() {
 	// Load protocols
 	data, err := ioutil.ReadFile("/etc/protocols")
 	if err != nil {
-		if !os.IsNotExist(err) {
+		// See https://gitlab.com/cznic/libc/-/issues/48#note_2952938171
+		if !os.IsNotExist(err) && !os.IsPermission(err) {
 			panic(err)
 		}
 
@@ -732,7 +733,8 @@ func init() {
 	// Load services
 	data, err = ioutil.ReadFile("/etc/services")
 	if err != nil {
-		if !os.IsNotExist(err) {
+		// See https://gitlab.com/cznic/libc/-/issues/48#note_2952938171
+		if !os.IsNotExist(err) && !os.IsPermission(err) {
 			panic(err)
 		}
 
@@ -744,6 +746,11 @@ func init() {
 		split := strings.SplitN(line, "#", 2)
 		fields := strings.Fields(split[0])
 		if len(fields) < 2 {
+			continue
+		}
+
+		// https://gitlab.com/cznic/libc/-/issues/25
+		if strings.Index(fields[1], "/") < 0 {
 			continue
 		}
 

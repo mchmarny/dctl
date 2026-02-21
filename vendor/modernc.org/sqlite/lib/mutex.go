@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !linux
+
 package sqlite3
 
 import (
@@ -57,94 +59,38 @@ var (
 		}{mutexNotheld})),
 	}
 
-	mutexApp1   mutex
-	mutexApp2   mutex
-	mutexApp3   mutex
-	mutexLRU    mutex
-	mutexMaster mutex
-	mutexMem    mutex
-	mutexOpen   mutex
-	mutexPMem   mutex
-	mutexPRNG   mutex
-	mutexVFS1   mutex
-	mutexVFS2   mutex
-	mutexVFS3   mutex
+	mutexApp10   mutex
+	mutexApp20   mutex
+	mutexApp30   mutex
+	mutexLRU0    mutex
+	mutexMaster0 mutex
+	mutexMem0    mutex
+	mutexOpen0   mutex
+	mutexPMem0   mutex
+	mutexPRNG0   mutex
+	mutexVFS10   mutex
+	mutexVFS20   mutex
+	mutexVFS30   mutex
+
+	mutexApp1   = uintptr(unsafe.Pointer(&mutexApp10))
+	mutexApp2   = uintptr(unsafe.Pointer(&mutexApp20))
+	mutexApp3   = uintptr(unsafe.Pointer(&mutexApp30))
+	mutexLRU    = uintptr(unsafe.Pointer(&mutexLRU0))
+	mutexMaster = uintptr(unsafe.Pointer(&mutexMaster0))
+	mutexMem    = uintptr(unsafe.Pointer(&mutexMem0))
+	mutexOpen   = uintptr(unsafe.Pointer(&mutexOpen0))
+	mutexPMem   = uintptr(unsafe.Pointer(&mutexPMem0))
+	mutexPRNG   = uintptr(unsafe.Pointer(&mutexPRNG0))
+	mutexVFS1   = uintptr(unsafe.Pointer(&mutexVFS10))
+	mutexVFS2   = uintptr(unsafe.Pointer(&mutexVFS20))
+	mutexVFS3   = uintptr(unsafe.Pointer(&mutexVFS30))
 )
 
 type mutex struct {
-	cnt int32
-	id  int32
 	sync.Mutex
-	wait      sync.Mutex
+	cnt       int32
+	id        int32 // tls.ID
 	recursive bool
-}
-
-func (m *mutex) enter(id int32) {
-	if !m.recursive {
-		m.Lock()
-		m.id = id
-		return
-	}
-
-	for {
-		m.Lock()
-		switch m.id {
-		case 0:
-			m.cnt = 1
-			m.id = id
-			m.wait.Lock()
-			m.Unlock()
-			return
-		case id:
-			m.cnt++
-			m.Unlock()
-			return
-		}
-
-		m.Unlock()
-		m.wait.Lock()
-		//lint:ignore SA2001 TODO report staticcheck issue
-		m.wait.Unlock()
-	}
-}
-
-func (m *mutex) try(id int32) int32 {
-	if !m.recursive {
-		return SQLITE_BUSY
-	}
-
-	m.Lock()
-	switch m.id {
-	case 0:
-		m.cnt = 1
-		m.id = id
-		m.wait.Lock()
-		m.Unlock()
-		return SQLITE_OK
-	case id:
-		m.cnt++
-		m.Unlock()
-		return SQLITE_OK
-	}
-
-	m.Unlock()
-	return SQLITE_BUSY
-}
-
-func (m *mutex) leave(id int32) {
-	if !m.recursive {
-		m.id = 0
-		m.Unlock()
-		return
-	}
-
-	m.Lock()
-	m.cnt--
-	if m.cnt == 0 {
-		m.id = 0
-		m.wait.Unlock()
-	}
-	m.Unlock()
 }
 
 // int (*xMutexInit)(void);
@@ -211,47 +157,48 @@ func mutexEnd(tls *libc.TLS) int32 { return SQLITE_OK }
 // SQLITE_MUTEX_RECURSIVE) is used then sqlite3_mutex_alloc() returns a
 // different mutex on every call. For the static mutex types, the same mutex is
 // returned on every call that has the same type number.
-func mutexAlloc(tls *libc.TLS, typ int32) uintptr {
-	defer func() {
-	}()
+func mutexAlloc(tls *libc.TLS, typ int32) (r uintptr) {
 	switch typ {
 	case SQLITE_MUTEX_FAST:
-		return libc.Xcalloc(tls, 1, types.Size_t(unsafe.Sizeof(mutex{})))
+		r = libc.Xcalloc(tls, 1, types.Size_t(unsafe.Sizeof(mutex{})))
+		return r
 	case SQLITE_MUTEX_RECURSIVE:
-		p := libc.Xcalloc(tls, 1, types.Size_t(unsafe.Sizeof(mutex{})))
-		(*mutex)(unsafe.Pointer(p)).recursive = true
-		return p
+		r = libc.Xcalloc(tls, 1, types.Size_t(unsafe.Sizeof(mutex{})))
+		(*mutex)(unsafe.Pointer(r)).recursive = true
+		return r
 	case SQLITE_MUTEX_STATIC_MASTER:
-		return uintptr(unsafe.Pointer(&mutexMaster))
+		return mutexMaster
 	case SQLITE_MUTEX_STATIC_MEM:
-		return uintptr(unsafe.Pointer(&mutexMem))
+		return mutexMem
 	case SQLITE_MUTEX_STATIC_OPEN:
-		return uintptr(unsafe.Pointer(&mutexOpen))
+		return mutexOpen
 	case SQLITE_MUTEX_STATIC_PRNG:
-		return uintptr(unsafe.Pointer(&mutexPRNG))
+		return mutexPRNG
 	case SQLITE_MUTEX_STATIC_LRU:
-		return uintptr(unsafe.Pointer(&mutexLRU))
+		return mutexLRU
 	case SQLITE_MUTEX_STATIC_PMEM:
-		return uintptr(unsafe.Pointer(&mutexPMem))
+		return mutexPMem
 	case SQLITE_MUTEX_STATIC_APP1:
-		return uintptr(unsafe.Pointer(&mutexApp1))
+		return mutexApp1
 	case SQLITE_MUTEX_STATIC_APP2:
-		return uintptr(unsafe.Pointer(&mutexApp2))
+		return mutexApp2
 	case SQLITE_MUTEX_STATIC_APP3:
-		return uintptr(unsafe.Pointer(&mutexApp3))
+		return mutexApp3
 	case SQLITE_MUTEX_STATIC_VFS1:
-		return uintptr(unsafe.Pointer(&mutexVFS1))
+		return mutexVFS1
 	case SQLITE_MUTEX_STATIC_VFS2:
-		return uintptr(unsafe.Pointer(&mutexVFS2))
+		return mutexVFS2
 	case SQLITE_MUTEX_STATIC_VFS3:
-		return uintptr(unsafe.Pointer(&mutexVFS3))
+		return mutexVFS3
 	default:
 		return 0
 	}
 }
 
 // void (*xMutexFree)(sqlite3_mutex *);
-func mutexFree(tls *libc.TLS, m uintptr) { libc.Xfree(tls, m) }
+func mutexFree(tls *libc.TLS, m uintptr) {
+	libc.Xfree(tls, m)
+}
 
 // The sqlite3_mutex_enter() and sqlite3_mutex_try() routines attempt to enter
 // a mutex. If another thread is already within the mutex,
@@ -273,7 +220,28 @@ func mutexEnter(tls *libc.TLS, m uintptr) {
 		return
 	}
 
-	(*mutex)(unsafe.Pointer(m)).enter(tls.ID)
+	// Non-recursive mutex: Standard Go lock
+	if !(*mutex)(unsafe.Pointer(m)).recursive {
+		(*mutex)(unsafe.Pointer(m)).Lock()
+		atomic.StoreInt32(&(*mutex)(unsafe.Pointer(m)).id, tls.ID)
+		return
+	}
+
+	// Recursive mutex: Check if we already own it (Fast Path)
+	// We can safely read ptr.id without a lock here because if it equals tls.ID,
+	// WE are the writer, so no other thread can be changing it.
+	if atomic.LoadInt32(&(*mutex)(unsafe.Pointer(m)).id) == tls.ID {
+		(*mutex)(unsafe.Pointer(m)).cnt++
+		return
+	}
+
+	// We don't own it. Acquire physical lock (Slow Path).
+	// This blocks until the mutex is free.
+	(*mutex)(unsafe.Pointer(m)).Lock()
+
+	// Now that we have the lock, claim ownership.
+	atomic.StoreInt32(&(*mutex)(unsafe.Pointer(m)).id, tls.ID)
+	(*mutex)(unsafe.Pointer(m)).cnt = 1
 }
 
 // int (*xMutexTry)(sqlite3_mutex *);
@@ -282,7 +250,30 @@ func mutexTry(tls *libc.TLS, m uintptr) int32 {
 		return SQLITE_OK
 	}
 
-	return (*mutex)(unsafe.Pointer(m)).try(tls.ID)
+	// Non-recursive mutex
+	if !(*mutex)(unsafe.Pointer(m)).recursive {
+		if (*mutex)(unsafe.Pointer(m)).TryLock() {
+			(*mutex)(unsafe.Pointer(m)).id = tls.ID
+			return SQLITE_OK
+		}
+
+		return SQLITE_BUSY
+	}
+
+	// Recursive mutex: Check if we already own it (Fast Path)
+	if atomic.LoadInt32(&(*mutex)(unsafe.Pointer(m)).id) == tls.ID {
+		(*mutex)(unsafe.Pointer(m)).cnt++
+		return SQLITE_OK
+	}
+
+	// Try to acquire physical lock
+	if (*mutex)(unsafe.Pointer(m)).TryLock() {
+		atomic.StoreInt32(&(*mutex)(unsafe.Pointer(m)).id, tls.ID)
+		(*mutex)(unsafe.Pointer(m)).cnt = 1
+		return SQLITE_OK
+	}
+
+	return SQLITE_BUSY
 }
 
 // void (*xMutexLeave)(sqlite3_mutex *);
@@ -291,7 +282,21 @@ func mutexLeave(tls *libc.TLS, m uintptr) {
 		return
 	}
 
-	(*mutex)(unsafe.Pointer(m)).leave(tls.ID)
+	// Non-recursive mutex
+	if !(*mutex)(unsafe.Pointer(m)).recursive {
+		atomic.StoreInt32(&(*mutex)(unsafe.Pointer(m)).id, 0)
+		(*mutex)(unsafe.Pointer(m)).Unlock()
+		return
+	}
+
+	// Recursive mutex: Decrement count
+	(*mutex)(unsafe.Pointer(m)).cnt--
+
+	// If count reaches zero, we are fully releasing the mutex.
+	if (*mutex)(unsafe.Pointer(m)).cnt == 0 {
+		atomic.StoreInt32(&(*mutex)(unsafe.Pointer(m)).id, 0)
+		(*mutex)(unsafe.Pointer(m)).Unlock()
+	}
 }
 
 // The sqlite3_mutex_held() and sqlite3_mutex_notheld() routines are intended
@@ -324,6 +329,8 @@ func mutexHeld(tls *libc.TLS, m uintptr) int32 {
 		return 1
 	}
 
+	// atomic.Load is required because we might be checking a mutex
+	// that we do not own (and thus another thread might be writing to).
 	return libc.Bool32(atomic.LoadInt32(&(*mutex)(unsafe.Pointer(m)).id) == tls.ID)
 }
 
@@ -333,5 +340,6 @@ func mutexNotheld(tls *libc.TLS, m uintptr) int32 {
 		return 1
 	}
 
+	// Returns True if ID is Zero (unheld) OR ID is some other thread's ID.
 	return libc.Bool32(atomic.LoadInt32(&(*mutex)(unsafe.Pointer(m)).id) != tls.ID)
 }
