@@ -4,9 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -235,7 +234,7 @@ func cleanEntityName(val string) string {
 	}
 
 	if len(val) > 0 {
-		log.Debugf("cleaned entity name: %s -> %s", original, val)
+		slog.Debug("cleaned entity name", "original", original, "cleaned", val)
 	}
 
 	return val

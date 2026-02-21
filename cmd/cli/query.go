@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/mchmarny/dctl/pkg/data"
 	"github.com/mchmarny/dctl/pkg/net"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -225,17 +225,17 @@ func cmdQueryEvents(c *cli.Context) error {
 		limit = queryResultLimitDefault
 	}
 
-	log.WithFields(log.Fields{
-		"org":     org,
-		"repo":    repo,
-		"author":  author,
-		"entity":  entity,
-		"since":   since,
-		"type":    etype,
-		"limit":   limit,
-		"mention": mention,
-		"label":   label,
-	}).Debug("query events")
+	slog.Debug("query events",
+		"org", org,
+		"repo", repo,
+		"author", author,
+		"entity", entity,
+		"since", since,
+		"type", etype,
+		"limit", limit,
+		"mention", mention,
+		"label", label,
+	)
 
 	q := &data.EventSearchCriteria{
 		Org:      optional(org),
@@ -304,7 +304,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	db := getDBOrFail()
 	defer db.Close()
 
-	log.WithFields(log.Fields{"name": val}).Debug("query developer data...")
+	slog.Debug("query developer data", "name", val)
 	dev, err := data.GetDeveloper(db, val)
 	if err != nil {
 		return fmt.Errorf("failed to query developer: %w", err)
@@ -317,7 +317,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	ctx := context.Background()
 	client := net.GetOAuthClient(ctx, token)
 
-	log.WithFields(log.Fields{"name": dev.Username}).Debug("query developer gh organizations...")
+	slog.Debug("query developer gh organizations", "name", dev.Username)
 	dev.Organizations, err = data.GetUserOrgs(ctx, client, dev.Username, queryResultLimitDefault)
 	if err != nil {
 		return fmt.Errorf("failed to query orgs: %w", err)

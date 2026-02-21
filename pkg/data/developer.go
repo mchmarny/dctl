@@ -4,9 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -136,14 +135,16 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 		if _, err = tx.Stmt(userStmt).Exec(u.Username,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
-			log.WithFields(log.Fields{
-				"user":    u.Username,
-				"name":    u.FullName,
-				"email":   u.Email,
-				"avatar":  u.AvatarURL,
-				"profile": u.ProfileURL,
-				"entity":  u.Entity,
-			}).Errorf("failed to insert developer[%d]: %v", i, err)
+			slog.Error("failed to insert developer",
+				"index", i,
+				"error", err,
+				"user", u.Username,
+				"name", u.FullName,
+				"email", u.Email,
+				"avatar", u.AvatarURL,
+				"profile", u.ProfileURL,
+				"entity", u.Entity,
+			)
 			rollbackTransaction(tx)
 			return fmt.Errorf("error inserting developer[%d]: %s: %w", i, u.Username, err)
 		}
@@ -221,9 +222,15 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 }
 
 func printDevDeltas(dbDev *Developer, ghDev *Developer, cncfDev *CNCFDeveloper) {
-	log.Debugf("%s [entity db:%s, gh:%s, cncf:%s], email [db:%s, gh:%s, cncf:%s]",
-		dbDev.Username, dbDev.Entity, ghDev.Entity, cncfDev.GetLatestAffiliation(),
-		dbDev.Email, ghDev.Email, cncfDev.GetBestIdentity())
+	slog.Debug("developer deltas",
+		"username", dbDev.Username,
+		"entity_db", dbDev.Entity,
+		"entity_gh", ghDev.Entity,
+		"entity_cncf", cncfDev.GetLatestAffiliation(),
+		"email_db", dbDev.Email,
+		"email_gh", ghDev.Email,
+		"email_cncf", cncfDev.GetBestIdentity(),
+	)
 }
 
 func GetDeveloper(db *sql.DB, username string) (*Developer, error) {

@@ -1,14 +1,16 @@
 package net
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func PrintHTTPResponse(resp *http.Response) {
+	if resp == nil {
+		return
+	}
 	if respDump, err := httputil.DumpResponse(resp, true); err == nil {
-		log.Debugf("%s", respDump)
+		slog.Debug("http response", "body", string(respDump))
 	}
 }

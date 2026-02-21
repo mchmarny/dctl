@@ -5,10 +5,10 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 
-	log "github.com/sirupsen/logrus"
 	_ "modernc.org/sqlite"
 )
 
@@ -39,7 +39,7 @@ func Init(dbFilePath string) error {
 		}
 		defer db.Close()
 
-		log.Debug("creating db schema...")
+		slog.Debug("creating db schema")
 		b, err := f.ReadFile("sql/ddl.sql")
 		if err != nil {
 			return fmt.Errorf("failed to read the schema creation file: %w", err)
@@ -47,7 +47,7 @@ func Init(dbFilePath string) error {
 		if _, err := db.Exec(string(b)); err != nil {
 			return fmt.Errorf("failed to create database schema in: %s: %w", dbFilePath, err)
 		}
-		log.Debug("db schema created")
+		slog.Debug("db schema created")
 	}
 
 	var err error

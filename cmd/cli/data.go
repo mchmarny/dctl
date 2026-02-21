@@ -2,13 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mchmarny/dctl/pkg/data"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -47,7 +47,7 @@ func queryHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		log.Errorf("failed to get org like data: %s", err)
+		slog.Error("failed to get org like data", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "error querying org like data",
 		})
@@ -58,7 +58,7 @@ func queryHandler(c *gin.Context) {
 }
 
 func mapCountedItemsToSeries(res []*data.CountedItem) *SeriesData[int] {
-	log.Debugf("items: %d", len(res))
+	slog.Debug("items", "count", len(res))
 
 	// trim
 	if len(res) > percentageListLimit {
@@ -100,8 +100,7 @@ func percentageHandler(c *gin.Context, fn percentageProvider) {
 	entity := c.Query("e")
 	exclude := strings.Split(c.Query("x"), arraySelector)
 
-	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')",
-		org, repo, entity, months)
+	slog.Debug("event type query", "org", org, "repo", repo, "entity", entity, "months", months)
 
 	if orgStr, repoStr, ok := parseRepo(&repo); ok {
 		org = *orgStr
@@ -113,7 +112,7 @@ func percentageHandler(c *gin.Context, fn percentageProvider) {
 
 	res, err := fn(db, optional(entity), optional(org), optional(repo), exclude, months)
 	if err != nil {
-		log.Errorf("failed to get event type series: %s", err)
+		slog.Error("failed to get event type series", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "error querying event type series",
 		})
@@ -131,7 +130,7 @@ func eventDataHandler(c *gin.Context) {
 	repo := c.Query("r")
 	entity := c.Query("e")
 
-	log.Debugf("event type query (org: '%s', repo: '%s', entity: '%s', months: '%d')", org, repo, entity, months)
+	slog.Debug("event type query", "org", org, "repo", repo, "entity", entity, "months", months)
 
 	if orgStr, repoStr, ok := parseRepo(&repo); ok {
 		org = *orgStr
@@ -143,7 +142,7 @@ func eventDataHandler(c *gin.Context) {
 
 	res, err := data.GetEventTypeSeries(db, optional(org), optional(repo), optional(entity), months)
 	if err != nil {
-		log.Errorf("failed to get event type series: %s", err)
+		slog.Error("failed to get event type series", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "error querying event type series",
 		})
@@ -161,7 +160,7 @@ func queryAsInt(c *gin.Context, key string, def int) int {
 
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		log.Errorf("error converting query string '%s' to int: %s", v, err)
+		slog.Error("error converting query string to int", "value", v, "error", err)
 		return def
 	}
 
@@ -171,7 +170,7 @@ func queryAsInt(c *gin.Context, key string, def int) int {
 func eventSearchHandler(c *gin.Context) {
 	var q data.EventSearchCriteria
 	if err := c.ShouldBindJSON(&q); err != nil {
-		log.Errorf("error binding json: %s", err)
+		slog.Error("error binding json", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "error binding json",
 		})
@@ -206,14 +205,14 @@ func eventSearchHandler(c *gin.Context) {
 		}
 	}
 
-	log.Debugf("event search query: %s", q)
+	slog.Debug("event search query", "query", q)
 
 	db := getDBOrFail()
 	defer db.Close()
 
 	res, err := data.SearchEvents(db, &q)
 	if err != nil {
-		log.Errorf("failed to execute event search: %s", err)
+		slog.Error("failed to execute event search", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "error querying event type series",
 		})

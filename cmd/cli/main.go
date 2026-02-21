@@ -3,16 +3,15 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
 
-	"errors"
-
 	"github.com/mchmarny/dctl/pkg/data"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -44,7 +43,7 @@ var (
 )
 
 func main() {
-	initLogging(name, version)
+	initLogging(false)
 
 	var err error
 	if err = data.Init(dbFilePath); err != nil {
@@ -68,8 +67,7 @@ func main() {
 		},
 		Before: func(c *cli.Context) error {
 			if c.Bool(debugFlag.Name) {
-				log.SetLevel(log.DebugLevel)
-				// log.SetReportCaller(true)
+				initLogging(true)
 			}
 
 			path := c.String(dbFilePathFlag.Name)
@@ -88,7 +86,7 @@ func main() {
 
 func fatalErr(err error) {
 	if err != nil {
-		log.Fatalf("fatal error: %v", err)
+		slog.Error("fatal error", "error", err)
 		os.Exit(1)
 	}
 }
@@ -96,40 +94,36 @@ func fatalErr(err error) {
 func getDBOrFail() *sql.DB {
 	db, err := data.GetDB(dbFilePath)
 	if err != nil {
-		log.Fatalf("fatal error creating DB: %v", err)
+		slog.Error("fatal error creating DB", "error", err)
 		os.Exit(1)
 	}
 	return db
 }
 
-func initLogging(name, version string) {
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
-	log.SetReportCaller(false)
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp:          false,
-		DisableTimestamp:       true,
-		ForceColors:            true,
-		DisableLevelTruncation: true,
-		PadLevelText:           true,
-	})
+func initLogging(debug bool) {
+	level := slog.LevelInfo
+	if debug {
+		level = slog.LevelDebug
+	}
+	h := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
+	slog.SetDefault(slog.New(h))
 }
 
 func getHomeDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Debugf("error getting home dir, using current dir instead: %v", err)
+		slog.Debug("error getting home dir, using current dir instead", "error", err)
 		return "."
 	}
-	log.Debugf("home dir: %s", home)
+	slog.Debug("home dir", "path", home)
 
 	dirName := "." + name
 	dirPath := filepath.Join(home, dirName)
 	if _, err := os.Stat(dirPath); errors.Is(err, os.ErrNotExist) {
-		log.Debugf("creating dir: %s", dirPath)
+		slog.Debug("creating dir", "path", dirPath)
 		err := os.Mkdir(dirPath, dirMode)
 		if err != nil {
-			log.Debugf("error creating dir: %s, using home: %s - %v", dirPath, home, err)
+			slog.Debug("error creating dir", "path", dirPath, "home", home, "error", err)
 			return home
 		}
 	}

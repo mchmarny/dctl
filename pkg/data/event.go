@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"log/slog"
+
 	"github.com/google/go-github/v45/github"
 	"github.com/mchmarny/dctl/pkg/net"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -88,7 +89,7 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 	for _, r := range list {
 		m, err := ImportEvents(dbPath, token, r.Org, r.Repo, EventAgeMonthsDefault)
 		if err != nil {
-			log.Errorf("error importing events for %s/%s: %v", r.Org, r.Repo, err)
+			slog.Error("error importing events", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 		for k, v := range m {
 			results[k] += v
@@ -135,14 +136,14 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		return nil, fmt.Errorf("error loading last page state: %s/%s: %w", owner, repo, err)
 	}
 
-	log.Debugf("importing events for %s/%s", owner, repo)
+	slog.Debug("importing events", "owner", owner, "repo", repo)
 	var wg sync.WaitGroup
 
 	errCh := make(chan error, len(importers))
 
 	go func() {
 		for err := range errCh {
-			log.Error(err)
+			slog.Error("import error", "error", err)
 		}
 	}()
 
@@ -250,7 +251,7 @@ func (e *EventImporter) flush() error {
 		devs = append(devs, mapUserToDeveloper(v))
 	}
 
-	log.Debugf("flushing %d events and %d developers to db...", len(events), len(devs))
+	slog.Debug("flushing events and developers to db", "events", len(events), "developers", len(devs))
 
 	db, err := GetDB(e.dbPath)
 	if err != nil {
@@ -310,14 +311,14 @@ func (e *EventImporter) flush() error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Debugf("successfully flushed in %s", time.Since(start).String())
+	slog.Debug("successfully flushed", "duration", time.Since(start).String())
 
 	return nil
 }
 
 func rollbackTransaction(tx *sql.Tx) {
 	if err := tx.Rollback(); err != nil {
-		log.Errorf("error rolling back transaction: %s", err)
+		slog.Error("error rolling back transaction", "error", err)
 	}
 }
 
@@ -334,7 +335,7 @@ func (e *EventImporter) isEventBatchValidAge(first *time.Time, last *time.Time) 
 }
 
 func (e *EventImporter) importPREvents(ctx context.Context) error {
-	log.Debugf("starting pr event import on page %d since %s", e.state[EventTypePR].Page, e.state[EventTypePR].Since.Format("2006-01-02"))
+	slog.Debug("starting pr event import", "page", e.state[EventTypePR].Page, "since", e.state[EventTypePR].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListOptions{
 		State:     "all",
@@ -352,7 +353,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing prs, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
-		log.Debugf("pr - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
+		slog.Debug("pr events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
 			break
@@ -360,7 +361,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 
 		// PR list has no since option so break manually when both 1st and last event are older than the min.
 		if !e.isEventBatchValidAge(items[0].CreatedAt, items[len(items)-1].CreatedAt) {
-			log.Debugf("pr - all returned events older than %v", e.minEventTime.Format("2006-01-02"))
+			slog.Debug("pr - all returned events older than min", "min_event_time", e.minEventTime.Format("2006-01-02"))
 			break
 		}
 
@@ -388,7 +389,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importIssueEvents(ctx context.Context) error {
-	log.Debugf("starting issue event import on page %d since %s", e.state[EventTypeIssue].Page, e.state[EventTypeIssue].Since.Format("2006-01-02"))
+	slog.Debug("starting issue event import", "page", e.state[EventTypeIssue].Page, "since", e.state[EventTypeIssue].Since.Format("2006-01-02"))
 
 	opt := &github.IssueListByRepoOptions{
 		State:     "all",
@@ -407,7 +408,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing issues, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
-		log.Debugf("issue - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
+		slog.Debug("issue events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
 			break
@@ -443,7 +444,7 @@ func getStrPtr(s string) *string {
 }
 
 func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
-	log.Debugf("starting issue comment event import on page %d since %s", e.state[EventTypeIssueComment].Page, e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
+	slog.Debug("starting issue comment event import", "page", e.state[EventTypeIssueComment].Page, "since", e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
 
 	opt := &github.IssueListCommentsOptions{
 		Sort:      getStrPtr(sortField),
@@ -461,7 +462,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing issue comments, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
-		log.Debugf("issue comment - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
+		slog.Debug("issue comment events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
 			break
@@ -486,7 +487,7 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
-	log.Debugf("starting pr comment event import on page %d since %s", e.state[EventTypePRReview].Page, e.state[EventTypePRReview].Since.Format("2006-01-02"))
+	slog.Debug("starting pr review event import", "page", e.state[EventTypePRReview].Page, "since", e.state[EventTypePRReview].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListCommentsOptions{
 		Sort:      sortField,
@@ -504,7 +505,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing pr comments, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
-		log.Debugf("pr comment - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
+		slog.Debug("pr review events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
 			break
@@ -529,7 +530,7 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 }
 
 func (e *EventImporter) importForkEvents(ctx context.Context) error {
-	log.Debugf("starting fork event import on page %d since %s", e.state[EventTypeFork].Page, e.state[EventTypeFork].Since.Format("2006-01-02"))
+	slog.Debug("starting fork event import", "page", e.state[EventTypeFork].Page, "since", e.state[EventTypeFork].Since.Format("2006-01-02"))
 
 	opt := &github.RepositoryListForksOptions{
 		Sort: sortForkField,
@@ -545,7 +546,7 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing forks, rate: %s: %w", rateInfo(&resp.Rate), err)
 		}
-		log.Debugf("fork - found:%d, page:%d/%d, %s", len(items), resp.NextPage, resp.LastPage, rateInfo(&resp.Rate))
+		slog.Debug("fork events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
 
 		if len(items) == 0 {
 			break

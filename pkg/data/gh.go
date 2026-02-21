@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/google/go-github/v45/github"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -66,7 +67,7 @@ func GetGitHubDeveloper(ctx context.Context, client *http.Client, username strin
 		return nil, fmt.Errorf("failed to list repositories for: %s: %w", username, err)
 	}
 
-	log.Debugf("got details for user: %s, %s", username, rateInfo(&resp.Rate))
+	slog.Debug("got details for user", "username", username, "rate", rateInfo(&resp.Rate))
 
 	return mapUserToDeveloper(usr), nil
 }
@@ -90,14 +91,14 @@ func SearchGitHubUsers(ctx context.Context, client *http.Client, query string, l
 		return nil, nil
 	}
 
-	log.WithFields(log.Fields{
-		"query":       query,
-		"status":      resp.Status,
-		"status_code": resp.StatusCode,
-		"has_more":    list.IncompleteResults,
-		"matched":     list.Total,
-		"returned":    len(list.Users),
-	}).Debug("get user")
+	slog.Debug("get user",
+		"query", query,
+		"status", resp.Status,
+		"status_code", resp.StatusCode,
+		"has_more", list.IncompleteResults,
+		"matched", list.Total,
+		"returned", len(list.Users),
+	)
 
 	r := make([]*DeveloperListItem, len(list.Users))
 	for i, u := range list.Users {

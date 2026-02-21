@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/google/go-github/v45/github"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -203,10 +204,7 @@ func GetUserOrgs(ctx context.Context, client *http.Client, username string, limi
 		return nil, errors.New("username is required")
 	}
 
-	log.WithFields(log.Fields{
-		"username": username,
-		"limit":    limit,
-	}).Debug("listing repositories...")
+	slog.Debug("listing repositories", "username", username, "limit", limit)
 
 	opt := &github.ListOptions{}
 	if limit > 0 {
@@ -220,7 +218,7 @@ func GetUserOrgs(ctx context.Context, client *http.Client, username string, limi
 
 	list := make([]*Org, 0)
 	for _, r := range items {
-		log.Debugf("org: %+v", r)
+		slog.Debug("org", "value", r)
 		list = append(list, mapOrg(r))
 	}
 

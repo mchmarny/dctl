@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -63,11 +63,11 @@ func cmdStartServer(c *cli.Context) error {
 
 	go func() {
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Errorf("error starting server: %s", err)
+			slog.Error("error starting server", "error", err)
 		}
 	}()
 
-	log.Infof("server started on %s", address)
+	slog.Info("server started", "address", address)
 
 	<-done
 
@@ -75,7 +75,7 @@ func cmdStartServer(c *cli.Context) error {
 	defer cancel()
 
 	if err := s.Shutdown(ctx); err != nil && err != http.ErrServerClosed {
-		log.Errorf("error shutting down server: %s", err)
+		slog.Error("error shutting down server", "error", err)
 	}
 	return nil
 }

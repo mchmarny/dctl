@@ -13,7 +13,7 @@ const (
 
 func TestMain(m *testing.M) {
 	os.RemoveAll(testDir)
-	initLogging(name, version)
+	initLogging(false)
 
 	if err := data.Init(testDir); err != nil {
 		fatalErr(err)

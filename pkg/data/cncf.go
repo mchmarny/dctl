@@ -11,8 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/mchmarny/dctl/pkg/net"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -126,7 +127,7 @@ func GetCNCFEntityAffiliations() (map[string]*CNCFDeveloper, error) {
 			break
 		}
 	}
-	log.Debugf("downloaded and processed %d files in %s", completed, time.Since(start).String())
+	slog.Debug("downloaded and processed files", "count", completed, "duration", time.Since(start).String())
 
 	return devs, nil
 }
@@ -142,17 +143,17 @@ func loadAffiliations(url string, devs map[string]*CNCFDeveloper) (bool, error) 
 	}
 
 	path := f.Name()
-	log.Debugf("downloading %s to %s", url, path)
+	slog.Debug("downloading", "url", url, "path", path)
 	if err = net.Download(url, path); err != nil {
 		if errors.Is(err, net.ErrorURLNotFound) {
-			log.Debugf("url not found: %s", url)
+			slog.Debug("url not found", "url", url)
 			return false, nil // return raw error
 		}
 		return false, fmt.Errorf("error downloading file: %s: %w", url, err)
 	}
 	defer os.Remove(f.Name())
 
-	log.Debugf("extracting %s", path)
+	slog.Debug("extracting", "path", path)
 	if err := extractAffiliations(path, devs); err != nil {
 		return false, fmt.Errorf("error extracting file: %s: %w", path, err)
 	}
