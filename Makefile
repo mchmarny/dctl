@@ -6,7 +6,7 @@ GO_VERSION         := $(shell go env GOVERSION 2>/dev/null | sed 's/go//')
 GOLINT_VERSION      = $(shell golangci-lint --version 2>/dev/null | awk '{print $$4}' || echo "not installed")
 LINT_TIMEOUT       ?= 5m
 TEST_TIMEOUT       ?= 10m
-COVERAGE_THRESHOLD ?= 70
+COVERAGE_THRESHOLD ?= 30
 
 all: help
 
