@@ -84,6 +84,8 @@ See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
 dctl server
 ```
 
+![](docs/img/screenshot2.png)
+
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
 Use the search bar with prefix syntax to scope the dashboard:
@@ -138,8 +140,7 @@ Release binaries are signed and attested in CI. No private keys — everything u
 
 ```shell
 cosign verify-blob \
-  --certificate checksums-sha256.txt.pem \
-  --signature checksums-sha256.txt.sig \
+  --bundle checksums-sha256.txt.sigstore.json \
   --certificate-identity-regexp 'github.com/mchmarny/dctl' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   checksums-sha256.txt
