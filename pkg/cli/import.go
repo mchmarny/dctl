@@ -81,8 +81,8 @@ var (
 )
 
 type ImportResult struct {
-	Org          string                        `json:"org"`
-	Repos        []*data.ImportSummary         `json:"repos"`
+	Org          string                        `json:"org,omitempty"`
+	Repos        []*data.ImportSummary         `json:"repos,omitempty"`
 	Duration     string                        `json:"duration"`
 	Events       map[string]int                `json:"events,omitempty"`
 	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty"`
