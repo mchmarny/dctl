@@ -1,6 +1,6 @@
 # devpulse
 
-[![Build Status](https://github.com/mchmarny/devpulse/actions/workflows/on-push.yaml/badge.svg)](https://github.com/mchmarny/devpulse/actions/workflows/on-push.yaml)
+[![Build Status](https://github.com/mchmarny/devpulse/actions/workflows/test-on-push.yaml/badge.svg)](https://github.com/mchmarny/devpulse/actions/workflows/test-on-push.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mchmarny/devpulse)](https://goreportcard.com/report/github.com/mchmarny/devpulse)
 [![Go Reference](https://pkg.go.dev/badge/github.com/mchmarny/repudevpulseter.svg)](https://pkg.go.dev/github.com/mchmarny/devpulse)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
