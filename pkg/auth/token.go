@@ -20,21 +20,21 @@ const (
 
 type DeviceCode struct {
 	// The device verification code is 40 characters and used to verify the device.
-	DeviceCode string `json:"device_code,omitempty"`
+	DeviceCode string `json:"device_code,omitempty" yaml:"deviceCode,omitempty"`
 	// The user verification code is displayed on the device so the user
 	// can enter the code in a browser. This code is 8 characters with a
 	// hyphen in the middle.
-	UserCode string `json:"user_code,omitempty"`
+	UserCode string `json:"user_code,omitempty" yaml:"userCode,omitempty"`
 	// The verification URL where users need to enter the user_code
-	VerificationURL string `json:"verification_uri,omitempty"`
+	VerificationURL string `json:"verification_uri,omitempty" yaml:"verificationURL,omitempty"`
 	// The number of seconds before the device_code and user_code expire.
 	// The default is 900 seconds or 15 minutes.
-	ExpiresInSec int `json:"expires_in,omitempty"`
+	ExpiresInSec int `json:"expires_in,omitempty" yaml:"expiresInSec,omitempty"`
 	// The minimum number of seconds that must pass before you can make a new access token request
 	// (POST https://github.com/login/oauth/access_token) to complete the device authorization.
 	// For example, if the interval is 5, then you cannot make a new request until 5 seconds pass.
 	// If you make more than one request over 5 seconds, then you will hit the rate limit and receive a slow_down error.
-	Interval int `json:"interval,omitempty"`
+	Interval int `json:"interval,omitempty" yaml:"interval,omitempty"`
 }
 
 type AccessTokenResponse struct {

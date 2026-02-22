@@ -21,20 +21,20 @@ const (
 )
 
 type CountedItem struct {
-	Name  string `json:"name,omitempty"`
-	Count int    `json:"count,omitempty"`
+	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
+	Count int    `json:"count,omitempty" yaml:"count,omitempty"`
 }
 
 type Repo struct {
-	Name        string `json:"name,omitempty"`
-	FullName    string `json:"full_name,omitempty"`
-	Description string `json:"description,omitempty"`
-	URL         string `json:"url,omitempty"`
+	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
+	FullName    string `json:"full_name,omitempty" yaml:"fullName,omitempty"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	URL         string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 type ListItem struct {
-	Value string `json:"value,omitempty"`
-	Text  string `json:"text,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
+	Text  string `json:"text,omitempty" yaml:"text,omitempty"`
 }
 
 func mapRepo(r *github.Repository) *Repo {

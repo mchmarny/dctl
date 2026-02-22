@@ -61,13 +61,13 @@ Examples:
 )
 
 type ImportResult struct {
-	Org          string                        `json:"org,omitempty"`
-	Repos        []*data.ImportSummary         `json:"repos,omitempty"`
-	Duration     string                        `json:"duration"`
-	Events       map[string]int                `json:"events,omitempty"`
-	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty"`
-	Substituted  []*data.Substitution          `json:"substituted,omitempty"`
-	Reputation   *data.ReputationResult        `json:"reputation,omitempty"`
+	Org          string                        `json:"org,omitempty" yaml:"org,omitempty"`
+	Repos        []*data.ImportSummary         `json:"repos,omitempty" yaml:"repos,omitempty"`
+	Duration     string                        `json:"duration" yaml:"duration,omitempty"`
+	Events       map[string]int                `json:"events,omitempty" yaml:"events,omitempty"`
+	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty" yaml:"affiliations,omitempty"`
+	Substituted  []*data.Substitution          `json:"substituted,omitempty" yaml:"substituted,omitempty"`
+	Reputation   *data.ReputationResult        `json:"reputation,omitempty" yaml:"reputation,omitempty"`
 }
 
 func cmdImport(c *cli.Context) error {

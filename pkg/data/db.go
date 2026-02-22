@@ -158,14 +158,14 @@ func Contains[T comparable](list []T, val T) bool {
 }
 
 type Query struct {
-	On    int64  `json:"on,omitempty"`
-	Type  string `json:"type,omitempty"`
-	Value string `json:"value,omitempty"`
-	Limit int    `json:"limit,omitempty"`
+	On    int64  `json:"on,omitempty" yaml:"on,omitempty"`
+	Type  string `json:"type,omitempty" yaml:"type,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
+	Limit int    `json:"limit,omitempty" yaml:"limit,omitempty"`
 }
 
 type CountedResult struct {
-	Query   Query            `json:"query,omitempty"`
-	Results int              `json:"results,omitempty"`
-	Data    map[string]int64 `json:"data,omitempty"`
+	Query   Query            `json:"query,omitempty" yaml:"query,omitempty"`
+	Results int              `json:"results,omitempty" yaml:"results,omitempty"`
+	Data    map[string]int64 `json:"data,omitempty" yaml:"data,omitempty"`
 }

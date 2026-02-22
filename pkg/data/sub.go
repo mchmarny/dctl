@@ -64,10 +64,10 @@ var (
 )
 
 type Substitution struct {
-	Prop    string `json:"prop"`
-	Old     string `json:"old"`
-	New     string `json:"new"`
-	Records int64  `json:"records"`
+	Prop    string `json:"prop" yaml:"prop"`
+	Old     string `json:"old" yaml:"old"`
+	New     string `json:"new" yaml:"new"`
+	Records int64  `json:"records" yaml:"records"`
 }
 
 func applyDeveloperSub(db *sql.DB, sub *Substitution) error {

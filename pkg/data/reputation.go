@@ -76,39 +76,39 @@ const (
 
 // ReputationResult is returned by the shallow bulk import.
 type ReputationResult struct {
-	Updated int `json:"updated"`
-	Skipped int `json:"skipped"`
-	Errors  int `json:"errors"`
+	Updated int `json:"updated" yaml:"updated"`
+	Skipped int `json:"skipped" yaml:"skipped"`
+	Errors  int `json:"errors" yaml:"errors"`
 }
 
 // ReputationDistribution is the dashboard chart data.
 type ReputationDistribution struct {
-	Labels []string  `json:"labels"`
-	Data   []float64 `json:"data"`
+	Labels []string  `json:"labels" yaml:"labels"`
+	Data   []float64 `json:"data" yaml:"data"`
 }
 
 // UserReputation is returned by the on-demand deep score endpoint.
 type UserReputation struct {
-	Username   string         `json:"username"`
-	Reputation float64        `json:"reputation"`
-	Deep       bool           `json:"deep"`
-	Signals    *SignalSummary `json:"signals,omitempty"`
+	Username   string         `json:"username" yaml:"username"`
+	Reputation float64        `json:"reputation" yaml:"reputation"`
+	Deep       bool           `json:"deep" yaml:"deep"`
+	Signals    *SignalSummary `json:"signals,omitempty" yaml:"signals,omitempty"`
 }
 
 // SignalSummary exposes gathered signals to the UI.
 type SignalSummary struct {
-	AgeDays           int64 `json:"age_days"`
-	Followers         int64 `json:"followers"`
-	Following         int64 `json:"following"`
-	PublicRepos       int64 `json:"public_repos"`
-	PrivateRepos      int64 `json:"private_repos"`
-	StrongAuth        bool  `json:"strong_auth"`
-	Suspended         bool  `json:"suspended"`
-	OrgMember         bool  `json:"org_member"`
-	Commits           int64 `json:"commits"`
-	TotalCommits      int64 `json:"total_commits"`
-	TotalContributors int   `json:"total_contributors"`
-	LastCommitDays    int64 `json:"last_commit_days"`
+	AgeDays           int64 `json:"age_days" yaml:"ageDays"`
+	Followers         int64 `json:"followers" yaml:"followers"`
+	Following         int64 `json:"following" yaml:"following"`
+	PublicRepos       int64 `json:"public_repos" yaml:"publicRepos"`
+	PrivateRepos      int64 `json:"private_repos" yaml:"privateRepos"`
+	StrongAuth        bool  `json:"strong_auth" yaml:"strongAuth"`
+	Suspended         bool  `json:"suspended" yaml:"suspended"`
+	OrgMember         bool  `json:"org_member" yaml:"orgMember"`
+	Commits           int64 `json:"commits" yaml:"commits"`
+	TotalCommits      int64 `json:"total_commits" yaml:"totalCommits"`
+	TotalContributors int   `json:"total_contributors" yaml:"totalContributors"`
+	LastCommitDays    int64 `json:"last_commit_days" yaml:"lastCommitDays"`
 }
 
 // globalStats holds DB-wide statistics computed once per import run.

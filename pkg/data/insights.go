@@ -124,27 +124,27 @@ const (
 )
 
 type VelocitySeries struct {
-	Months  []string  `json:"months"`
-	Count   []int     `json:"count"`
-	AvgDays []float64 `json:"avg_days"`
+	Months  []string  `json:"months" yaml:"months"`
+	Count   []int     `json:"count" yaml:"count"`
+	AvgDays []float64 `json:"avg_days" yaml:"avgDays"`
 }
 
 type InsightsSummary struct {
-	BusFactor  int `json:"bus_factor"`
-	PonyFactor int `json:"pony_factor"`
+	BusFactor  int `json:"bus_factor" yaml:"busFactor"`
+	PonyFactor int `json:"pony_factor" yaml:"ponyFactor"`
 }
 
 type RetentionSeries struct {
-	Months    []string `json:"months"`
-	New       []int    `json:"new"`
-	Returning []int    `json:"returning"`
+	Months    []string `json:"months" yaml:"months"`
+	New       []int    `json:"new" yaml:"new"`
+	Returning []int    `json:"returning" yaml:"returning"`
 }
 
 type PRReviewRatioSeries struct {
-	Months  []string  `json:"months"`
-	PRs     []int     `json:"prs"`
-	Reviews []int     `json:"reviews"`
-	Ratio   []float64 `json:"ratio"`
+	Months  []string  `json:"months" yaml:"months"`
+	PRs     []int     `json:"prs" yaml:"prs"`
+	Reviews []int     `json:"reviews" yaml:"reviews"`
+	Ratio   []float64 `json:"ratio" yaml:"ratio"`
 }
 
 func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*InsightsSummary, error) {

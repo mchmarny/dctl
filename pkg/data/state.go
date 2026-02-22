@@ -24,8 +24,8 @@ var (
 )
 
 type State struct {
-	Since time.Time `json:"since"`
-	Page  int       `json:"page"`
+	Since time.Time `json:"since" yaml:"since"`
+	Page  int       `json:"page" yaml:"page"`
 }
 
 func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error) {

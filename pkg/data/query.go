@@ -80,33 +80,33 @@ const (
 )
 
 type EventTypeSeries struct {
-	Dates         []string  `json:"dates"`
-	PRs           []int     `json:"pr"`
-	PRReviews     []int     `json:"pr_review"`
-	Issues        []int     `json:"issue"`
-	IssueComments []int     `json:"issue_comment"`
-	Forks         []int     `json:"fork"`
-	Total         []int     `json:"total"`
-	Trend         []float32 `json:"trend"`
+	Dates         []string  `json:"dates" yaml:"dates"`
+	PRs           []int     `json:"pr" yaml:"pr"`
+	PRReviews     []int     `json:"pr_review" yaml:"prReview"`
+	Issues        []int     `json:"issue" yaml:"issue"`
+	IssueComments []int     `json:"issue_comment" yaml:"issueComment"`
+	Forks         []int     `json:"fork" yaml:"fork"`
+	Total         []int     `json:"total" yaml:"total"`
+	Trend         []float32 `json:"trend" yaml:"trend"`
 }
 
 type EventDetails struct {
-	Event     *Event     `json:"event,omitempty"`
-	Developer *Developer `json:"developer,omitempty"`
+	Event     *Event     `json:"event,omitempty" yaml:"event,omitempty"`
+	Developer *Developer `json:"developer,omitempty" yaml:"developer,omitempty"`
 }
 
 type EventSearchCriteria struct {
-	FromDate *string `json:"from,omitempty"`
-	ToDate   *string `json:"to,omitempty"`
-	Type     *string `json:"type,omitempty"`
-	Org      *string `json:"org,omitempty"`
-	Repo     *string `json:"repo,omitempty"`
-	Username *string `json:"user,omitempty"`
-	Entity   *string `json:"entity,omitempty"`
-	Mention  *string `json:"mention,omitempty"`
-	Label    *string `json:"label,omitempty"`
-	Page     int     `json:"page,omitempty"`
-	PageSize int     `json:"page_size,omitempty"`
+	FromDate *string `json:"from,omitempty" yaml:"from,omitempty"`
+	ToDate   *string `json:"to,omitempty" yaml:"to,omitempty"`
+	Type     *string `json:"type,omitempty" yaml:"type,omitempty"`
+	Org      *string `json:"org,omitempty" yaml:"org,omitempty"`
+	Repo     *string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Username *string `json:"user,omitempty" yaml:"user,omitempty"`
+	Entity   *string `json:"entity,omitempty" yaml:"entity,omitempty"`
+	Mention  *string `json:"mention,omitempty" yaml:"mention,omitempty"`
+	Label    *string `json:"label,omitempty" yaml:"label,omitempty"`
+	Page     int     `json:"page,omitempty" yaml:"page,omitempty"`
+	PageSize int     `json:"page_size,omitempty" yaml:"pageSize,omitempty"`
 }
 
 func (c EventSearchCriteria) String() string {

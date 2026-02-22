@@ -29,15 +29,15 @@ const (
 )
 
 type RepoMeta struct {
-	Org        string `json:"org"`
-	Repo       string `json:"repo"`
-	Stars      int    `json:"stars"`
-	Forks      int    `json:"forks"`
-	OpenIssues int    `json:"open_issues"`
-	Language   string `json:"language"`
-	License    string `json:"license"`
-	Archived   bool   `json:"archived"`
-	UpdatedAt  string `json:"updated_at"`
+	Org        string `json:"org" yaml:"org"`
+	Repo       string `json:"repo" yaml:"repo"`
+	Stars      int    `json:"stars" yaml:"stars"`
+	Forks      int    `json:"forks" yaml:"forks"`
+	OpenIssues int    `json:"open_issues" yaml:"openIssues"`
+	Language   string `json:"language" yaml:"language"`
+	License    string `json:"license" yaml:"license"`
+	Archived   bool   `json:"archived" yaml:"archived"`
+	UpdatedAt  string `json:"updated_at" yaml:"updatedAt"`
 }
 
 func ImportRepoMeta(dbPath, token, owner, repo string) error {

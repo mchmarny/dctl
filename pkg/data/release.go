@@ -34,9 +34,9 @@ const (
 )
 
 type ReleaseCadenceSeries struct {
-	Months []string `json:"months"`
-	Total  []int    `json:"total"`
-	Stable []int    `json:"stable"`
+	Months []string `json:"months" yaml:"months"`
+	Total  []int    `json:"total" yaml:"total"`
+	Stable []int    `json:"stable" yaml:"stable"`
 }
 
 func ImportReleases(dbPath, token, owner, repo string) error {

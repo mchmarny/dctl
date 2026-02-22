@@ -20,8 +20,8 @@ const (
 )
 
 type SeriesData[T any] struct {
-	Labels []string `json:"labels"`
-	Data   []T      `json:"data"`
+	Labels []string `json:"labels" yaml:"labels"`
+	Data   []T      `json:"data" yaml:"data"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

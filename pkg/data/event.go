@@ -63,21 +63,21 @@ var (
 )
 
 type Event struct {
-	Org       string  `json:"org,omitempty"`
-	Repo      string  `json:"repo,omitempty"`
-	Username  string  `json:"username,omitempty"`
-	Type      string  `json:"type,omitempty"`
-	Date      string  `json:"date,omitempty"`
-	URL       string  `json:"url,omitempty"`
-	Mentions  string  `json:"mentions,omitempty"`
-	Labels    string  `json:"labels,omitempty"`
-	State     *string `json:"state,omitempty"`
-	Number    *int    `json:"number,omitempty"`
-	CreatedAt *string `json:"created_at,omitempty"`
-	ClosedAt  *string `json:"closed_at,omitempty"`
-	MergedAt  *string `json:"merged_at,omitempty"`
-	Additions *int    `json:"additions,omitempty"`
-	Deletions *int    `json:"deletions,omitempty"`
+	Org       string  `json:"org,omitempty" yaml:"org,omitempty"`
+	Repo      string  `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Username  string  `json:"username,omitempty" yaml:"username,omitempty"`
+	Type      string  `json:"type,omitempty" yaml:"type,omitempty"`
+	Date      string  `json:"date,omitempty" yaml:"date,omitempty"`
+	URL       string  `json:"url,omitempty" yaml:"url,omitempty"`
+	Mentions  string  `json:"mentions,omitempty" yaml:"mentions,omitempty"`
+	Labels    string  `json:"labels,omitempty" yaml:"labels,omitempty"`
+	State     *string `json:"state,omitempty" yaml:"state,omitempty"`
+	Number    *int    `json:"number,omitempty" yaml:"number,omitempty"`
+	CreatedAt *string `json:"created_at,omitempty" yaml:"createdAt,omitempty"`
+	ClosedAt  *string `json:"closed_at,omitempty" yaml:"closedAt,omitempty"`
+	MergedAt  *string `json:"merged_at,omitempty" yaml:"mergedAt,omitempty"`
+	Additions *int    `json:"additions,omitempty" yaml:"additions,omitempty"`
+	Deletions *int    `json:"deletions,omitempty" yaml:"deletions,omitempty"`
 }
 
 type importer func(ctx context.Context) error
@@ -216,10 +216,10 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 
 // ImportSummary contains per-repo import metadata.
 type ImportSummary struct {
-	Repo       string `json:"repo"`
-	Since      string `json:"since"`
-	Events     int    `json:"events"`
-	Developers int    `json:"developers"`
+	Repo       string `json:"repo" yaml:"repo"`
+	Since      string `json:"since" yaml:"since"`
+	Events     int    `json:"events" yaml:"events"`
+	Developers int    `json:"developers" yaml:"developers"`
 }
 
 type EventImporter struct {

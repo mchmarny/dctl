@@ -43,9 +43,9 @@ const (
 )
 
 type EntityResult struct {
-	Entity         string               `json:"entity,omitempty"`
-	DeveloperCount int                  `json:"developer_count,omitempty"`
-	Developers     []*DeveloperListItem `json:"developers,omitempty"`
+	Entity         string               `json:"entity,omitempty" yaml:"entity,omitempty"`
+	DeveloperCount int                  `json:"developer_count,omitempty" yaml:"developerCount,omitempty"`
+	Developers     []*DeveloperListItem `json:"developers,omitempty" yaml:"developers,omitempty"`
 }
 
 // GetEntityLike returns a list of repos that match the given pattern.

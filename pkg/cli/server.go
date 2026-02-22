@@ -45,7 +45,7 @@ var (
 
 	serverCmd = &cli.Command{
 		Name:    "server",
-		Aliases: []string{"s"},
+		Aliases: []string{"serve"},
 		Usage:   "Start local HTTP server",
 		Action:  cmdStartServer,
 		Flags: []cli.Flag{
