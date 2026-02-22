@@ -41,7 +41,11 @@ var (
 		Name:    "import",
 		Aliases: []string{"i"},
 		Usage:   "Import GitHub data (events, affiliations, metadata, releases, reputation)",
-		Action:  cmdImport,
+		UsageText: `dctl import --org NVIDIA --repo NVSentinel --repo skyhook   # import specific repos
+   dctl import --org NVIDIA                                     # import all org repos
+   dctl import                                                  # update all previously imported data
+   dctl import --org NVIDIA --fresh                             # re-import from scratch`,
+		Action: cmdImport,
 		Flags: []cli.Flag{
 			orgNameFlag,
 			repoNameFlag,
