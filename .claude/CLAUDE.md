@@ -16,7 +16,7 @@ make build         # goreleaser single-target build
 make server        # run dev server with --debug
 ```
 
-Go version is pinned in `go.mod` (currently 1.25). The `.golangci.yaml` at the repo root configures linting.
+Go version is pinned in `go.mod` (currently 1.26). The `.golangci.yaml` at the repo root configures linting.
 
 ## Non-Negotiable Rules
 

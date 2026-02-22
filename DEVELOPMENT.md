@@ -34,7 +34,7 @@ make qualify        # Full check: test + lint + scan
 
 | Tool | Purpose | Installation |
 |------|---------|--------------|
-| **Go 1.25+** | Language runtime | [golang.org/dl](https://golang.org/dl/) |
+| **Go 1.26+** | Language runtime | [golang.org/dl](https://golang.org/dl/) |
 | **make** | Build automation | Pre-installed on macOS; `apt install make` on Ubuntu/Debian |
 | **git** | Version control | Pre-installed on most systems |
 

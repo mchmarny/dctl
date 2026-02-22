@@ -36,7 +36,7 @@ Pre-built binaries for macOS, Linux, and Windows (amd64/arm64) are available on 
 
 ### Build from source
 
-Requires [Go](https://go.dev/) 1.25+.
+Requires [Go](https://go.dev/) 1.26+.
 
 ```shell
 git clone https://github.com/mchmarny/dctl.git
