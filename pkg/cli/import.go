@@ -32,6 +32,24 @@ var (
 		Value: data.EventAgeMonthsDefault,
 	}
 
+	freshFlag = &cli.BoolFlag{
+		Name:  "fresh",
+		Usage: "Clear pagination state and re-import from scratch",
+	}
+
+	importCmd = &cli.Command{
+		Name:    "import",
+		Aliases: []string{"i"},
+		Usage:   "Import GitHub data (events, affiliations, metadata, releases, reputation)",
+		Action:  cmdImport,
+		Flags: []cli.Flag{
+			orgNameFlag,
+			repoNameFlag,
+			monthsFlag,
+			freshFlag,
+		},
+	}
+
 	subTypeFlag = &cli.StringFlag{
 		Name:  "type",
 		Usage: fmt.Sprintf("Substitution type [%s]", strings.Join(data.UpdatableProperties, ",")),
@@ -49,167 +67,20 @@ var (
 		Required: true,
 	}
 
-	freshFlag = &cli.BoolFlag{
-		Name:  "fresh",
-		Usage: "Clear pagination state and re-import from scratch",
-	}
-
-	importCmd = &cli.Command{
-		Name:    "import",
-		Aliases: []string{"i"},
-		Usage:   "List data import operations",
-		Subcommands: []*cli.Command{
-			{
-				Name:    "events",
-				Aliases: []string{"e"},
-				Usage:   "Imports GitHub repo event data (PRs, comments, issues, etc)",
-				Action:  cmdImportEvents,
-				Flags: []cli.Flag{
-					orgNameFlag,
-					repoNameFlag,
-					monthsFlag,
-					freshFlag,
-				},
-			},
-			{
-				Name:    "affiliations",
-				Aliases: []string{"a"},
-				Usage:   "Updates imported developer entity/identity with CNCF and GitHub data",
-				Action:  cmdImportAffiliations,
-			},
-			{
-				Name:    "substitutions",
-				Aliases: []string{"s"},
-				Usage:   "Create a global data substitutions (e.g. standardize entity name)",
-				Action:  cmdSubstitutes,
-				Flags: []cli.Flag{
-					subTypeFlag,
-					oldValFlag,
-					newValFlag,
-				},
-			},
-			{
-				Name:    "updates",
-				Aliases: []string{"u"},
-				Usage:   "Update all previously imported org, repos, and affiliations",
-				Action:  cmdUpdate,
-			},
-			{
-				Name:    "all",
-				Aliases: []string{"al"},
-				Usage:   "Import everything (events, affiliations, metadata, releases) for a given org",
-				Action:  cmdImportAll,
-				Flags: []cli.Flag{
-					orgNameFlag,
-					repoNameFlag,
-					monthsFlag,
-					freshFlag,
-				},
-			},
-			{
-				Name:    "metadata",
-				Aliases: []string{"m"},
-				Usage:   "Import repository metadata (stars, forks, language, license, etc)",
-				Action:  cmdImportMetadata,
-				Flags: []cli.Flag{
-					orgNameFlag,
-					repoNameFlag,
-				},
-			},
-			{
-				Name:    "releases",
-				Aliases: []string{"r"},
-				Usage:   "Import repository releases and tags",
-				Action:  cmdImportReleases,
-				Flags: []cli.Flag{
-					orgNameFlag,
-					repoNameFlag,
-				},
-			},
-			{
-				Name:    "reputation",
-				Aliases: []string{"rep"},
-				Usage:   "Compute reputation scores for contributors with stale or missing scores",
-				Action:  cmdImportReputation,
-			},
+	substituteCmd = &cli.Command{
+		Name:    "substitute",
+		Aliases: []string{"sub"},
+		Usage:   "Create a global data substitution (e.g. standardize entity name)",
+		Action:  cmdSubstitutes,
+		Flags: []cli.Flag{
+			subTypeFlag,
+			oldValFlag,
+			newValFlag,
 		},
 	}
 )
 
-type EventImportResult struct {
-	Org      string         `json:"org,omitempty"`
-	Repos    []string       `json:"repos,omitempty"`
-	Duration string         `json:"duration,omitempty"`
-	Imported map[string]int `json:"imported,omitempty"`
-}
-
-type EventUpdateResult struct {
-	Duration    string                        `json:"duration,omitempty"`
-	Imported    map[string]int                `json:"imported,omitempty"`
-	Updated     *data.AffiliationImportResult `json:"updated,omitempty"`
-	Substituted []*data.Substitution          `json:"substituted,omitempty"`
-}
-
-func cmdUpdate(c *cli.Context) error {
-	start := time.Now()
-	token, err := getGitHubToken()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if token == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
-
-	cfg := getConfig(c)
-	res := &EventUpdateResult{}
-
-	m, err := data.UpdateEvents(cfg.DBPath, token)
-	if err != nil {
-		return fmt.Errorf("failed to import events: %w", err)
-	}
-
-	// update final state
-	res.Imported = m
-	res.Duration = time.Since(start).String()
-
-	// also update affiliations
-	a, err := importAffiliations(cfg.DB)
-	if err != nil {
-		return fmt.Errorf("failed to import affiliations: %w", err)
-	}
-	res.Updated = a
-
-	// also update substitutes
-	sub, err := data.ApplySubstitutions(cfg.DB)
-	if err != nil {
-		return fmt.Errorf("failed to apply substitutions: %w", err)
-	}
-	res.Substituted = sub
-
-	// also update repo metadata
-	if err := data.ImportAllRepoMeta(cfg.DBPath, token); err != nil {
-		slog.Error("failed to import repo metadata", "error", err)
-	}
-
-	// also update releases
-	if err := data.ImportAllReleases(cfg.DBPath, token); err != nil {
-		slog.Error("failed to import releases", "error", err)
-	}
-
-	// also update reputation (shallow — local DB only)
-	if _, err := data.ImportReputation(cfg.DB); err != nil {
-		slog.Error("failed to compute reputation scores", "error", err)
-	}
-
-	if err := getEncoder().Encode(res); err != nil {
-		return fmt.Errorf("error encoding list: %+v: %w", res, err)
-	}
-
-	return nil
-}
-
-type ImportAllResult struct {
+type ImportResult struct {
 	Org          string                        `json:"org"`
 	Repos        []*data.ImportSummary         `json:"repos"`
 	Duration     string                        `json:"duration"`
@@ -219,7 +90,7 @@ type ImportAllResult struct {
 	Reputation   *data.ReputationResult        `json:"reputation,omitempty"`
 }
 
-func cmdImportAll(c *cli.Context) error {
+func cmdImport(c *cli.Context) error {
 	start := time.Now()
 	org := c.String(orgNameFlag.Name)
 	repoSlice := c.StringSlice(repoNameFlag.Name)
@@ -230,13 +101,18 @@ func cmdImportAll(c *cli.Context) error {
 		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
-	if org == "" || token == "" {
+	if token == "" {
 		return cli.ShowSubcommandHelp(c)
 	}
 
 	cfg := getConfig(c)
 
-	// resolve repos
+	// If no org specified, update all previously imported data.
+	if org == "" {
+		return cmdUpdate(c, cfg, token, start)
+	}
+
+	// Resolve repos
 	var repos []string
 	if len(repoSlice) == 0 {
 		ctx := context.Background()
@@ -249,7 +125,7 @@ func cmdImportAll(c *cli.Context) error {
 		repos = repoSlice
 	}
 
-	res := &ImportAllResult{
+	res := &ImportResult{
 		Org:    org,
 		Repos:  make([]*data.ImportSummary, 0, len(repos)),
 		Events: make(map[string]int),
@@ -302,7 +178,7 @@ func cmdImportAll(c *cli.Context) error {
 	// 4. metadata + releases
 	importRepoExtras(cfg.DBPath, token, org, repos)
 
-	// 6. reputation (shallow — local DB only)
+	// 5. reputation (shallow — local DB only)
 	slog.Info("computing reputation scores")
 	repResult, err := data.ImportReputation(cfg.DB)
 	if err != nil {
@@ -312,6 +188,52 @@ func cmdImportAll(c *cli.Context) error {
 	}
 
 	res.Duration = time.Since(start).String()
+
+	if err := getEncoder().Encode(res); err != nil {
+		return fmt.Errorf("error encoding result: %w", err)
+	}
+
+	return nil
+}
+
+func cmdUpdate(_ *cli.Context, cfg *appConfig, token string, start time.Time) error {
+	slog.Info("no org specified, updating all previously imported data")
+
+	m, err := data.UpdateEvents(cfg.DBPath, token)
+	if err != nil {
+		return fmt.Errorf("failed to import events: %w", err)
+	}
+
+	a, err := importAffiliations(cfg.DB)
+	if err != nil {
+		slog.Error("failed to import affiliations", "error", err)
+	}
+
+	sub, err := data.ApplySubstitutions(cfg.DB)
+	if err != nil {
+		slog.Error("failed to apply substitutions", "error", err)
+	}
+
+	if metaErr := data.ImportAllRepoMeta(cfg.DBPath, token); metaErr != nil {
+		slog.Error("failed to import repo metadata", "error", metaErr)
+	}
+
+	if relErr := data.ImportAllReleases(cfg.DBPath, token); relErr != nil {
+		slog.Error("failed to import releases", "error", relErr)
+	}
+
+	repResult, repErr := data.ImportReputation(cfg.DB)
+	if repErr != nil {
+		slog.Error("failed to compute reputation scores", "error", repErr)
+	}
+
+	res := &ImportResult{
+		Events:       m,
+		Affiliations: a,
+		Substituted:  sub,
+		Reputation:   repResult,
+		Duration:     time.Since(start).String(),
+	}
 
 	if err := getEncoder().Encode(res); err != nil {
 		return fmt.Errorf("error encoding result: %w", err)
@@ -335,69 +257,6 @@ func importRepoExtras(dbPath, token, org string, repos []string) {
 	}
 }
 
-func cmdImportEvents(c *cli.Context) error {
-	start := time.Now()
-	org := c.String(orgNameFlag.Name)
-	repoSlice := c.StringSlice(repoNameFlag.Name)
-	months := c.Int(monthsFlag.Name)
-	token, err := getGitHubToken()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if org == "" || token == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
-
-	var repos []string
-
-	if len(repoSlice) == 0 {
-		ctx := context.Background()
-		client := net.GetOAuthClient(ctx, token)
-		repos, err = data.GetOrgRepoNames(ctx, client, org)
-		if err != nil {
-			return fmt.Errorf("failed to get org %s repos: %w", org, err)
-		}
-	} else {
-		repos = repoSlice
-	}
-
-	cfg := getConfig(c)
-
-	if c.Bool(freshFlag.Name) {
-		for _, r := range repos {
-			if err := data.ClearState(cfg.DB, org, r); err != nil {
-				return fmt.Errorf("failed to clear state for %s/%s: %w", org, r, err)
-			}
-		}
-		slog.Info("cleared pagination state", "org", org, "repos", len(repos))
-	}
-
-	res := &EventImportResult{
-		Org:      org,
-		Repos:    repos,
-		Imported: make(map[string]int),
-	}
-
-	for _, r := range repos {
-		m, _, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
-		if importErr != nil {
-			return fmt.Errorf("failed to import events: %w", importErr)
-		}
-		for k, v := range m {
-			res.Imported[k] = v
-		}
-	}
-
-	res.Duration = time.Since(start).String()
-
-	if err := getEncoder().Encode(res); err != nil {
-		return fmt.Errorf("error encoding list: %+v: %w", res, err)
-	}
-
-	return nil
-}
-
 func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 	token, err := getGitHubToken()
 	if err != nil {
@@ -419,74 +278,6 @@ func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 	return res, nil
 }
 
-func cmdImportAffiliations(c *cli.Context) error {
-	cfg := getConfig(c)
-
-	res, err := importAffiliations(cfg.DB)
-	if err != nil {
-		return fmt.Errorf("failed to import affiliations: %w", err)
-	}
-
-	if err := getEncoder().Encode(res); err != nil {
-		return fmt.Errorf("error encoding list: %+v: %w", res, err)
-	}
-
-	return nil
-}
-
-func runImport(c *cli.Context, single func(string, string, string, string) error, all func(string, string) error, name string) error {
-	org := c.String(orgNameFlag.Name)
-	repos := c.StringSlice(repoNameFlag.Name)
-	token, err := getGitHubToken()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if token == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
-
-	cfg := getConfig(c)
-
-	if org != "" && len(repos) > 0 {
-		for _, repo := range repos {
-			if importErr := single(cfg.DBPath, token, org, repo); importErr != nil {
-				return fmt.Errorf("failed to import %s for %s/%s: %w", name, org, repo, importErr)
-			}
-		}
-	} else {
-		if importErr := all(cfg.DBPath, token); importErr != nil {
-			return fmt.Errorf("failed to import all %s: %w", name, importErr)
-		}
-	}
-
-	fmt.Printf("%s import complete\n", name)
-	return nil
-}
-
-func cmdImportMetadata(c *cli.Context) error {
-	return runImport(c, data.ImportRepoMeta, data.ImportAllRepoMeta, "metadata")
-}
-
-func cmdImportReleases(c *cli.Context) error {
-	return runImport(c, data.ImportReleases, data.ImportAllReleases, "releases")
-}
-
-func cmdImportReputation(c *cli.Context) error {
-	cfg := getConfig(c)
-
-	res, err := data.ImportReputation(cfg.DB)
-	if err != nil {
-		return fmt.Errorf("failed to compute reputation scores: %w", err)
-	}
-
-	if err := getEncoder().Encode(res); err != nil {
-		return fmt.Errorf("error encoding result: %w", err)
-	}
-
-	return nil
-}
-
 func cmdSubstitutes(c *cli.Context) error {
 	sub := c.String(subTypeFlag.Name)
 	old := c.String(oldValFlag.Name)
@@ -500,11 +291,11 @@ func cmdSubstitutes(c *cli.Context) error {
 
 	res, err := data.SaveAndApplyDeveloperSub(cfg.DB, sub, old, new)
 	if err != nil {
-		return fmt.Errorf("failed to update names from apache foundation: %w", err)
+		return fmt.Errorf("failed to apply substitution: %w", err)
 	}
 
 	if err := getEncoder().Encode(res); err != nil {
-		return fmt.Errorf("error encoding list: %+v: %w", res, err)
+		return fmt.Errorf("error encoding result: %w", err)
 	}
 
 	return nil
