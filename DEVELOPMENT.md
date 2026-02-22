@@ -45,7 +45,6 @@ make qualify        # Full check: test + lint + scan
 | golangci-lint | Go linting | [golangci-lint.run](https://golangci-lint.run/welcome/install/) |
 | goreleaser | Release automation / local builds | [goreleaser.com](https://goreleaser.com/install/) |
 | grype | Vulnerability scanning | [github.com/anchore/grype](https://github.com/anchore/grype) |
-| git-cliff | Changelog generation | [git-cliff.org](https://git-cliff.org/docs/installation/) |
 
 ## Development Setup
 
