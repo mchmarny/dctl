@@ -22,6 +22,14 @@
             </button>
             <div id="ac-dropdown" class="ac-dropdown"></div>
         </form>
+        <button class="theme-toggle-btn" id="theme-toggle" aria-label="toggle theme">
+            <svg class="icon-moon" aria-hidden="true">
+                <use xlink:href="#moon"></use>
+            </svg>
+            <svg class="icon-sun" aria-hidden="true">
+                <use xlink:href="#sun"></use>
+            </svg>
+        </button>
     </section>
 
     <div class="search-meta">
@@ -166,32 +174,69 @@
             </div>
         </article>
 
-        <article class="init-hide">
+        <article>
             <div class="tbl bordered">
                 <div class="tbl-header">
                     <div class="content-header">
-                        Search Results (page <b id="page-number">1</b>)
+                        Event Search
                     </div>
                 </div>
                 <div class="tbl-content">
-                    <div id="tbl-criteria"></div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Repo</th>
-                                <th>Event Type</th>
-                                <th>Developer</th>
-                                <th>Entity</th>
-                            </tr>
-                        </thead>
-                        <tbody id="result-table-content"></tbody>
-                    </table>
-                    <div class="result-pager">
-                        <a href="#" id="prev-page">Prev</a> |
-                        <a href="#" id="next-page">Next</a>
+                    <form id="search-filters" class="search-filters">
+                        <div class="filter-row">
+                            <label for="filter-type">Type</label>
+                            <select id="filter-type">
+                                <option value="">All</option>
+                                <option value="PR">PR</option>
+                                <option value="PR-Review">PR-Review</option>
+                                <option value="Issue">Issue</option>
+                                <option value="Issue-Comment">Issue-Comment</option>
+                                <option value="Fork">Fork</option>
+                            </select>
+                        </div>
+                        <div class="filter-row">
+                            <label for="filter-from">From</label>
+                            <input type="date" id="filter-from" />
+                        </div>
+                        <div class="filter-row">
+                            <label for="filter-to">To</label>
+                            <input type="date" id="filter-to" />
+                        </div>
+                        <div class="filter-row">
+                            <label for="filter-user">User</label>
+                            <input type="text" id="filter-user" placeholder="username" />
+                        </div>
+                        <div class="filter-row">
+                            <label for="filter-entity">Entity</label>
+                            <input type="text" id="filter-entity" placeholder="company" />
+                        </div>
+                        <div class="filter-actions">
+                            <button type="submit" class="modal-btn modal-btn-primary">Search</button>
+                            <button type="button" id="filter-clear" class="modal-btn">Clear</button>
+                        </div>
+                    </form>
+                    <div id="search-results-wrap" style="display:none;">
+                        <div id="tbl-criteria"></div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Repo</th>
+                                    <th>Event Type</th>
+                                    <th>Developer</th>
+                                    <th>Entity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="result-table-content"></tbody>
+                        </table>
+                        <div class="result-pager">
+                            Page <b id="page-number">1</b>
+                            &nbsp;
+                            <a href="#" id="prev-page">Prev</a> |
+                            <a href="#" id="next-page">Next</a>
+                        </div>
                     </div>
-                </div>            
+                </div>
             </div>
         </article>
 

@@ -17,14 +17,14 @@ const (
 			avatar,
 			url,
 			entity
-		) 
-		VALUES (?, ?, ?, ?, ?, ?) 
-		ON CONFLICT(username) DO UPDATE SET 
+		)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(username) DO UPDATE SET
 			full_name = ?,
 			email = ?,
 			avatar = ?,
 			url = ?,
-			entity = ?
+			entity = CASE WHEN ? = '' THEN COALESCE(developer.entity, '') ELSE ? END
 	`
 
 	selectDeveloperSQL = `SELECT
@@ -135,7 +135,7 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 	for i, u := range devs {
 		if _, err = tx.Stmt(userStmt).Exec(u.Username,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
-			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
+			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Entity); err != nil {
 			slog.Error("failed to insert developer",
 				"index", i,
 				"error", err,

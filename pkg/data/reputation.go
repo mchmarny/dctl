@@ -22,6 +22,7 @@ const (
 		FROM developer d
 		JOIN event e ON d.username = e.username
 		WHERE d.username NOT LIKE '%[bot]'
+		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		  AND (d.reputation IS NULL
 		   OR d.reputation_updated_at IS NULL
 		   OR d.reputation_updated_at < ?)
@@ -50,6 +51,7 @@ const (
 		  AND e.date >= ?
 		  AND d.reputation IS NOT NULL
 		  AND d.username NOT LIKE '%[bot]'
+		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		GROUP BY d.username, d.reputation
 		ORDER BY d.reputation ASC
 		LIMIT 20

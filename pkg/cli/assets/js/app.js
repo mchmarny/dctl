@@ -11,6 +11,8 @@ function applyChartDefaults() {
     const gridColor = dark ? 'rgba(230,237,243,0.1)' : 'rgba(31,35,40,0.1)';
     Chart.defaults.color = textColor;
     Chart.defaults.borderColor = gridColor;
+    Chart.defaults.transitions = Chart.defaults.transitions || {};
+    Chart.defaults.transitions.resize = { animation: { duration: 0 } };
 }
 
 function initTheme() {
@@ -120,30 +122,9 @@ function parseSearchInput(raw) {
 }
 
 $(function () {
-    $(".init-hide").hide();
     $(window).resize(function () {
         const scrollWidth = $('.tbl-content').width() - $('.tbl-content table').width();
         $('.tbl-header').css({ 'padding-right': scrollWidth });
-    });
-
-    $(".admin-menu .collapse-btn").click(function () {
-        $("body").toggleClass("collapsed");
-        $(".admin-menu").attr("aria-expanded") == "true"
-            ? $(".admin-menu").attr("aria-expanded", "false")
-            : $(".admin-menu").attr("aria-expanded", "true");
-        $(".collapse-btn").attr("aria-label") == "collapse menu"
-            ? $(".collapse-btn").attr("aria-label", "expand menu")
-            : $(".collapse-btn").attr("aria-label", "collapse menu");
-    });
-
-    $(".toggle-mob-menu").click(function () {
-        $("body").toggleClass("mob-menu-opened");
-        $(".admin-menu").attr("aria-expanded") == "true"
-            ? $(".admin-menu").attr("aria-expanded", "false")
-            : $(".admin-menu").attr("aria-expanded", "true");
-        $(".collapse-btn").attr("aria-label") == "open menu"
-            ? $(".collapse-btn").attr("aria-label", "close menu")
-            : $(".collapse-btn").attr("aria-label", "open menu");
     });
 
     // Theme toggle
@@ -186,6 +167,7 @@ $(function () {
     if ($("#search-bar").length) {
         searchCriteria.init();
         initUnifiedSearch();
+        initSearchFilters();
         loadAllCharts($("#period_months").val(), "", "", "");
     }
 });
@@ -364,8 +346,9 @@ function initUnifiedSearch() {
 function resetSearch() {
     searchItem = null;
     $("#result-table-content").empty();
-    $(".init-hide").hide();
+    $("#search-results-wrap").hide();
     searchCriteria.reset();
+    clearFilterInputs();
     $("#bus-factor-val").text("—");
     $("#pony-factor-val").text("—");
     $("#repo-meta-container").empty().html('<span class="insight-label">No metadata imported yet</span>');
@@ -409,17 +392,20 @@ function onTimeSeriesChartSelect(label, val) {
     if (val != "Total" && val != "Trend") {
         searchCriteria.type = val;
     }
+    syncFiltersToInputs();
     submitSearch();
 }
 
 function onLeftChartSelect(label) {
     searchCriteria.entity = label;
+    syncFiltersToInputs();
     submitSearch();
     showEntityDevelopers(label);
 }
 
 function onRightChartSelect(label) {
     searchCriteria.user = label;
+    syncFiltersToInputs();
     submitSearch();
 }
 
@@ -451,7 +437,7 @@ function displaySearchResults(table, data) {
     table.empty();
     if (data.length == 0) {
         table.append("<tr><td colspan='5'>No results found.</td></tr>");
-        $(".init-hide").show();
+        $("#search-results-wrap").show();
         return;
     }
     $.each(data, function (key, item) {
@@ -466,7 +452,7 @@ function displaySearchResults(table, data) {
             .append(`<td>${parseOptional(item.developer.entity)}</td>`)
             .appendTo(table);
     });
-    $(".init-hide").show();
+    $("#search-results-wrap").show();
     return false;
 }
 
@@ -992,6 +978,54 @@ function showDeepReputation(username) {
         list.append(`<li><a href="https://github.com/${username}" target="_blank">View on GitHub</a></li>`);
     }).fail(function () {
         list.empty().append('<li>Failed to compute score</li>');
+    });
+}
+
+function syncFiltersToInputs() {
+    $("#filter-type").val(searchCriteria.type || "");
+    $("#filter-from").val(searchCriteria.from || "");
+    $("#filter-to").val(searchCriteria.to || "");
+    $("#filter-user").val(searchCriteria.user || "");
+    $("#filter-entity").val(searchCriteria.entity || "");
+}
+
+function clearFilterInputs() {
+    $("#filter-type").val("");
+    $("#filter-from").val("");
+    $("#filter-to").val("");
+    $("#filter-user").val("");
+    $("#filter-entity").val("");
+}
+
+function initSearchFilters() {
+    $("#search-filters").on("submit", function (e) {
+        e.preventDefault();
+        const t = $("#filter-type").val();
+        const from = $("#filter-from").val();
+        const to = $("#filter-to").val();
+        const user = $("#filter-user").val().trim();
+        const entity = $("#filter-entity").val().trim();
+
+        searchCriteria.type = t || null;
+        searchCriteria.from = from || null;
+        searchCriteria.to = to || null;
+        searchCriteria.user = user || null;
+        searchCriteria.entity = entity || null;
+        searchCriteria.page = 1;
+
+        submitSearch();
+    });
+
+    $("#filter-clear").click(function () {
+        searchCriteria.type = null;
+        searchCriteria.from = null;
+        searchCriteria.to = null;
+        searchCriteria.user = null;
+        searchCriteria.entity = null;
+        searchCriteria.page = 1;
+        clearFilterInputs();
+        $("#result-table-content").empty();
+        $("#search-results-wrap").hide();
     });
 }
 
