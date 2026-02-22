@@ -1108,6 +1108,20 @@ a.link {
   margin-top: 2px;
 }
 
+.insights-summary .insight-card {
+  gap: 8px;
+}
+.insights-summary .insight-label {
+  font-size: 1.1rem;
+}
+.insights-summary .insight-val {
+  font-size: 4rem;
+}
+.insights-summary .insight-desc {
+  font-size: 0.95rem;
+  max-width: 300px;
+}
+
 .insights-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

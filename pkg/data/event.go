@@ -192,6 +192,7 @@ type EventImporter struct {
 	users        map[string]*github.User
 	state        map[string]*State
 	minEventTime time.Time
+	flushed      int
 }
 
 func (e *EventImporter) qualifyTypeKey(t string) string {
@@ -351,7 +352,13 @@ func (e *EventImporter) flush() error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	slog.Debug("successfully flushed", "duration", time.Since(start).String())
+	e.flushed += len(events)
+	slog.Info("events imported",
+		"repo", e.owner+"/"+e.repo,
+		"batch", len(events),
+		"total", e.flushed,
+		"developers", len(users),
+		"duration", time.Since(start).String())
 
 	return nil
 }

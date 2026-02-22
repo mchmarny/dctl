@@ -106,6 +106,7 @@ let prRatioChart;
 let timeToMergeChart;
 let timeToCloseChart;
 let releaseCadenceChart;
+let reputationChart;
 let searchItem;
 
 const searchPrefixes = ['org', 'repo', 'entity'];
@@ -164,6 +165,10 @@ $(function () {
         $("#entity-popover").removeClass("open");
     });
 
+    $("#reputation-popover-close").click(function () {
+        $("#reputation-popover").removeClass("open");
+    });
+
     // Pagination — bind once
     $("#prev-page").click(function (e) {
         e.preventDefault();
@@ -207,6 +212,7 @@ function loadAllCharts(months, org, repo, entity) {
     loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}`, 'time-to-close-chart', 'timeToClose');
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
+    loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}`);
 }
 
 function applySelection(scope, item) {
@@ -364,6 +370,7 @@ function resetSearch() {
     $("#pony-factor-val").text("—");
     $("#repo-meta-container").empty().html('<span class="insight-label">No metadata imported yet</span>');
     $("#entity-popover").removeClass("open");
+    $("#reputation-popover").removeClass("open");
 }
 
 function resetCharts() {
@@ -390,6 +397,9 @@ function resetCharts() {
     }
     if (releaseCadenceChart) {
         releaseCadenceChart.destroy();
+    }
+    if (reputationChart) {
+        reputationChart.destroy();
     }
 }
 
@@ -898,6 +908,90 @@ function loadReleaseCadenceChart(url) {
                 }
             }
         });
+    });
+}
+
+function reputationBarColors(values) {
+    return values.map(function (v) {
+        if (v >= 0.7) return '#2da44e';
+        if (v >= 0.4) return '#bf8700';
+        return '#cf222e';
+    });
+}
+
+function loadReputationChart(url) {
+    $.get(url, function (data) {
+        if (!data.labels || data.labels.length === 0) {
+            return;
+        }
+        reputationChart = new Chart($("#reputation-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Score',
+                    data: data.data,
+                    backgroundColor: reputationBarColors(data.data),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 1.0,
+                        ticks: { font: { size: 14 } }
+                    },
+                    y: {
+                        ticks: { font: { size: 14 } }
+                    }
+                },
+                onClick: (evt, item) => {
+                    if (item.length) {
+                        const username = reputationChart.data.labels[item[0].index];
+                        showDeepReputation(username);
+                    }
+                }
+            }
+        });
+    });
+}
+
+function showDeepReputation(username) {
+    const popover = $("#reputation-popover");
+    const list = $("#reputation-popover-list");
+    const title = $("#reputation-popover-title");
+
+    title.text(username);
+    list.empty().append('<li>Computing full score...</li>');
+    popover.addClass("open");
+
+    $.get(`/data/insights/reputation/user?u=${encodeURIComponent(username)}`, function (data) {
+        list.empty();
+        const color = data.reputation >= 0.7 ? '#2da44e' : (data.reputation >= 0.4 ? '#bf8700' : '#cf222e');
+        const label = data.reputation >= 0.7 ? 'High' : (data.reputation >= 0.4 ? 'Medium' : 'Low');
+        const cached = data.deep ? '' : ' (cached)';
+        list.append(`<li><b>Score:</b> <span style="color:${color};font-weight:bold;">${data.reputation.toFixed(2)} (${label})</span>${cached}</li>`);
+        if (data.signals) {
+            const s = data.signals;
+            list.append(`<li><b>Account Age:</b> ${Math.round(s.age_days / 365)}y (${s.age_days}d)</li>`);
+            list.append(`<li><b>2FA Enabled:</b> ${s.strong_auth ? 'Yes' : 'No'}</li>`);
+            list.append(`<li><b>Org Member:</b> ${s.org_member ? 'Yes' : 'No'}</li>`);
+            list.append(`<li><b>Followers:</b> ${s.followers} &middot; <b>Following:</b> ${s.following}</li>`);
+            list.append(`<li><b>Repos:</b> ${s.public_repos} public, ${s.private_repos} private</li>`);
+            list.append(`<li><b>Events:</b> ${s.commits} of ${s.total_commits} total</li>`);
+            list.append(`<li><b>Last Active:</b> ${s.last_commit_days}d ago</li>`);
+            list.append(`<li><b>Suspended:</b> ${s.suspended ? 'Yes' : 'No'}</li>`);
+        }
+        list.append(`<li><a href="https://github.com/${username}" target="_blank">View on GitHub</a></li>`);
+    }).fail(function () {
+        list.empty().append('<li>Failed to compute score</li>');
     });
 }
 

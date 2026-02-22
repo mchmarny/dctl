@@ -337,6 +337,45 @@ func insightsTimeToCloseAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsReputationAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := data.GetReputationDistribution(db, p.org, p.repo, p.months)
+		if err != nil {
+			slog.Error("failed to get reputation distribution", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying reputation distribution")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func reputationUserAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username := r.URL.Query().Get("u")
+		if username == "" {
+			writeError(w, http.StatusBadRequest, "username parameter required")
+			return
+		}
+
+		token, err := getGitHubToken()
+		if err != nil || token == "" {
+			slog.Error("failed to get GitHub token for deep score", "error", err)
+			writeError(w, http.StatusInternalServerError, "GitHub token not available")
+			return
+		}
+
+		res, err := data.GetOrComputeDeepReputation(db, token, username)
+		if err != nil {
+			slog.Error("failed to compute deep reputation", "username", username, "error", err)
+			writeError(w, http.StatusInternalServerError, "error computing reputation")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func parseRepo(repo *string) (*string, *string, bool) {
 	if repo == nil {
 		return nil, nil, false

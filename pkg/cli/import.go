@@ -126,6 +126,12 @@ var (
 					repoNameFlag,
 				},
 			},
+			{
+				Name:    "reputation",
+				Aliases: []string{"rep"},
+				Usage:   "Compute reputation scores for contributors with stale or missing scores",
+				Action:  cmdImportReputation,
+			},
 		},
 	}
 )
@@ -191,6 +197,11 @@ func cmdUpdate(c *cli.Context) error {
 		slog.Error("failed to import releases", "error", err)
 	}
 
+	// also update reputation (shallow — local DB only)
+	if _, err := data.ImportReputation(cfg.DB); err != nil {
+		slog.Error("failed to compute reputation scores", "error", err)
+	}
+
 	if err := getEncoder().Encode(res); err != nil {
 		return fmt.Errorf("error encoding list: %+v: %w", res, err)
 	}
@@ -205,6 +216,7 @@ type ImportAllResult struct {
 	Events       map[string]int                `json:"events,omitempty"`
 	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty"`
 	Substituted  []*data.Substitution          `json:"substituted,omitempty"`
+	Reputation   *data.ReputationResult        `json:"reputation,omitempty"`
 }
 
 func cmdImportAll(c *cli.Context) error {
@@ -287,17 +299,26 @@ func cmdImportAll(c *cli.Context) error {
 	// 4. metadata
 	for _, r := range repos {
 		slog.Info("importing metadata", "org", org, "repo", r)
-		if err := data.ImportRepoMeta(cfg.DBPath, token, org, r); err != nil {
-			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", err)
+		if metaErr := data.ImportRepoMeta(cfg.DBPath, token, org, r); metaErr != nil {
+			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", metaErr)
 		}
 	}
 
 	// 5. releases
 	for _, r := range repos {
 		slog.Info("importing releases", "org", org, "repo", r)
-		if err := data.ImportReleases(cfg.DBPath, token, org, r); err != nil {
-			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
+		if relErr := data.ImportReleases(cfg.DBPath, token, org, r); relErr != nil {
+			slog.Error("failed to import releases", "org", org, "repo", r, "error", relErr)
 		}
+	}
+
+	// 6. reputation (shallow — local DB only)
+	slog.Info("computing reputation scores")
+	repResult, err := data.ImportReputation(cfg.DB)
+	if err != nil {
+		slog.Error("failed to compute reputation scores", "error", err)
+	} else {
+		res.Reputation = repResult
 	}
 
 	res.Duration = time.Since(start).String()
@@ -442,6 +463,21 @@ func cmdImportMetadata(c *cli.Context) error {
 
 func cmdImportReleases(c *cli.Context) error {
 	return runImport(c, data.ImportReleases, data.ImportAllReleases, "releases")
+}
+
+func cmdImportReputation(c *cli.Context) error {
+	cfg := getConfig(c)
+
+	res, err := data.ImportReputation(cfg.DB)
+	if err != nil {
+		return fmt.Errorf("failed to compute reputation scores: %w", err)
+	}
+
+	if err := getEncoder().Encode(res); err != nil {
+		return fmt.Errorf("error encoding result: %w", err)
+	}
+
+	return nil
 }
 
 func cmdSubstitutes(c *cli.Context) error {
