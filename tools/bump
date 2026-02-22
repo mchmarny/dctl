@@ -3,9 +3,8 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${DIR}/common"
-ROOT=$(dirname "${DIR}")
 
-has_tools git git-cliff
+has_tools git
 
 bump_version() {
   local bump_type=${1:-patch}
@@ -62,21 +61,6 @@ bump_version() {
   fi
 
   msg "Bumping $bump_type version: $current_version → $new_version"
-
-  msg "Generating CHANGELOG.md for $new_version..."
-  if [ -f "${ROOT}/CHANGELOG.md" ]; then
-    git-cliff --tag "$new_version" --unreleased --prepend "${ROOT}/CHANGELOG.md"
-  else
-    git-cliff --tag "$new_version" -o "${ROOT}/CHANGELOG.md"
-  fi
-
-  git add "${ROOT}/CHANGELOG.md"
-  if git diff --cached --quiet; then
-    msg "No changelog changes to commit"
-  else
-    git commit -S -m "build: release $new_version"
-    msg "Committed CHANGELOG.md update"
-  fi
 
   git tag -s -a "$new_version" -m "Release $new_version"
   git push origin HEAD
