@@ -1,0 +1,33 @@
+name: 'Setup Build Tools'
+description: 'Install build and release tools (syft, cosign, goreleaser)'
+
+inputs:
+  install_syft:
+    description: 'Install syft (true/false)'
+    required: false
+    default: 'true'
+  install_cosign:
+    description: 'Install cosign (true/false)'
+    required: false
+    default: 'true'
+  install_goreleaser:
+    description: 'Install goreleaser (true/false)'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Syft
+      if: inputs.install_syft == 'true'
+      uses: anchore/sbom-action/download-syft@28d71544de8eaf1b958d335707167c5f783590ad  # v0.22.2
+
+    - name: Install Cosign
+      if: inputs.install_cosign == 'true'
+      uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad  # v4.0.0
+
+    - name: Install GoReleaser
+      if: inputs.install_goreleaser == 'true'
+      uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29  # v7.0.0
+      with:
+        install-only: true

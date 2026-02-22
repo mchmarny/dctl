@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // SQLite driver registration
 )
 
 const (

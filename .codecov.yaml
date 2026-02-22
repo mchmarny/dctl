@@ -1,0 +1,10 @@
+coverage:
+  precision: 2
+  range:
+    - 10.0
+    - 70.0
+  round: up
+
+# Local minimum coverage threshold enforced by `make test-coverage`.
+# Codecov ignores this key; the Makefile parses it.
+target: 30

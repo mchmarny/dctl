@@ -6,7 +6,8 @@ GO_VERSION         := $(shell go env GOVERSION 2>/dev/null | sed 's/go//')
 GOLINT_VERSION      = $(shell golangci-lint --version 2>/dev/null | awk '{print $$4}' || echo "not installed")
 LINT_TIMEOUT       ?= 5m
 TEST_TIMEOUT       ?= 10m
-COVERAGE_THRESHOLD ?= 30
+YAML_FILES         := $(shell find . ! -path "./vendor/*" -type f -regex ".*\.yaml")
+COVERAGE_THRESHOLD ?= $(shell awk '/^target:/{print $$2}' .codecov.yaml 2>/dev/null || echo 30)
 
 all: help
 
@@ -50,20 +51,27 @@ upgrade: ## Upgrades all dependencies to latest versions
 # =============================================================================
 
 .PHONY: lint
-lint: ## Lints the entire project with go vet and golangci-lint
+lint: lint-go lint-yaml ## Lints Go code and YAML files
+
+.PHONY: lint-go
+lint-go: ## Lints Go code with go vet and golangci-lint
 	@set -e; \
 	echo "Running go vet..."; \
-	go vet ./...; \
+	GOFLAGS="-mod=vendor" go vet ./...; \
 	echo "Running golangci-lint..."; \
 	golangci-lint -c .golangci.yaml run --timeout=$(LINT_TIMEOUT)
 
+.PHONY: lint-yaml
+lint-yaml: ## Lints YAML files with yamllint
+	yamllint -c .yamllint.yaml $(YAML_FILES)
+
 .PHONY: test
 test: tidy ## Runs unit tests with race detector and coverage
-	go test -short -count=1 -race -timeout=$(TEST_TIMEOUT) -covermode=atomic -coverprofile=coverage.out ./...
+	GOFLAGS="-mod=vendor" go test -short -count=1 -race -timeout=$(TEST_TIMEOUT) -covermode=atomic -coverprofile=cover.out ./...
 
 .PHONY: test-coverage
-test-coverage: test ## Runs tests and enforces coverage threshold (COVERAGE_THRESHOLD=70)
-	@coverage=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//'); \
+test-coverage: test ## Runs tests and enforces coverage threshold
+	@coverage=$$(go tool cover -func=cover.out | grep total | awk '{print $$3}' | sed 's/%//'); \
 	echo "Coverage: $$coverage% (threshold: $(COVERAGE_THRESHOLD)%)"; \
 	if [ $$(echo "$$coverage < $(COVERAGE_THRESHOLD)" | bc) -eq 1 ]; then \
 		echo "ERROR: Coverage $$coverage% is below threshold $(COVERAGE_THRESHOLD)%"; \
@@ -75,12 +83,16 @@ test-coverage: test ## Runs tests and enforces coverage threshold (COVERAGE_THRE
 bench: ## Runs benchmarks
 	go test -bench=. -benchmem ./...
 
-.PHONY: scan
-scan: ## Scans for vulnerabilities with grype
-	grype dir:. --fail-on high --quiet
+.PHONY: vulncheck
+vulncheck: ## Scans for known vulnerabilities with govulncheck
+	GOFLAGS="-mod=vendor" govulncheck -test ./...
+
+.PHONY: e2e
+e2e: ## Runs end-to-end CLI tests
+	tools/e2e
 
 .PHONY: qualify
-qualify: test-coverage lint scan ## Qualifies the codebase (test-coverage, lint, scan)
+qualify: test-coverage lint vulncheck e2e ## Qualifies the codebase (test, lint, vulncheck, e2e)
 	@echo "Codebase qualification completed"
 
 # =============================================================================
@@ -124,7 +136,7 @@ bump-patch: ## Bumps patch version (1.2.3 → 1.2.4)
 
 .PHONY: clean
 clean: ## Cleans build artifacts
-	rm -rf ./dist ./bin ./coverage.out
+	rm -rf ./dist ./bin ./cover.out
 	go clean ./...
 
 .PHONY: clean-all

@@ -1,0 +1,74 @@
+#!/bin/bash
+set -euo pipefail
+
+err() { echo "FAIL: $*" >&2; exit 1; }
+pass() { echo "PASS: $*"; }
+
+# Require dependencies
+command -v go >/dev/null 2>&1 || err "go is required"
+command -v jq >/dev/null 2>&1 || err "jq is required"
+
+# Build binary to temp directory, clean up on exit
+TMPDIR_E2E=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_E2E"' EXIT
+BIN="$TMPDIR_E2E/devpulse"
+
+echo "==> Building devpulse binary..."
+go build -mod=vendor -o "$BIN" ./cmd/devpulse
+[[ -x "$BIN" ]] || err "binary not found after build"
+
+FAILURES=0
+
+# --------------------------------------------------------------------------
+# Test: --version
+# --------------------------------------------------------------------------
+if output=$("$BIN" --version 2>&1) && echo "$output" | grep -q "devpulse"; then
+  pass "--version"
+else
+  echo "FAIL: --version"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: no args (shows help, exits 0)
+# --------------------------------------------------------------------------
+if output=$("$BIN" 2>&1) && echo "$output" | grep -q "COMMANDS"; then
+  pass "no-args-shows-help"
+else
+  echo "FAIL: no-args-shows-help"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: invalid subcommand (should fail)
+# --------------------------------------------------------------------------
+if "$BIN" nonexistent >/dev/null 2>&1; then
+  echo "FAIL: invalid-subcommand (expected non-zero exit)"; FAILURES=$((FAILURES + 1))
+else
+  pass "invalid-subcommand"
+fi
+
+# --------------------------------------------------------------------------
+# Test: --help
+# --------------------------------------------------------------------------
+if output=$("$BIN" --help 2>&1) && echo "$output" | grep -q "COMMANDS"; then
+  pass "--help"
+else
+  echo "FAIL: --help"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: query --help
+# --------------------------------------------------------------------------
+if output=$("$BIN" query --help 2>&1) && echo "$output" | grep -q "query"; then
+  pass "query --help"
+else
+  echo "FAIL: query --help"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Summary
+# --------------------------------------------------------------------------
+echo ""
+if [[ $FAILURES -gt 0 ]]; then
+  err "$FAILURES test(s) failed"
+fi
+echo "==> All e2e tests passed"

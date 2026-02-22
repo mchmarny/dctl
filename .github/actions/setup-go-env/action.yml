@@ -1,0 +1,24 @@
+name: 'Setup Go Environment'
+description: 'Configure Go toolchain and optionally verify module tidiness'
+
+inputs:
+  tidy-check:
+    description: 'Run make tidy and verify no uncommitted changes (true/false)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5  # v6.2.0
+      with:
+        go-version-file: go.mod
+
+    - name: Verify Module Tidiness
+      if: inputs.tidy-check == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        make tidy
+        git diff --exit-code

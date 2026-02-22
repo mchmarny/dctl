@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/google/go-github/v83 v83.0.0
-	github.com/mchmarny/reputer v0.4.2
+	github.com/mchmarny/reputer v0.4.7
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/zalando/go-keyring v0.2.6

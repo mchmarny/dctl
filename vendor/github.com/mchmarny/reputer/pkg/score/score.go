@@ -42,8 +42,8 @@ var (
 
 // CategoryWeight describes a scoring category and its weight.
 type CategoryWeight struct {
-	Name   string  `json:"name"`
-	Weight float64 `json:"weight"`
+	Name   string  `json:"name" yaml:"name"`
+	Weight float64 `json:"weight" yaml:"weight"`
 }
 
 // Signals holds the raw inputs to the reputation model.

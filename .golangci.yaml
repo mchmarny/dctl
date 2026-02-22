@@ -29,6 +29,7 @@ linters:
     # - sqlclosecheck # Unclosed sql.Rows (disabled: data layer needs stmt.Close refactor)
 
     # Code quality
+    - asciicheck      # Non-ASCII in identifiers
     - dogsled         # Too many blank identifiers
     - dupl            # Duplicate code detection
     - funlen          # Function length
@@ -36,9 +37,13 @@ linters:
     - gocritic        # Opinionated checks
     - gocyclo         # Cyclomatic complexity
     - govet           # Go vet checks
+    - importas        # Import alias consistency
     - ineffassign     # Useless assignments
     - misspell        # Spelling
     - nakedret        # Naked returns
+    - prealloc        # Slice preallocation
+    - revive          # General code quality
+    - tparallel       # t.Parallel usage errors
     - unconvert       # Unnecessary conversions
     - unparam         # Unused parameters
     - unused          # Unused code
@@ -92,6 +97,15 @@ linters:
       require-explanation: true
       require-specific: true
 
+    revive:
+      rules:
+        - name: blank-imports
+          disabled: true
+        - name: redefines-builtin-id
+          disabled: true
+        - name: var-naming
+          disabled: true
+
     unparam:
       check-exported: false
 
@@ -121,6 +135,8 @@ linters:
           - goconst
           - gocyclo
           - gosec
+          - revive
+          - tparallel
         path: _test\.go
       # Relaxed rules for main entry point
       - linters:

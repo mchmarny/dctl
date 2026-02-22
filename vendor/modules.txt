@@ -30,7 +30,7 @@ github.com/google/uuid
 # github.com/mattn/go-isatty v0.0.20
 ## explicit; go 1.15
 github.com/mattn/go-isatty
-# github.com/mchmarny/reputer v0.4.2
+# github.com/mchmarny/reputer v0.4.7
 ## explicit; go 1.26.0
 github.com/mchmarny/reputer/pkg/score
 # github.com/ncruces/go-strftime v1.0.0

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/logging"
 	urfave "github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -124,12 +125,11 @@ func newApp() *urfave.App {
 }
 
 func initLogging(debug bool) {
-	level := slog.LevelInfo
+	level := "info"
 	if debug {
-		level = slog.LevelDebug
+		level = "debug"
 	}
-	h := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
-	slog.SetDefault(slog.New(h))
+	logging.SetDefaultCLILogger(level)
 }
 
 func getHomeDir() string {

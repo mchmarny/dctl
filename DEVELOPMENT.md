@@ -25,7 +25,7 @@ make lint           # Run linters
 make build          # Build binary
 
 # 3. Before submitting PR
-make qualify        # Full check: test + lint + scan
+make qualify        # Full check: test + lint + vulncheck + e2e
 ```
 
 ## Prerequisites
@@ -43,8 +43,10 @@ make qualify        # Full check: test + lint + scan
 | Tool | Purpose | Installation |
 |------|---------|--------------|
 | golangci-lint | Go linting | [golangci-lint.run](https://golangci-lint.run/welcome/install/) |
+| yamllint | YAML linting | `pip install yamllint` or `brew install yamllint` |
+| govulncheck | Vulnerability scanning | `go install golang.org/x/vuln/cmd/govulncheck@latest` |
 | goreleaser | Release automation / local builds | [goreleaser.com](https://goreleaser.com/install/) |
-| grype | Vulnerability scanning | [github.com/anchore/grype](https://github.com/anchore/grype) |
+| jq | JSON processing (for e2e tests) | `brew install jq` or `apt install jq` |
 
 ## Development Setup
 
@@ -151,13 +153,19 @@ make test
 make lint
 ```
 
-### 5. Security Scan
+### 5. Vulnerability Check
 
 ```bash
-make scan
+make vulncheck
 ```
 
-### 6. Full Qualification
+### 6. End-to-End Tests
+
+```bash
+make e2e
+```
+
+### 7. Full Qualification
 
 Before submitting a PR, run everything:
 
@@ -165,7 +173,7 @@ Before submitting a PR, run everything:
 make qualify
 ```
 
-This runs: `test` -> `lint` -> `scan`
+This runs: `test` -> `lint` -> `vulncheck` -> `e2e`
 
 ### 7. Run Locally
 
@@ -180,11 +188,14 @@ make server
 
 | Target | Description |
 |--------|-------------|
-| `make qualify` | Full qualification (test + lint + scan) |
+| `make qualify` | Full qualification (test + lint + vulncheck + e2e) |
 | `make test` | Unit tests with race detector and coverage |
 | `make test-coverage` | Tests with coverage threshold enforcement |
-| `make lint` | Go vet + golangci-lint |
-| `make scan` | Vulnerability scan with grype |
+| `make lint` | Go lint + YAML lint (`lint-go` + `lint-yaml`) |
+| `make lint-go` | Go vet + golangci-lint |
+| `make lint-yaml` | YAML linting with yamllint |
+| `make vulncheck` | Vulnerability scanning with govulncheck |
+| `make e2e` | End-to-end CLI tests |
 | `make bench` | Run benchmarks |
 
 ### Build and Release
@@ -237,8 +248,8 @@ go test -v ./pkg/data/... -run TestSpecificFunction
 go test -race ./...
 
 # Generate coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
+go test -coverprofile=cover.out ./...
+go tool cover -html=cover.out
 ```
 
 ### Debugging the Server

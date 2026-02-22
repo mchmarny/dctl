@@ -21,14 +21,13 @@ builds:
     goarch:
       - amd64
       - arm64
-    goarm:
-      - 7
 
 release:
   github:
     owner: mchmarny
     name: devpulse
   prerelease: auto
+  draft: true
 
 archives:
   - formats:
@@ -79,13 +78,10 @@ changelog:
       - readme
 
 brews:
-  -
-    goarm: 7
-    repository:
+  - repository:
       owner: mchmarny
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    url_template: "https://github.com/mchmarny/devpulse/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     commit_author:
       name: github-actions
       email: github-actions@github.com

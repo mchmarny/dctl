@@ -1,0 +1,75 @@
+name: scan
+
+on:
+  schedule:
+    - cron: '30 7 * * *'
+  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  SARIF_OUTPUT: 'vulnerability-scan-results.sarif'
+  SEVERITY_LEVELS: 'MEDIUM,HIGH,CRITICAL'
+
+jobs:
+  trivy-repo-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Scan Repo
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@e368e328979b113139d6f9068e03accaed98a518  # v0.34.1
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          vuln-type: 'os,library'
+          scanners: 'vuln,secret,misconfig'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: ${{ env.SARIF_OUTPUT }}
+          severity: ${{ env.SEVERITY_LEVELS }}
+          skip-dirs: 'vendor'
+          limit-severities-for-sarif: true
+
+      - name: Check SARIF file exists
+        id: check_sarif
+        shell: bash
+        run: |
+          if [ -f "${{ env.SARIF_OUTPUT }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Report
+        if: steps.check_sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@89a39a4e59826350b863aa6b6252a07ad50cf83e  # v4.32.4
+        with:
+          sarif_file: ${{ env.SARIF_OUTPUT }}
+          category: 'Trivy Vulnerability Scan'

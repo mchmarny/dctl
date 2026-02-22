@@ -134,7 +134,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 
 func openBrowser(url string) {
 	var cmd string
-	var args []string
+	args := make([]string, 0, 1)
 
 	switch runtime.GOOS {
 	case "darwin":

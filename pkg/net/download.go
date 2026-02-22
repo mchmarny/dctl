@@ -43,12 +43,16 @@ func getResp(url string) (resp *http.Response, err error) {
 
 var ErrorURLNotFound = errors.New("URL not found")
 
-func Download(url string, filepath string) error {
+func Download(url string, filepath string) (retErr error) {
 	out, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		if cerr := out.Close(); cerr != nil && retErr == nil {
+			retErr = fmt.Errorf("closing file: %w", cerr)
+		}
+	}()
 
 	resp, err := getResp(url)
 	if err != nil {
