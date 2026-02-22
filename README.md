@@ -1,9 +1,9 @@
 # devpulse
 
-[![test](https://github.com/mchmarny/devpulse/actions/workflows/test-on-push.yaml/badge.svg)](https://github.com/mchmarny/devpulse/actions/workflows/test-on-push.yaml)
-[![analyze](https://github.com/mchmarny/devpulse/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/mchmarny/devpulse/actions/workflows/codeql-analysis.yml)
-[![release](https://img.shields.io/github/v/release/mchmarny/devpulse)](https://github.com/mchmarny/devpulse/releases/latest)
-[![license](https://img.shields.io/github/license/mchmarny/devpulse)](LICENSE)
+[![Build Status](https://github.com/mchmarny/devpulse/actions/workflows/on-push.yaml/badge.svg)](https://github.com/mchmarny/devpulse/actions/workflows/on-push.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mchmarny/devpulse)](https://goreportcard.com/report/github.com/mchmarny/devpulse)
+[![Go Reference](https://pkg.go.dev/badge/github.com/mchmarny/repudevpulseter.svg)](https://pkg.go.dev/github.com/mchmarny/devpulse)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Community health analytics for GitHub organizations and repositories. `devpulse` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard.
 
