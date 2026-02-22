@@ -29,6 +29,20 @@ release:
   prerelease: auto
   draft: true
 
+kos:
+  - id: devpulse
+    build: devpulse
+    repositories:
+      - ghcr.io/mchmarny/devpulse
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - latest
+      - "{{.Tag}}"
+    preserve_import_paths: false
+    bare: true
+
 archives:
   - formats:
       - binary

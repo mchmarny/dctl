@@ -1,7 +1,15 @@
 name: 'Setup Build Tools'
-description: 'Install build and release tools (syft, cosign, goreleaser)'
+description: 'Install build and release tools (ko, syft, cosign, goreleaser)'
 
 inputs:
+  install_ko:
+    description: 'Install ko (true/false)'
+    required: false
+    default: 'true'
+  ko_version:
+    description: 'ko version (e.g. v0.18.0)'
+    required: false
+    default: 'v0.18.0'
   install_syft:
     description: 'Install syft (true/false)'
     required: false
@@ -18,6 +26,32 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install ko
+      if: inputs.install_ko == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        KO_VERSION="${{ inputs.ko_version }}"
+        KO_VERSION="${KO_VERSION#v}"
+        KO_BASE="https://github.com/ko-build/ko/releases/download/v${KO_VERSION}"
+        KO_OS="$(uname -s)"
+        KO_ARCH="$(uname -m)"
+        KO_TAR="ko_${KO_VERSION}_${KO_OS}_${KO_ARCH}.tar.gz"
+        KO_TMP="$(mktemp -d)"
+        curl -fsSL -o "${KO_TMP}/${KO_TAR}" "${KO_BASE}/${KO_TAR}"
+        curl -fsSL -o "${KO_TMP}/checksums.txt" "${KO_BASE}/checksums.txt"
+        EXPECTED=$(grep "${KO_TAR}" "${KO_TMP}/checksums.txt" | head -1 | awk '{print $1}')
+        ACTUAL=$(sha256sum "${KO_TMP}/${KO_TAR}" | awk '{print $1}')
+        if [[ "${ACTUAL}" != "${EXPECTED}" ]]; then
+          echo "::error::ko checksum mismatch: expected ${EXPECTED}, got ${ACTUAL}"
+          exit 1
+        fi
+        tar -xzf "${KO_TMP}/${KO_TAR}" -C "${KO_TMP}"
+        sudo mv "$KO_TMP/ko" /usr/local/bin/ko
+        sudo chmod +x /usr/local/bin/ko
+        rm -rf "$KO_TMP"
+        echo "ko installed: $(ko version)"
+
     - name: Install Syft
       if: inputs.install_syft == 'true'
       uses: anchore/sbom-action/download-syft@28d71544de8eaf1b958d335707167c5f783590ad  # v0.22.2
