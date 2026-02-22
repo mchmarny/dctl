@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"errors"
@@ -28,7 +27,7 @@ var (
 
 	monthsFlag = &cli.IntFlag{
 		Name:  "months",
-		Usage: fmt.Sprintf("Number of months to import (default: %d)", data.EventAgeMonthsDefault),
+		Usage: "Number of months to import",
 		Value: data.EventAgeMonthsDefault,
 	}
 
@@ -38,48 +37,24 @@ var (
 	}
 
 	importCmd = &cli.Command{
-		Name:    "import",
-		Aliases: []string{"i"},
-		Usage:   "Import GitHub data (events, affiliations, metadata, releases, reputation)",
-		UsageText: `dctl import --org NVIDIA --repo NVSentinel --repo skyhook   # import specific repos
-   dctl import --org NVIDIA                                     # import all org repos
-   dctl import                                                  # update all previously imported data
-   dctl import --org NVIDIA --fresh                             # re-import from scratch`,
+		Name:            "import",
+		Aliases:         []string{"imp"},
+		HideHelpCommand: true,
+		Usage:           "Import GitHub data (events, affiliations, metadata, releases, reputation)",
+		UsageText: `dctl import --org <ORG> --repo <REPO> [--months <N>] [--fresh]
+
+Examples:
+  dctl import --org <ORG> --repo <REPO1> --repo <REPO2>    # import specific repos
+  dctl import --org <ORG> --repo <REPO1> --months 24       # import last 24 months for specific repo
+  dctl import --org <ORG>                                  # import all org repos
+  dctl import --org <ORG> --fresh                          # re-import from scratch 
+  dctl import                                              # update all previously imported data`,
 		Action: cmdImport,
 		Flags: []cli.Flag{
 			orgNameFlag,
 			repoNameFlag,
 			monthsFlag,
 			freshFlag,
-		},
-	}
-
-	subTypeFlag = &cli.StringFlag{
-		Name:  "type",
-		Usage: fmt.Sprintf("Substitution type [%s]", strings.Join(data.UpdatableProperties, ",")),
-	}
-
-	oldValFlag = &cli.StringFlag{
-		Name:     "old",
-		Usage:    "Old value",
-		Required: true,
-	}
-
-	newValFlag = &cli.StringFlag{
-		Name:     "new",
-		Usage:    "New value",
-		Required: true,
-	}
-
-	substituteCmd = &cli.Command{
-		Name:    "substitute",
-		Aliases: []string{"sub"},
-		Usage:   "Create a global data substitution (e.g. standardize entity name)",
-		Action:  cmdSubstitutes,
-		Flags: []cli.Flag{
-			subTypeFlag,
-			oldValFlag,
-			newValFlag,
 		},
 	}
 )
@@ -280,27 +255,4 @@ func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 	}
 
 	return res, nil
-}
-
-func cmdSubstitutes(c *cli.Context) error {
-	sub := c.String(subTypeFlag.Name)
-	old := c.String(oldValFlag.Name)
-	new := c.String(newValFlag.Name)
-
-	if sub == "" || old == "" || new == "" {
-		return cli.ShowSubcommandHelp(c)
-	}
-
-	cfg := getConfig(c)
-
-	res, err := data.SaveAndApplyDeveloperSub(cfg.DB, sub, old, new)
-	if err != nil {
-		return fmt.Errorf("failed to apply substitution: %w", err)
-	}
-
-	if err := getEncoder().Encode(res); err != nil {
-		return fmt.Errorf("error encoding result: %w", err)
-	}
-
-	return nil
 }
