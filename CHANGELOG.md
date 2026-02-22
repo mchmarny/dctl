@@ -1,3 +1,12 @@
+## [0.5.6] - 2026-02-22
+
+### 🐛 Bug Fixes
+
+- Exclude vendor from CI format check
+
+### ⚙️ Miscellaneous Tasks
+
+- Update readme
 ## [0.5.5] - 2026-02-22
 
 ### 🚀 Features
