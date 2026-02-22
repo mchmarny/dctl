@@ -90,14 +90,7 @@ func newApp() *urfave.App {
 			serverCmd,
 		},
 		Before: func(c *urfave.Context) error {
-			if c.Bool(debugFlag.Name) {
-				initLogging(true)
-			}
-
-			f := c.String(formatFlag.Name)
-			if f == formatYAML || f == "yml" {
-				outputFormat = formatYAML
-			}
+			applyFlags(c)
 
 			dbPath := c.String(dbFilePathFlag.Name)
 			if dbPath == "" {
@@ -157,6 +150,16 @@ func getHomeDir() string {
 		}
 	}
 	return dirPath
+}
+
+func applyFlags(c *urfave.Context) {
+	if c.Bool(debugFlag.Name) {
+		initLogging(true)
+	}
+	f := c.String(formatFlag.Name)
+	if f == formatYAML || f == "yml" {
+		outputFormat = formatYAML
+	}
 }
 
 func encode(v any) error {

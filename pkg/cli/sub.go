@@ -38,11 +38,13 @@ var (
 			subTypeFlag,
 			oldValFlag,
 			newValFlag,
+			formatFlag,
 		},
 	}
 )
 
 func cmdSubstitutes(c *cli.Context) error {
+	applyFlags(c)
 	sub := c.String(subTypeFlag.Name)
 	old := c.String(oldValFlag.Name)
 	new := c.String(newValFlag.Name)

@@ -89,6 +89,7 @@ var (
 		Name:            "query",
 		HideHelpCommand: true,
 		Usage:           "Query imported data",
+		Flags:           []cli.Flag{formatFlag},
 		UsageText: `dctl query <subcommand> [options]
 
 Examples:
@@ -193,6 +194,7 @@ func optional(val string) *string {
 }
 
 func cmdQueryEntity(c *cli.Context) error {
+	applyFlags(c)
 	val := c.String(entityNameQueryFlag.Name)
 	if val == "" {
 		return cli.ShowSubcommandHelp(c)
@@ -213,6 +215,7 @@ func cmdQueryEntity(c *cli.Context) error {
 }
 
 func cmdQueryEvents(c *cli.Context) error {
+	applyFlags(c)
 	org := c.String(orgNameFlag.Name)
 	repoSlice := c.StringSlice(repoNameFlag.Name)
 	var repo string
@@ -270,6 +273,7 @@ func cmdQueryEvents(c *cli.Context) error {
 }
 
 func cmdQueryList[T any](c *cli.Context, flag *cli.StringFlag, fn func(*sql.DB, string, int) ([]*T, error)) error {
+	applyFlags(c)
 	val := c.String(flag.Name)
 	if val == "" {
 		return cli.ShowSubcommandHelp(c)
@@ -295,6 +299,7 @@ func cmdQueryEntities(c *cli.Context) error {
 }
 
 func cmdQueryDeveloper(c *cli.Context) error {
+	applyFlags(c)
 	val := c.String(ghUserNameQueryFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
@@ -339,6 +344,7 @@ func cmdQueryDevelopers(c *cli.Context) error {
 }
 
 func cmdQueryOrgRepos(c *cli.Context) error {
+	applyFlags(c)
 	org := c.String(orgNameFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {

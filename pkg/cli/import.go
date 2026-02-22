@@ -55,6 +55,7 @@ Examples:
 			repoNameFlag,
 			monthsFlag,
 			freshFlag,
+			formatFlag,
 		},
 	}
 )
@@ -71,6 +72,8 @@ type ImportResult struct {
 
 func cmdImport(c *cli.Context) error {
 	start := time.Now()
+	applyFlags(c)
+
 	org := c.String(orgNameFlag.Name)
 	repoSlice := c.StringSlice(repoNameFlag.Name)
 	months := c.Int(monthsFlag.Name)
