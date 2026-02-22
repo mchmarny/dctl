@@ -49,6 +49,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND e.date >= ?
 		  AND d.reputation IS NOT NULL
+		  AND d.username NOT LIKE '%[bot]'
 		GROUP BY d.username, d.reputation
 		ORDER BY d.reputation ASC
 		LIMIT 20
