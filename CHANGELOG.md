@@ -1,3 +1,8 @@
+## [0.5.7] - 2026-02-22
+
+### 🐛 Bug Fixes
+
+- Bump golangci-lint to v2.10.1 for Go 1.26 support
 ## [0.5.6] - 2026-02-22
 
 ### 🐛 Bug Fixes
