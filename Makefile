@@ -35,7 +35,8 @@ tidy: ## Formats code and updates Go module dependencies
 
 .PHONY: fmt-check
 fmt-check: ## Checks if code is formatted (CI-friendly, no modifications)
-	@test -z "$$(gofmt -l .)" || (echo "Code not formatted. Run 'make tidy':" && gofmt -l . && exit 1)
+	@UNFORMATTED=$$(gofmt -l $$(go list -f '{{.Dir}}' ./...)); \
+	test -z "$$UNFORMATTED" || (echo "Code not formatted. Run 'make tidy':" && echo "$$UNFORMATTED" && exit 1)
 	@echo "Code formatting check passed"
 
 .PHONY: upgrade
