@@ -151,7 +151,15 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		return nil, fmt.Errorf("error loading last page state: %s/%s: %w", owner, repo, err)
 	}
 
-	slog.Debug("importing events", "owner", owner, "repo", repo)
+	// Log resume state so users understand what period is being imported.
+	for _, t := range EventTypes {
+		s := imp.state[t]
+		slog.Info("import state",
+			"repo", owner+"/"+repo,
+			"type", t,
+			"since", s.Since.Format("2006-01-02"),
+			"page", s.Page)
+	}
 	var wg sync.WaitGroup
 	var importErrors []error
 	var errMu sync.Mutex
@@ -177,6 +185,16 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	if err := imp.flush(); err != nil {
 		return nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
 	}
+
+	total := 0
+	for _, v := range imp.counts {
+		total += v
+	}
+	slog.Info("import complete",
+		"repo", owner+"/"+repo,
+		"total_events", total,
+		"developers", len(imp.users),
+		"window", imp.minEventTime.Format("2006-01-02")+" to now")
 
 	return imp.counts, nil
 }

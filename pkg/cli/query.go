@@ -207,7 +207,11 @@ func cmdQueryEntity(c *cli.Context) error {
 
 func cmdQueryEvents(c *cli.Context) error {
 	org := c.String(orgNameFlag.Name)
-	repo := c.String(repoNameFlag.Name)
+	repoSlice := c.StringSlice(repoNameFlag.Name)
+	var repo string
+	if len(repoSlice) > 0 {
+		repo = repoSlice[0]
+	}
 	author := c.String(eventAuthorFlag.Name)
 	entity := c.String(eventEntityFlag.Name)
 	since := c.String(eventSinceFlag.Name)

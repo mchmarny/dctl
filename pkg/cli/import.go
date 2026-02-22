@@ -21,9 +21,9 @@ var (
 		Usage: "Name of the GitHub organization or user",
 	}
 
-	repoNameFlag = &cli.StringFlag{
+	repoNameFlag = &cli.StringSliceFlag{
 		Name:  "repo",
-		Usage: "Name of the GitHub repository",
+		Usage: "Name of the GitHub repository (can be specified multiple times)",
 	}
 
 	monthsFlag = &cli.IntFlag{
@@ -222,7 +222,7 @@ type ImportAllResult struct {
 func cmdImportAll(c *cli.Context) error {
 	start := time.Now()
 	org := c.String(orgNameFlag.Name)
-	repo := c.String(repoNameFlag.Name)
+	repoSlice := c.StringSlice(repoNameFlag.Name)
 	months := c.Int(monthsFlag.Name)
 
 	token, err := getGitHubToken()
@@ -238,7 +238,7 @@ func cmdImportAll(c *cli.Context) error {
 
 	// resolve repos
 	var repos []string
-	if repo == "" {
+	if len(repoSlice) == 0 {
 		ctx := context.Background()
 		client := net.GetOAuthClient(ctx, token)
 		repos, err = data.GetOrgRepoNames(ctx, client, org)
@@ -246,7 +246,7 @@ func cmdImportAll(c *cli.Context) error {
 			return fmt.Errorf("failed to get org %s repos: %w", org, err)
 		}
 	} else {
-		repos = strings.Split(repo, ",")
+		repos = repoSlice
 	}
 
 	res := &ImportAllResult{
@@ -333,7 +333,7 @@ func cmdImportAll(c *cli.Context) error {
 func cmdImportEvents(c *cli.Context) error {
 	start := time.Now()
 	org := c.String(orgNameFlag.Name)
-	repo := c.String(repoNameFlag.Name)
+	repoSlice := c.StringSlice(repoNameFlag.Name)
 	months := c.Int(monthsFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
@@ -346,7 +346,7 @@ func cmdImportEvents(c *cli.Context) error {
 
 	var repos []string
 
-	if repo == "" {
+	if len(repoSlice) == 0 {
 		ctx := context.Background()
 		client := net.GetOAuthClient(ctx, token)
 		repos, err = data.GetOrgRepoNames(ctx, client, org)
@@ -354,7 +354,7 @@ func cmdImportEvents(c *cli.Context) error {
 			return fmt.Errorf("failed to get org %s repos: %w", org, err)
 		}
 	} else {
-		repos = strings.Split(repo, ",")
+		repos = repoSlice
 	}
 
 	cfg := getConfig(c)
@@ -431,7 +431,7 @@ func cmdImportAffiliations(c *cli.Context) error {
 
 func runImport(c *cli.Context, single func(string, string, string, string) error, all func(string, string) error, name string) error {
 	org := c.String(orgNameFlag.Name)
-	repo := c.String(repoNameFlag.Name)
+	repos := c.StringSlice(repoNameFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub token: %w", err)
@@ -443,13 +443,15 @@ func runImport(c *cli.Context, single func(string, string, string, string) error
 
 	cfg := getConfig(c)
 
-	if org != "" && repo != "" {
-		if err := single(cfg.DBPath, token, org, repo); err != nil {
-			return fmt.Errorf("failed to import %s: %w", name, err)
+	if org != "" && len(repos) > 0 {
+		for _, repo := range repos {
+			if importErr := single(cfg.DBPath, token, org, repo); importErr != nil {
+				return fmt.Errorf("failed to import %s for %s/%s: %w", name, org, repo, importErr)
+			}
 		}
 	} else {
-		if err := all(cfg.DBPath, token); err != nil {
-			return fmt.Errorf("failed to import all %s: %w", name, err)
+		if importErr := all(cfg.DBPath, token); importErr != nil {
+			return fmt.Errorf("failed to import all %s: %w", name, importErr)
 		}
 	}
 
