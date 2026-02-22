@@ -1,25 +1,33 @@
 version: 2
 updates:
-- package-ecosystem: "gomod"
-  directory: "/"
-  schedule:
-    interval: "weekly"
-  groups:
-    all-go-deps:
-      patterns: ["*"]
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-go-deps:
+        patterns: ["*"]
 
-- package-ecosystem: "github-actions"
-  directory: "/"
-  schedule:
-    interval: "weekly"
-  groups:
-    all-actions:
-      patterns: ["*"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-actions:
+        patterns: ["*"]
 
-- package-ecosystem: "github-actions"
-  directory: ".github/actions/setup-go"
-  schedule:
-    interval: "weekly"
-  groups:
-    all-actions:
-      patterns: ["*"]
+  - package-ecosystem: "github-actions"
+    directory: ".github/actions/setup-go-env"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: ".github/actions/setup-build-tools"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-actions:
+        patterns: ["*"]
