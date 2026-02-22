@@ -1,4 +1,4 @@
-module github.com/mchmarny/dctl
+module github.com/mchmarny/devpulse
 
 go 1.26.0
 

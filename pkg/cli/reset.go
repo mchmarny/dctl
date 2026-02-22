@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mchmarny/dctl/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/urfave/cli/v2"
 )
 

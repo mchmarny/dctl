@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`dctl` is a Go CLI that imports GitHub contribution data into a local SQLite database and serves a browser-based analytics dashboard. No external services, no Kubernetes, no cloud dependencies at runtime.
+`devpulse` is a Go CLI that imports GitHub contribution data into a local SQLite database and serves a browser-based analytics dashboard. No external services, no Kubernetes, no cloud dependencies at runtime.
 
 ## Build & Test
 
@@ -99,7 +99,7 @@ When choosing between approaches, prioritize in this order:
 ## Architecture
 
 ```
-cmd/dctl/         Main entrypoint (thin wrapper)
+cmd/devpulse/     Main entrypoint (thin wrapper)
 pkg/cli/          CLI commands, HTTP handlers, templates, static assets
 pkg/data/         Data layer: SQLite queries, GitHub importers, migrations
 pkg/auth/         GitHub OAuth token management (OS keychain)
@@ -132,4 +132,4 @@ Releases are triggered by version tags. Use `make bump-patch`, `make bump-minor`
 - **Signing**: cosign v3 keyless signing via Sigstore OIDC; produces `.sigstore.json` bundles (not separate .sig/.pem)
 - **SBOM**: syft generates SPDX JSON for each binary
 - **Attestations**: GitHub build provenance attestations via `actions/attest-build-provenance`
-- **Homebrew**: goreleaser pushes formula to `mchmarny/homebrew-dctl` tap
+- **Homebrew**: goreleaser pushes formula to `mchmarny/homebrew-tap` tap

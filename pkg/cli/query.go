@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/mchmarny/dctl/pkg/data"
-	"github.com/mchmarny/dctl/pkg/net"
+	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/urfave/cli/v2"
 )
 
@@ -85,14 +85,14 @@ var (
 		HideHelpCommand: true,
 		Usage:           "Query imported data",
 		Flags:           commonFlags,
-		UsageText: `dctl query <subcommand> [options]
+		UsageText: `devpulse query <subcommand> [options]
 
 Examples:
-  dctl query events --org <ORG> --repo <REPO>                  # list events for a repo
-  dctl query events --org <ORG> --type pr --since 2025-01-01   # PRs since date
-  dctl query developer list --org <ORG>                        # list developers
-  dctl query entity list --org <ORG>                           # list entities
-  dctl query org repos --org <ORG>                             # list org repos`,
+  devpulse query events --org <ORG> --repo <REPO>                  # list events for a repo
+  devpulse query events --org <ORG> --type pr --since 2025-01-01   # PRs since date
+  devpulse query developer list --org <ORG>                        # list developers
+  devpulse query entity list --org <ORG>                           # list entities
+  devpulse query org repos --org <ORG>                             # list org repos`,
 		Subcommands: []*cli.Command{
 			{
 				Name:            "developers",

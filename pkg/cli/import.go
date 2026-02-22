@@ -9,8 +9,8 @@ import (
 
 	"errors"
 
-	"github.com/mchmarny/dctl/pkg/data"
-	"github.com/mchmarny/dctl/pkg/net"
+	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/urfave/cli/v2"
 )
 
@@ -41,14 +41,14 @@ var (
 		Aliases:         []string{"imp"},
 		HideHelpCommand: true,
 		Usage:           "Import GitHub data (events, affiliations, metadata, releases, reputation)",
-		UsageText: `dctl import --org <ORG> --repo <REPO> [--months <N>] [--fresh]
+		UsageText: `devpulse import --org <ORG> --repo <REPO> [--months <N>] [--fresh]
 
 Examples:
-  dctl import --org <ORG> --repo <REPO1> --repo <REPO2>    # import specific repos
-  dctl import --org <ORG> --repo <REPO1> --months 24       # import last 24 months for specific repo
-  dctl import --org <ORG>                                  # import all org repos
-  dctl import --org <ORG> --fresh                          # re-import from scratch 
-  dctl import                                              # update all previously imported data`,
+  devpulse import --org <ORG> --repo <REPO1> --repo <REPO2>    # import specific repos
+  devpulse import --org <ORG> --repo <REPO1> --months 24       # import last 24 months for specific repo
+  devpulse import --org <ORG>                                  # import all org repos
+  devpulse import --org <ORG> --fresh                          # re-import from scratch
+  devpulse import                                              # update all previously imported data`,
 		Action: cmdImport,
 		Flags: []cli.Flag{
 			orgNameFlag,

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/mchmarny/dctl/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data"
 )
 
 func faviconHandler(w http.ResponseWriter, r *http.Request) {

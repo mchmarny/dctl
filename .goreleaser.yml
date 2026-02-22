@@ -1,19 +1,19 @@
 version: 2
 
-project_name: dctl
+project_name: devpulse
 
 builds:
   - binary: "{{.ProjectName}}"
-    dir: ./cmd/dctl
+    dir: ./cmd/devpulse
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
     ldflags:
       - -s -w
-        -X github.com/mchmarny/dctl/pkg/cli.version={{.Version}}
-        -X github.com/mchmarny/dctl/pkg/cli.commit={{.ShortCommit}}
-        -X github.com/mchmarny/dctl/pkg/cli.date={{.CommitDate}}
+        -X github.com/mchmarny/devpulse/pkg/cli.version={{.Version}}
+        -X github.com/mchmarny/devpulse/pkg/cli.commit={{.ShortCommit}}
+        -X github.com/mchmarny/devpulse/pkg/cli.date={{.CommitDate}}
     goos:
       - darwin
       - linux
@@ -27,7 +27,7 @@ builds:
 release:
   github:
     owner: mchmarny
-    name: dctl
+    name: devpulse
   prerelease: auto
 
 archives:
@@ -71,14 +71,14 @@ brews:
     goarm: 7
     repository:
       owner: mchmarny
-      name: homebrew-dctl
+      name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    url_template: "https://github.com/mchmarny/dctl/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    url_template: "https://github.com/mchmarny/devpulse/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     commit_author:
       name: github-actions
       email: github-actions@github.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     directory: Formula
-    homepage: "https://github.com/mchmarny/dctl"
+    homepage: "https://github.com/mchmarny/devpulse"
     description: "Simple utility to provide insight into repo activity."
     license: "Apache-2.0"

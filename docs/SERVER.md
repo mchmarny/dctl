@@ -5,7 +5,7 @@
 ## Start
 
 ```shell
-dctl server
+devpulse server
 ```
 
 This starts a local HTTP server and opens your browser to `http://127.0.0.1:8080`.

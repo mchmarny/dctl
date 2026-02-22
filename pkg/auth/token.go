@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mchmarny/dctl/pkg/net"
+	"github.com/mchmarny/devpulse/pkg/net"
 )
 
 const (

@@ -99,12 +99,12 @@ release: ## Runs the full release process with goreleaser
 
 .PHONY: server
 server: ## Starts local development server with debug logging
-	go run ./cmd/dctl --debug s
+	go run ./cmd/devpulse --debug s
 
 .PHONY: local
 local: build ## Copies latest binary to local bin directory
-	sudo cp $$(find dist -name dctl -type f | head -1) /usr/local/bin/dctl
-	sudo chmod 755 /usr/local/bin/dctl
+	sudo cp $$(find dist -name devpulse -type f | head -1) /usr/local/bin/devpulse
+	sudo chmod 755 /usr/local/bin/devpulse
 
 .PHONY: bump-major
 bump-major: ## Bumps major version (1.2.3 → 2.0.0)

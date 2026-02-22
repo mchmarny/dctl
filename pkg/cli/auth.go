@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/mchmarny/dctl/pkg/auth"
+	"github.com/mchmarny/devpulse/pkg/auth"
 	"github.com/urfave/cli/v2"
 	"github.com/zalando/go-keyring"
 )
@@ -14,7 +14,7 @@ import (
 const (
 	clientID       = "f1b500ebdf533aa8a3e2"
 	tokenFileName  = "github_token"
-	keyringService = "dctl"
+	keyringService = "devpulse"
 	keyringUser    = "github_token"
 )
 

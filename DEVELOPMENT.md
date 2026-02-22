@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers project setup, architecture, development workflows, and tooling for contributors working on dctl.
+This guide covers project setup, architecture, development workflows, and tooling for contributors working on devpulse.
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@ This guide covers project setup, architecture, development workflows, and toolin
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/mchmarny/dctl.git && cd dctl
+git clone https://github.com/mchmarny/devpulse.git && cd devpulse
 make tidy           # Download dependencies
 
 # 2. Develop
@@ -51,8 +51,8 @@ make qualify        # Full check: test + lint + scan
 ### Clone and Build
 
 ```bash
-git clone https://github.com/mchmarny/dctl.git
-cd dctl
+git clone https://github.com/mchmarny/devpulse.git
+cd devpulse
 ```
 
 Build for your current platform:
@@ -84,8 +84,8 @@ make qualify
 ### Directory Structure
 
 ```
-dctl/
-├── cmd/dctl/         Main entrypoint (thin wrapper)
+devpulse/
+├── cmd/devpulse/     Main entrypoint (thin wrapper)
 ├── pkg/
 │   ├── cli/          CLI commands, HTTP handlers, templates, static assets
 │   ├── data/         Data layer: SQLite queries, GitHub importers, migrations
@@ -120,8 +120,8 @@ dctl/
 ### Data Flow
 
 ```
-GitHub API --> dctl import --> SQLite --> dctl server --> localhost:8080
-                                     \--> dctl query --> JSON (stdout)
+GitHub API --> devpulse import --> SQLite --> devpulse server --> localhost:8080
+                                           \--> devpulse query --> JSON (stdout)
 ```
 
 ## Development Workflow
@@ -248,7 +248,7 @@ go tool cover -html=coverage.out
 make server
 
 # Or directly
-go run ./cmd/dctl --debug s
+go run ./cmd/devpulse --debug s
 ```
 
 ## Additional Resources

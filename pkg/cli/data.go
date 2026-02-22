@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mchmarny/dctl/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 
 	"log/slog"
 
-	"github.com/mchmarny/dctl/pkg/net"
+	"github.com/mchmarny/devpulse/pkg/net"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v83/github"
-	"github.com/mchmarny/dctl/pkg/net"
+	"github.com/mchmarny/devpulse/pkg/net"
 )
 
 const (

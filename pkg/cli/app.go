@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mchmarny/dctl/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data"
 	urfave "github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -71,7 +71,7 @@ func getConfig(c *urfave.Context) *appConfig {
 
 func newApp() *urfave.App {
 	return &urfave.App{
-		Name:                 "dctl",
+		Name:                 "devpulse",
 		Version:              fmt.Sprintf("%s (%s - %s)", version, commit, date),
 		Compiled:             time.Now(),
 		EnableBashCompletion: true,
@@ -140,7 +140,7 @@ func getHomeDir() string {
 	}
 	slog.Debug("home dir", "path", home)
 
-	dirName := ".dctl"
+	dirName := ".devpulse"
 	dirPath := filepath.Join(home, dirName)
 	if _, err := os.Stat(dirPath); errors.Is(err, os.ErrNotExist) {
 		slog.Debug("creating dir", "path", dirPath)

@@ -1,6 +1,6 @@
-# Contributing to dctl
+# Contributing to devpulse
 
-Thank you for your interest in contributing to dctl! We welcome contributions from developers of all backgrounds and experience levels.
+Thank you for your interest in contributing to devpulse! We welcome contributions from developers of all backgrounds and experience levels.
 
 ## Table of Contents
 
@@ -20,14 +20,14 @@ This project follows a commitment to fostering an open and welcoming environment
 Before contributing:
 
 1. Read the [README.md](README.md) to understand the project
-2. Check existing [issues](https://github.com/mchmarny/dctl/issues) to avoid duplicates
+2. Check existing [issues](https://github.com/mchmarny/devpulse/issues) to avoid duplicates
 3. Set up your development environment following [DEVELOPMENT.md](DEVELOPMENT.md)
 
 ## How to Contribute
 
 ### Reporting Bugs
 
-- Use [GitHub Issues](https://github.com/mchmarny/dctl/issues/new) to report bugs
+- Use [GitHub Issues](https://github.com/mchmarny/devpulse/issues/new) to report bugs
 - Describe the issue clearly with steps to reproduce
 - Include system information (OS, Go version)
 - Attach logs or screenshots if applicable
@@ -35,7 +35,7 @@ Before contributing:
 
 ### Suggesting Enhancements
 
-- Open a [GitHub Issue](https://github.com/mchmarny/dctl/issues/new) describing the feature
+- Open a [GitHub Issue](https://github.com/mchmarny/devpulse/issues/new) describing the feature
 - Clearly describe the proposed feature and its use case
 - Explain how it benefits the project and users
 
@@ -58,7 +58,7 @@ This project vendors Go dependencies. After changing `go.mod` or `go.sum`, run `
 
 ## Design Principles
 
-These principles guide all design decisions in dctl. When faced with trade-offs, these principles take precedence.
+These principles guide all design decisions in devpulse. When faced with trade-offs, these principles take precedence.
 
 ### Correctness Must Be Reproducible
 
@@ -178,7 +178,7 @@ Explain the problem being solved and why this approach was chosen.
 
 ### Getting Help
 
-- **GitHub Issues**: [Create an issue](https://github.com/mchmarny/dctl/issues/new) with the "question" label
+- **GitHub Issues**: [Create an issue](https://github.com/mchmarny/devpulse/issues/new) with the "question" label
 - **Existing Issues**: Search for similar questions first
 
 ## Additional Resources
@@ -186,4 +186,4 @@ Explain the problem being solved and why this approach was chosen.
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Development setup, architecture, and tooling
 - [README.md](README.md) - Project overview and quick start
 
-Thank you for contributing to dctl!
+Thank you for contributing to devpulse!

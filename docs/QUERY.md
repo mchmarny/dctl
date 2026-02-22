@@ -9,13 +9,13 @@ All query output is JSON, suitable for piping to [jq](https://stedolan.github.io
 List developers matching a pattern:
 
 ```shell
-dctl query developer list --like mark
+devpulse query developer list --like mark
 ```
 
 Get details for a specific developer:
 
 ```shell
-dctl query developer detail --name mchmarny
+devpulse query developer detail --name mchmarny
 ```
 
 ## Entities
@@ -23,13 +23,13 @@ dctl query developer detail --name mchmarny
 List entities (companies/orgs) matching a pattern:
 
 ```shell
-dctl query entity list --like google
+devpulse query entity list --like google
 ```
 
 Get entity details with affiliated developers:
 
 ```shell
-dctl query entity detail --name GOOGLE
+devpulse query entity detail --name GOOGLE
 ```
 
 ## Repositories
@@ -37,7 +37,7 @@ dctl query entity detail --name GOOGLE
 List repositories in an organization:
 
 ```shell
-dctl query org repos --org knative
+devpulse query org repos --org knative
 ```
 
 ## Events
@@ -45,7 +45,7 @@ dctl query org repos --org knative
 Search events with filters:
 
 ```shell
-dctl query events --org knative --repo serving --type pr --since 2024-01-01
+devpulse query events --org knative --repo serving --type pr --since 2024-01-01
 ```
 
 Available filters: `--org`, `--repo`, `--type` (pr, pr_review, issue, issue_comment, fork), `--author`, `--since`, `--label`, `--mention`, `--limit`.
@@ -53,17 +53,17 @@ Available filters: `--org`, `--repo`, `--type` (pr, pr_review, issue, issue_comm
 Pipe to jq for post-processing:
 
 ```shell
-dctl query events --org knative --repo serving --type pr | jq '. | length'
+devpulse query events --org knative --repo serving --type pr | jq '. | length'
 ```
 
 Use `--limit` on any list command to control result count (default: 100, max: 500).
 
 ## Direct SQL access
 
-The database is at `~/.dctl/data.db`:
+The database is at `~/.devpulse/data.db`:
 
 ```shell
-sqlite3 ~/.dctl/data.db
+sqlite3 ~/.devpulse/data.db
 ```
 
 Schema is defined in [pkg/data/sql/migrations/](../pkg/data/sql/migrations/). Key tables:

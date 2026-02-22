@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mchmarny/dctl/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,8 +30,8 @@ var (
 		Name:    "substitute",
 		Aliases: []string{"sub"},
 		Usage:   "Create a global data substitution (e.g. standardize entity name)",
-		UsageText: `dctl substitute --type entity --old "Old Corp" --new "NEW CORP"   # rename entity
-   dctl sub --type entity --old "ACME INC" --new "ACME"              # standardize name`,
+		UsageText: `devpulse substitute --type entity --old "Old Corp" --new "NEW CORP"   # rename entity
+   devpulse sub --type entity --old "ACME INC" --new "ACME"              # standardize name`,
 		HideHelpCommand: true,
 		Action:          cmdSubstitutes,
 		Flags: []cli.Flag{

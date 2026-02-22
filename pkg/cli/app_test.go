@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mchmarny/dctl/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data"
 )
 
 const (
