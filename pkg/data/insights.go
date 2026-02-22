@@ -9,15 +9,15 @@ import (
 
 const (
 	// Bus factor: count of developers whose cumulative event share reaches 50%.
-	// Uses a CTE that ranks developers by event count descending, then
-	// accumulates a running sum to find the cutoff.
 	selectBusFactorSQL = `WITH dev_counts AS (
-			SELECT username, COUNT(*) AS cnt
-			FROM event
-			WHERE org = COALESCE(?, org)
-			  AND repo = COALESCE(?, repo)
-			  AND date >= ?
-			GROUP BY username
+			SELECT e.username, COUNT(*) AS cnt
+			FROM event e
+			JOIN developer d ON e.username = d.username
+			WHERE e.org = COALESCE(?, e.org)
+			  AND e.repo = COALESCE(?, e.repo)
+			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+			  AND e.date >= ?
+			GROUP BY e.username
 			ORDER BY cnt DESC
 		),
 		running AS (
@@ -36,6 +36,7 @@ const (
 			JOIN developer d ON e.username = d.username
 			WHERE e.org = COALESCE(?, e.org)
 			  AND e.repo = COALESCE(?, e.repo)
+			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
 			  AND d.entity IS NOT NULL AND d.entity != ''
 			GROUP BY d.entity
@@ -52,18 +53,22 @@ const (
 
 	// Contributor retention: for each month, count new (first seen) vs returning developers.
 	selectRetentionSQL = `WITH first_seen AS (
-			SELECT username, MIN(substr(date, 1, 7)) AS first_month
-			FROM event
-			WHERE org = COALESCE(?, org)
-			  AND repo = COALESCE(?, repo)
-			  AND date >= ?
-			GROUP BY username
+			SELECT e.username, MIN(substr(e.date, 1, 7)) AS first_month
+			FROM event e
+			JOIN developer d ON e.username = d.username
+			WHERE e.org = COALESCE(?, e.org)
+			  AND e.repo = COALESCE(?, e.repo)
+			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+			  AND e.date >= ?
+			GROUP BY e.username
 		),
 		monthly AS (
 			SELECT DISTINCT e.username, substr(e.date, 1, 7) AS month
 			FROM event e
+			JOIN developer d ON e.username = d.username
 			WHERE e.org = COALESCE(?, e.org)
 			  AND e.repo = COALESCE(?, e.repo)
+			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
 		)
 		SELECT m.month,
@@ -77,47 +82,53 @@ const (
 
 	// Time-to-merge: avg days from created_at to merged_at for merged PRs, per month.
 	selectTimeToMergeSQL = `SELECT
-			substr(created_at, 1, 7) AS month,
+			substr(e.created_at, 1, 7) AS month,
 			COUNT(*) AS cnt,
-			AVG(julianday(merged_at) - julianday(created_at)) AS avg_days
-		FROM event
-		WHERE type = 'pr'
-		  AND merged_at IS NOT NULL
-		  AND created_at IS NOT NULL
-		  AND org = COALESCE(?, org)
-		  AND repo = COALESCE(?, repo)
-		  AND date >= ?
+			AVG(julianday(e.merged_at) - julianday(e.created_at)) AS avg_days
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.type = 'pr'
+		  AND e.merged_at IS NOT NULL
+		  AND e.created_at IS NOT NULL
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.date >= ?
 		GROUP BY month
 		ORDER BY month
 	`
 
 	// Time-to-close: avg days from created_at to closed_at for closed issues, per month.
 	selectTimeToCloseSQL = `SELECT
-			substr(created_at, 1, 7) AS month,
+			substr(e.created_at, 1, 7) AS month,
 			COUNT(*) AS cnt,
-			AVG(julianday(closed_at) - julianday(created_at)) AS avg_days
-		FROM event
-		WHERE type = 'issue'
-		  AND closed_at IS NOT NULL
-		  AND created_at IS NOT NULL
-		  AND state = 'closed'
-		  AND org = COALESCE(?, org)
-		  AND repo = COALESCE(?, repo)
-		  AND date >= ?
+			AVG(julianday(e.closed_at) - julianday(e.created_at)) AS avg_days
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.type = 'issue'
+		  AND e.closed_at IS NOT NULL
+		  AND e.created_at IS NOT NULL
+		  AND e.state = 'closed'
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.date >= ?
 		GROUP BY month
 		ORDER BY month
 	`
 
 	// PR-to-review ratio: monthly PR and PR review counts with computed ratio.
 	selectPRReviewRatioSQL = `SELECT
-			substr(date, 1, 7) AS month,
-			SUM(CASE WHEN type = ? THEN 1 ELSE 0 END) AS prs,
-			SUM(CASE WHEN type = ? THEN 1 ELSE 0 END) AS reviews
-		FROM event
-		WHERE org = COALESCE(?, org)
-		  AND repo = COALESCE(?, repo)
-		  AND date >= ?
-		  AND type IN (?, ?)
+			substr(e.date, 1, 7) AS month,
+			SUM(CASE WHEN e.type = ? THEN 1 ELSE 0 END) AS prs,
+			SUM(CASE WHEN e.type = ? THEN 1 ELSE 0 END) AS reviews
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.date >= ?
+		  AND e.type IN (?, ?)
 		GROUP BY month
 		ORDER BY month
 	`
@@ -155,25 +166,25 @@ func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*Ins
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 	summary := &InsightsSummary{}
 
-	if err := db.QueryRow(selectBusFactorSQL, org, repo, since).Scan(&summary.BusFactor); err != nil {
+	if err := db.QueryRow(selectBusFactorSQL, org, repo, entity, since).Scan(&summary.BusFactor); err != nil {
 		return nil, fmt.Errorf("failed to query bus factor: %w", err)
 	}
 
-	if err := db.QueryRow(selectPonyFactorSQL, org, repo, since).Scan(&summary.PonyFactor); err != nil {
+	if err := db.QueryRow(selectPonyFactorSQL, org, repo, entity, since).Scan(&summary.PonyFactor); err != nil {
 		return nil, fmt.Errorf("failed to query pony factor: %w", err)
 	}
 
 	return summary, nil
 }
 
-func GetContributorRetention(db *sql.DB, org, repo *string, months int) (*RetentionSeries, error) {
+func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) (*RetentionSeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
-	rows, err := db.Query(selectRetentionSQL, org, repo, since, org, repo, since)
+	rows, err := db.Query(selectRetentionSQL, org, repo, entity, since, org, repo, entity, since)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query contributor retention: %w", err)
 	}
@@ -199,7 +210,7 @@ func GetContributorRetention(db *sql.DB, org, repo *string, months int) (*Retent
 	return s, nil
 }
 
-func GetPRReviewRatio(db *sql.DB, org, repo *string, months int) (*PRReviewRatioSeries, error) {
+func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRReviewRatioSeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
@@ -208,7 +219,7 @@ func GetPRReviewRatio(db *sql.DB, org, repo *string, months int) (*PRReviewRatio
 
 	rows, err := db.Query(selectPRReviewRatioSQL,
 		EventTypePR, EventTypePRReview,
-		org, repo, since,
+		org, repo, entity, since,
 		EventTypePR, EventTypePRReview)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query PR review ratio: %w", err)
@@ -242,14 +253,14 @@ func GetPRReviewRatio(db *sql.DB, org, repo *string, months int) (*PRReviewRatio
 	return s, nil
 }
 
-func getVelocitySeries(db *sql.DB, query string, org, repo *string, months int) (*VelocitySeries, error) {
+func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
-	rows, err := db.Query(query, org, repo, since)
+	rows, err := db.Query(query, org, repo, entity, since)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query velocity series: %w", err)
 	}
@@ -276,10 +287,10 @@ func getVelocitySeries(db *sql.DB, query string, org, repo *string, months int) 
 	return s, nil
 }
 
-func GetTimeToMerge(db *sql.DB, org, repo *string, months int) (*VelocitySeries, error) {
-	return getVelocitySeries(db, selectTimeToMergeSQL, org, repo, months)
+func GetTimeToMerge(db *sql.DB, org, repo, entity *string, months int) (*VelocitySeries, error) {
+	return getVelocitySeries(db, selectTimeToMergeSQL, org, repo, entity, months)
 }
 
-func GetTimeToClose(db *sql.DB, org, repo *string, months int) (*VelocitySeries, error) {
-	return getVelocitySeries(db, selectTimeToCloseSQL, org, repo, months)
+func GetTimeToClose(db *sql.DB, org, repo, entity *string, months int) (*VelocitySeries, error) {
+	return getVelocitySeries(db, selectTimeToCloseSQL, org, repo, entity, months)
 }

@@ -9,6 +9,11 @@ import (
 )
 
 const (
+	selectMinEventDateSQL = `SELECT COALESCE(MIN(date), '') FROM event
+		WHERE org = COALESCE(?, org)
+		  AND repo = COALESCE(?, repo)
+	`
+
 	selectEventTypesSinceSQL = `SELECT
 			date, 
 			SUM(prs) as prs,
@@ -161,6 +166,20 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 	}
 
 	return list, nil
+}
+
+// GetMinEventDate returns the earliest event date, optionally filtered by org/repo.
+func GetMinEventDate(db *sql.DB, org, repo *string) (string, error) {
+	if db == nil {
+		return "", errDBNotInitialized
+	}
+
+	var minDate string
+	if err := db.QueryRow(selectMinEventDateSQL, org, repo).Scan(&minDate); err != nil {
+		return "", fmt.Errorf("failed to query min event date: %w", err)
+	}
+
+	return minDate, nil
 }
 
 func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*EventTypeSeries, error) {

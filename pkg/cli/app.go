@@ -88,6 +88,7 @@ func newApp() *urfave.App {
 			substituteCmd,
 			queryCmd,
 			serverCmd,
+			resetCmd,
 		},
 		Before: func(c *urfave.Context) error {
 			applyFlags(c)

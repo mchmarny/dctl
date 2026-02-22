@@ -1,3 +1,22 @@
+## [Unreleased]
+
+### 🚀 Features
+
+- Remove sidebar; theme toggle moved to top bar, repo link to footer
+- Add event search filter panel (type, date range, username, entity)
+- Add adjustable time period dropdown (auto-adapts to available data range)
+- Add `reset` command to delete all data with confirmation prompt
+- Add entity filtering to all insight panels (retention, PR ratio, velocity, reputation)
+- Refresh reputation chart after deep score computation
+- Add contextual descriptions to all dashboard panels
+
+### 🐛 Bug Fixes
+
+- Fix chart flicker on search panel toggle (disable resize animation)
+- Fix developer upsert overwriting entity with empty string from partial GitHub API objects
+- Fix missing Exec argument in event import flush for developer upsert
+- Filter Copilot/Claude bot accounts from reputation dashboard
+
 ## [0.5.7] - 2026-02-22
 
 ### 🐛 Bug Fixes

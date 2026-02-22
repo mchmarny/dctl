@@ -101,7 +101,7 @@ dctl/
 #### CLI
 - **Location**: `pkg/cli/`
 - **Framework**: [urfave/cli v2](https://github.com/urfave/cli)
-- **Commands**: `auth`, `import`, `query`, `server`
+- **Commands**: `auth`, `import`, `query`, `server`, `reset`, `substitute`
 
 #### Data Layer
 - **Location**: `pkg/data/`

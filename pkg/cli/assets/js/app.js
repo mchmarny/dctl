@@ -109,6 +109,7 @@ let timeToMergeChart;
 let timeToCloseChart;
 let releaseCadenceChart;
 let reputationChart;
+let reputationChartURL;
 let searchItem;
 
 const searchPrefixes = ['org', 'repo', 'entity'];
@@ -168,7 +169,10 @@ $(function () {
         searchCriteria.init();
         initUnifiedSearch();
         initSearchFilters();
-        loadAllCharts($("#period_months").val(), "", "", "");
+        initPeriodSelector();
+        updatePeriodOptions("", "", function () {
+            loadAllCharts($("#period_months").val(), "", "", "");
+        });
     }
 });
 
@@ -188,13 +192,13 @@ function loadAllCharts(months, org, repo, entity) {
     loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect, onLeftExclude);
     loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect, onRightExclude);
     loadInsightsSummary(`/data/insights/summary?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadRetentionChart(`/data/insights/retention?m=${months}&o=${org}&r=${repo}`);
-    loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}`);
-    loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}`, 'time-to-merge-chart', 'timeToMerge');
-    loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}`, 'time-to-close-chart', 'timeToClose');
+    loadRetentionChart(`/data/insights/retention?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
+    loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-close-chart', 'timeToClose');
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
-    loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}`);
+    loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}&e=${entity}`);
 }
 
 function applySelection(scope, item) {
@@ -204,7 +208,7 @@ function applySelection(scope, item) {
     rightChartExcludes = [];
 
     searchItem = item;
-    $(".header-term").html(item.text);
+    $(".header-term").html(item.value);
 
     resetCharts();
 
@@ -226,7 +230,9 @@ function applySelection(scope, item) {
     }
 
     submitSearch();
-    loadAllCharts(months, org, repo, entity);
+    updatePeriodOptions(org, repo, function () {
+        loadAllCharts($("#period_months").val(), org, repo, entity);
+    });
 }
 
 function initUnifiedSearch() {
@@ -288,7 +294,9 @@ function initUnifiedSearch() {
             leftChartExcludes = [];
             rightChartExcludes = [];
             $(".header-term").html("All imported events");
-            loadAllCharts($("#period_months").val(), "", "", "");
+            updatePeriodOptions("", "", function () {
+                loadAllCharts($("#period_months").val(), "", "", "");
+            });
             return false;
         }
 
@@ -906,6 +914,7 @@ function reputationBarColors(values) {
 }
 
 function loadReputationChart(url) {
+    reputationChartURL = url;
     $.get(url, function (data) {
         if (!data.labels || data.labels.length === 0) {
             return;
@@ -976,6 +985,12 @@ function showDeepReputation(username) {
             list.append(`<li><b>Suspended:</b> ${s.suspended ? 'Yes' : 'No'}</li>`);
         }
         list.append(`<li><a href="https://github.com/${username}" target="_blank">View on GitHub</a></li>`);
+
+        // refresh the chart so updated scores are reflected
+        if (reputationChartURL) {
+            if (reputationChart) { reputationChart.destroy(); }
+            loadReputationChart(reputationChartURL);
+        }
     }).fail(function () {
         list.empty().append('<li>Failed to compute score</li>');
     });
@@ -1026,6 +1041,78 @@ function initSearchFilters() {
         clearFilterInputs();
         $("#result-table-content").empty();
         $("#search-results-wrap").hide();
+    });
+}
+
+function initPeriodSelector() {
+    $("#period-select").on("change", function () {
+        const months = $(this).val();
+        $("#period_months").val(months);
+        resetCharts();
+
+        let org = "", repo = "", entity = "";
+        if (searchItem) {
+            const scope = ($("#search-bar").val().match(/^(org|repo|entity):/i) || [])[1] || "org";
+            switch (scope.toLowerCase()) {
+                case "org": org = searchItem.value; break;
+                case "repo": repo = searchItem.value; break;
+                case "entity": entity = searchItem.value; break;
+            }
+        }
+        loadAllCharts(months, org, repo, entity);
+    });
+}
+
+function updatePeriodOptions(org, repo, cb) {
+    let url = "/data/min-date";
+    const params = [];
+    if (org) params.push("o=" + encodeURIComponent(org));
+    if (repo) params.push("r=" + encodeURIComponent(repo));
+    if (params.length) url += "?" + params.join("&");
+
+    const defaultMonths = parseInt($("#default_months").val(), 10) || 6;
+
+    $.get(url, function (data) {
+        const sel = $("#period-select");
+        const currentVal = parseInt($("#period_months").val(), 10) || defaultMonths;
+        sel.empty();
+
+        let maxMonths = defaultMonths;
+        if (data.min_date) {
+            const minDate = new Date(data.min_date);
+            const now = new Date();
+            maxMonths = Math.max(1,
+                (now.getFullYear() - minDate.getFullYear()) * 12 +
+                (now.getMonth() - minDate.getMonth()) + 1
+            );
+        }
+
+        const steps = [3, 6, 9, 12, 18, 24, 36, 48, 60];
+        const options = [];
+        for (let i = 0; i < steps.length; i++) {
+            if (steps[i] <= maxMonths) {
+                options.push(steps[i]);
+            }
+        }
+        if (options.length === 0 || options[options.length - 1] < maxMonths) {
+            options.push(maxMonths);
+        }
+
+        $.each(options, function (i, m) {
+            sel.append(`<option value="${m}">${m} months</option>`);
+        });
+
+        // keep current selection if still valid, otherwise use default or max
+        if (options.indexOf(currentVal) >= 0) {
+            sel.val(currentVal);
+        } else if (options.indexOf(defaultMonths) >= 0) {
+            sel.val(defaultMonths);
+        } else {
+            sel.val(options[options.length - 1]);
+        }
+        $("#period_months").val(sel.val());
+
+        if (cb) cb();
     });
 }
 

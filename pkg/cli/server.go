@@ -110,6 +110,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl))
 
 	// Data API
+	mux.HandleFunc("GET /data/min-date", minDateAPIHandler(db))
 	mux.HandleFunc("GET /data/query", queryAPIHandler(db))
 	mux.HandleFunc("GET /data/type", eventDataAPIHandler(db))
 	mux.HandleFunc("GET /data/entity", entityDataAPIHandler(db))

@@ -359,7 +359,7 @@ func (e *EventImporter) flush() error {
 	for i, u := range devs {
 		if _, err = tx.Stmt(devStmt).Exec(u.Username,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
-			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity); err != nil {
+			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Entity); err != nil {
 			rollbackTransaction(tx)
 			return fmt.Errorf("error inserting developer[%d]: %s: %w", i, u.Username, err)
 		}

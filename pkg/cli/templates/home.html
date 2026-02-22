@@ -5,6 +5,7 @@
 <!-- Middle  -->
 
     <input type="hidden" id="period_months" value="{{ .period_months }}" />
+    <input type="hidden" id="default_months" value="{{ .period_months }}" />
 
     {{ if .err }}
         <div class="error">
@@ -33,7 +34,10 @@
     </section>
 
     <div class="search-meta">
-        <b class="header-term">All imported events</b> over the last <b>{{ .period_months }} months</b>
+        <b class="header-term">All imported events</b> over the last
+        <select id="period-select">
+            <option value="{{ .period_months }}">{{ .period_months }} months</option>
+        </select>
     </div>
     
     <section class="grid">
@@ -64,6 +68,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="time-series-chart"></canvas>
                 </div>
+                <span class="insight-desc">GitHub events (PRs, issues, reviews, comments, forks) grouped by month. Trend line is linear regression.</span>
             </div>
         </article>
         <article>
@@ -74,6 +79,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="retention-chart"></canvas>
                 </div>
+                <span class="insight-desc">New = first contribution that month. Returning = contributed in a prior month.</span>
             </div>
         </article>
         <article>
@@ -102,6 +108,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="left-chart"></canvas>
                 </div>
+                <span class="insight-desc">Based on GitHub profile company field and CNCF gitdm affiliations. Self-reported, not verified.</span>
                 <div id="entity-popover" class="entity-popover">
                     <div class="entity-popover-header">
                         <span id="entity-popover-title"></span>
@@ -121,6 +128,7 @@
                 <div class="tbl-content tbl-home">
                     <canvas class="chart" id="right-chart"></canvas>
                 </div>
+                <span class="insight-desc">Ranked by total event count (PRs, issues, reviews, comments) in the selected period.</span>
             </div>
         </article>
         <article>
@@ -131,6 +139,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="pr-ratio-chart"></canvas>
                 </div>
+                <span class="insight-desc">Reviews per PR. Higher ratio suggests stronger code review culture.</span>
             </div>
         </article>
         <article>
@@ -141,6 +150,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="time-to-merge-chart"></canvas>
                 </div>
+                <span class="insight-desc">Average days from PR open to merge. Based on GitHub created/merged timestamps.</span>
             </div>
         </article>
         <article>
@@ -151,6 +161,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="time-to-close-chart"></canvas>
                 </div>
+                <span class="insight-desc">Average days from issue open to close. Based on GitHub created/closed timestamps.</span>
             </div>
         </article>
         <article>
@@ -161,6 +172,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="release-cadence-chart"></canvas>
                 </div>
+                <span class="insight-desc">GitHub releases per month. Stable excludes pre-releases and drafts.</span>
             </div>
         </article>
         <article>
@@ -171,6 +183,7 @@
                 <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
                     <span class="insight-label">No metadata imported yet</span>
                 </div>
+                <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
             </div>
         </article>
 

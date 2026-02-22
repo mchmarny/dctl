@@ -53,6 +53,19 @@ func parseInsightParams(r *http.Request) insightParams {
 	return insightParams{months: months, org: optional(org), repo: optional(repo)}
 }
 
+func minDateAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		minDate, err := data.GetMinEventDate(db, p.org, p.repo)
+		if err != nil {
+			slog.Error("failed to get min event date", "error", err)
+			writeError(w, http.StatusInternalServerError, "failed to get min date")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"min_date": minDate})
+	}
+}
+
 func queryAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
@@ -243,7 +256,8 @@ func insightsSummaryAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsRetentionAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetContributorRetention(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetContributorRetention(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get contributor retention", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying contributor retention")
@@ -256,7 +270,8 @@ func insightsRetentionAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsPRRatioAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetPRReviewRatio(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetPRReviewRatio(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get PR review ratio", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying PR review ratio")
@@ -314,7 +329,8 @@ func insightsReleaseCadenceAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsTimeToMergeAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetTimeToMerge(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetTimeToMerge(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get time to merge", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying time to merge")
@@ -327,7 +343,8 @@ func insightsTimeToMergeAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsTimeToCloseAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetTimeToClose(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetTimeToClose(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get time to close", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying time to close")
@@ -340,7 +357,8 @@ func insightsTimeToCloseAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsReputationAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetReputationDistribution(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetReputationDistribution(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get reputation distribution", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying reputation distribution")

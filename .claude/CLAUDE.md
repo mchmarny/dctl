@@ -44,7 +44,9 @@ Go version is pinned in `go.mod` (currently 1.26). The `.golangci.yaml` at the r
 
 **Database:**
 - All SQL constants defined at the top of the file they're used in
-- COALESCE pattern for optional filters: `WHERE col = COALESCE(?, col)`
+- COALESCE pattern for optional filters on non-nullable columns: `WHERE col = COALESCE(?, col)`
+- IFNULL/COALESCE pattern for nullable columns (e.g. entity): `IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))`
+- Developer upsert preserves existing entity when new value is empty: `CASE WHEN ? = '' THEN COALESCE(developer.entity, '') ELSE ? END`
 - Transactions with explicit rollback on error
 - Upserts via `INSERT ... ON CONFLICT(...) DO UPDATE SET`
 
@@ -105,7 +107,11 @@ pkg/net/          HTTP client utilities
 tools/            Dev scripts (version bump, shared helpers)
 ```
 
+CLI commands: `auth`, `import`, `substitute`, `query`, `server`, `reset`
+
 Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite → HTTP API → Chart.js dashboard
+
+Dashboard is full-width (no sidebar). Theme toggle is in the top bar next to search. All insight panels support entity filtering via `?e=` query param.
 
 ## CI/CD
 

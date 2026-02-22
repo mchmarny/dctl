@@ -16,10 +16,13 @@ Community health analytics for GitHub organizations and repositories. `dctl` imp
 - **Contributor retention** -- new vs returning contributors per month
 - **PR review ratio** -- PRs to reviews per month with ratio trend line
 - **Time to close / merge** -- average days to close issues and merge PRs
-- **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers
+- **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers (GitHub profile + CNCF gitdm)
+- **Contributor reputation** -- two-tier scoring (shallow local, deep GitHub API) with known bot filtering
 - **Repository metadata** -- stars, forks, open issues, language, license
 - **Release cadence** -- monthly release counts (total vs stable)
-- **Unified search** -- `org:name`, `repo:name`, or `entity:name` prefix syntax
+- **Event search filters** -- filter by type, date range, username, or entity directly from the dashboard
+- **Adjustable time period** -- dropdown adapts to available data range per search scope
+- **Unified search** -- `org:name`, `repo:name`, or `entity:name` prefix syntax; all panels respect entity filter
 
 ## Install
 
@@ -109,6 +112,16 @@ dctl query entity detail --name GOOGLE
 ```
 
 See [docs/QUERY.md](docs/QUERY.md) for all query options.
+
+### 5. Reset
+
+Delete all imported data and start fresh:
+
+```shell
+dctl reset
+```
+
+Prompts for confirmation before deleting the database.
 
 ![](docs/img/dash3.png)
 

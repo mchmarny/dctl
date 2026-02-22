@@ -27,34 +27,49 @@ The search bar uses prefix syntax to scope the dashboard:
 
 Typing without a prefix defaults to org search. Clearing the search bar resets to the all-data view.
 
+All panels respect the active search scope. For example, `entity:google` filters not just the entity chart but also retention, PR ratio, velocity, reputation, and all other contributor-based panels.
+
+## Time period
+
+The period dropdown (next to the search heading) adjusts the time window for all charts. Available options are computed from the earliest event matching the current search scope. Changing the period reloads all panels.
+
 ## Charts
 
-All charts are interactive. Click on data points to filter the event search results.
+All charts are interactive. Click on data points to filter the event search results. Each panel includes a brief description of its data source and methodology.
 
 ### Monthly Activity
-Stacked bar chart of event types (PRs, reviews, issues, comments, forks) with a total line and 3-month moving average trend line.
+GitHub events (PRs, reviews, issues, comments, forks) grouped by month with a total line and linear regression trend.
 
 ### Top Entities / Top Collaborators
-Entity and developer contribution distribution. Click an entity to see its affiliated developers in a popover. Legend items can be clicked to exclude them.
+Entity and developer contribution distribution. Entity affiliations come from GitHub profile company fields and CNCF gitdm data (self-reported, not verified). Click an entity to see its affiliated developers in a popover. Legend items can be clicked to exclude them.
 
 ### Project Health
 Bus factor and pony factor: the minimum number of developers (or organizations) producing 50% of all contributions.
 
 ### Contributor Retention
-Stacked bar chart showing new vs returning contributors per month.
+New (first contribution that month) vs returning (contributed in a prior month) contributors per month.
+
+### Lowest Reputation Contributors
+Two-tier scoring: shallow scores use local data only; click a bar for a full GitHub API-enriched deep score. The chart refreshes automatically after a deep score is computed. Known bot accounts (GitHub Apps, Copilot, Claude) are excluded.
 
 ### PR Review Ratio
-Monthly PR and review counts with the ratio on a secondary axis.
+Monthly PR and review counts with the ratio on a secondary axis. Higher ratio suggests stronger code review culture.
 
 ### Repository Metadata
-Aggregated stars, forks, open issues, primary language, license, and repo count.
+Snapshot from GitHub API at last import. Aggregated stars, forks, open issues, primary language, license, and repo count.
 
 ### Release Cadence
-Monthly release counts split by total vs stable (non-prerelease).
+GitHub releases per month. Stable excludes pre-releases and drafts.
 
 ### Time to Close / Time to Merge
-Average days to close issues and merge PRs per month, with volume overlay.
+Average days from open to close/merge based on GitHub created/closed/merged timestamps, with volume overlay.
 
-## Events table
+## Event search
 
-Filtered by scope, search, and chart clicks. Each row links directly to the PR, issue, or developer profile on GitHub. Paginated with prev/next controls.
+The Event Search panel is always visible at the bottom of the dashboard. It provides:
+
+- **Filter form** -- event type dropdown, from/to date inputs, username, and entity text fields
+- **Chart integration** -- clicking chart data points populates the filter inputs and triggers a search
+- **Pagination** -- prev/next controls for paging through results
+
+Each result row links directly to the PR, issue, or developer profile on GitHub.

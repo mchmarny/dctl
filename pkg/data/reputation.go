@@ -48,6 +48,7 @@ const (
 		JOIN event e ON d.username = e.username
 		WHERE e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
 		  AND d.reputation IS NOT NULL
 		  AND d.username NOT LIKE '%[bot]'
@@ -287,14 +288,14 @@ func ComputeDeepReputation(db *sql.DB, token, username string) (*UserReputation,
 	}, nil
 }
 
-func GetReputationDistribution(db *sql.DB, org, repo *string, months int) (*ReputationDistribution, error) {
+func GetReputationDistribution(db *sql.DB, org, repo, entity *string, months int) (*ReputationDistribution, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
-	rows, err := db.Query(selectReputationSQL, org, repo, since)
+	rows, err := db.Query(selectReputationSQL, org, repo, entity, since)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query reputation distribution: %w", err)
 	}

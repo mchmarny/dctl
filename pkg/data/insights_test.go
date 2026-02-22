@@ -62,13 +62,13 @@ func TestGetInsightsSummary_WithData(t *testing.T) {
 func TestGetContributorRetention_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
 
-	series, err := GetContributorRetention(db, nil, nil, 6)
+	series, err := GetContributorRetention(db, nil, nil, nil, 6)
 	require.NoError(t, err)
 	assert.Empty(t, series.Months)
 }
 
 func TestGetContributorRetention_NilDB(t *testing.T) {
-	_, err := GetContributorRetention(nil, nil, nil, 6)
+	_, err := GetContributorRetention(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
@@ -85,7 +85,7 @@ func TestGetContributorRetention_WithData(t *testing.T) {
 		('org1', 'repo1', 'bob', 'pr', '2025-02-15', 'http://b', '', '')`)
 	require.NoError(t, err)
 
-	series, err := GetContributorRetention(db, nil, nil, 24)
+	series, err := GetContributorRetention(db, nil, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, series.Months, 2)
 
@@ -103,13 +103,13 @@ func TestGetContributorRetention_WithData(t *testing.T) {
 func TestGetPRReviewRatio_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
 
-	series, err := GetPRReviewRatio(db, nil, nil, 6)
+	series, err := GetPRReviewRatio(db, nil, nil, nil, 6)
 	require.NoError(t, err)
 	assert.Empty(t, series.Months)
 }
 
 func TestGetPRReviewRatio_NilDB(t *testing.T) {
-	_, err := GetPRReviewRatio(nil, nil, nil, 6)
+	_, err := GetPRReviewRatio(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
@@ -127,7 +127,7 @@ func TestGetPRReviewRatio_WithData(t *testing.T) {
 		('org1', 'repo1', 'bob', 'pr_review', '2025-01-12', 'http://b3', '', '')`)
 	require.NoError(t, err)
 
-	series, err := GetPRReviewRatio(db, nil, nil, 24)
+	series, err := GetPRReviewRatio(db, nil, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, series.Months, 1)
 	assert.Equal(t, 2, series.PRs[0])
@@ -137,13 +137,13 @@ func TestGetPRReviewRatio_WithData(t *testing.T) {
 
 func TestGetTimeToMerge_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
-	series, err := GetTimeToMerge(db, nil, nil, 6)
+	series, err := GetTimeToMerge(db, nil, nil, nil, 6)
 	require.NoError(t, err)
 	assert.Empty(t, series.Months)
 }
 
 func TestGetTimeToMerge_NilDB(t *testing.T) {
-	_, err := GetTimeToMerge(nil, nil, nil, 6)
+	_, err := GetTimeToMerge(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
@@ -159,7 +159,7 @@ func TestGetTimeToMerge_WithData(t *testing.T) {
 		('org1', 'repo1', 'alice', 'pr', '2025-01-20', 'http://a2', '', '', 'closed', '2025-01-18T00:00:00Z', '2025-01-20T00:00:00Z')`)
 	require.NoError(t, err)
 
-	series, err := GetTimeToMerge(db, nil, nil, 24)
+	series, err := GetTimeToMerge(db, nil, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, series.Months, 1)
 	assert.Equal(t, 2, series.Count[0])
@@ -168,13 +168,13 @@ func TestGetTimeToMerge_WithData(t *testing.T) {
 
 func TestGetTimeToClose_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
-	series, err := GetTimeToClose(db, nil, nil, 6)
+	series, err := GetTimeToClose(db, nil, nil, nil, 6)
 	require.NoError(t, err)
 	assert.Empty(t, series.Months)
 }
 
 func TestGetTimeToClose_NilDB(t *testing.T) {
-	_, err := GetTimeToClose(nil, nil, nil, 6)
+	_, err := GetTimeToClose(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
@@ -190,7 +190,7 @@ func TestGetTimeToClose_WithData(t *testing.T) {
 		('org1', 'repo1', 'alice', 'issue', '2025-01-20', 'http://a2', '', '', 'closed', '2025-01-14T00:00:00Z', '2025-01-20T00:00:00Z')`)
 	require.NoError(t, err)
 
-	series, err := GetTimeToClose(db, nil, nil, 24)
+	series, err := GetTimeToClose(db, nil, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, series.Months, 1)
 	assert.Equal(t, 2, series.Count[0])
