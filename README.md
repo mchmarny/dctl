@@ -7,7 +7,7 @@
 
 Community health analytics for GitHub organizations and repositories. `dctl` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard.
 
-![](docs/img/screenshot.png)
+![](docs/img/dash1.png)
 
 ## Features
 
@@ -84,7 +84,7 @@ See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
 dctl server
 ```
 
-![](docs/img/screenshot2.png)
+![](docs/img/dash2.png)
 
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
@@ -109,6 +109,8 @@ dctl query entity detail --name GOOGLE
 ```
 
 See [docs/QUERY.md](docs/QUERY.md) for all query options.
+
+![](docs/img/dash3.png)
 
 ## Data sources
 
