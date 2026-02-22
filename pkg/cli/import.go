@@ -211,7 +211,7 @@ func cmdUpdate(c *cli.Context) error {
 
 type ImportAllResult struct {
 	Org          string                        `json:"org"`
-	Repos        []string                      `json:"repos"`
+	Repos        []*data.ImportSummary         `json:"repos"`
 	Duration     string                        `json:"duration"`
 	Events       map[string]int                `json:"events,omitempty"`
 	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty"`
@@ -251,7 +251,7 @@ func cmdImportAll(c *cli.Context) error {
 
 	res := &ImportAllResult{
 		Org:    org,
-		Repos:  repos,
+		Repos:  make([]*data.ImportSummary, 0, len(repos)),
 		Events: make(map[string]int),
 	}
 
@@ -268,10 +268,13 @@ func cmdImportAll(c *cli.Context) error {
 	// 1. events
 	for _, r := range repos {
 		slog.Info("importing events", "org", org, "repo", r)
-		m, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
+		m, summary, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
 		if importErr != nil {
 			slog.Error("failed to import events", "org", org, "repo", r, "error", importErr)
 			continue
+		}
+		if summary != nil {
+			res.Repos = append(res.Repos, summary)
 		}
 		for k, v := range m {
 			res.Events[k] += v
@@ -296,21 +299,8 @@ func cmdImportAll(c *cli.Context) error {
 		res.Substituted = sub
 	}
 
-	// 4. metadata
-	for _, r := range repos {
-		slog.Info("importing metadata", "org", org, "repo", r)
-		if metaErr := data.ImportRepoMeta(cfg.DBPath, token, org, r); metaErr != nil {
-			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", metaErr)
-		}
-	}
-
-	// 5. releases
-	for _, r := range repos {
-		slog.Info("importing releases", "org", org, "repo", r)
-		if relErr := data.ImportReleases(cfg.DBPath, token, org, r); relErr != nil {
-			slog.Error("failed to import releases", "org", org, "repo", r, "error", relErr)
-		}
-	}
+	// 4. metadata + releases
+	importRepoExtras(cfg.DBPath, token, org, repos)
 
 	// 6. reputation (shallow — local DB only)
 	slog.Info("computing reputation scores")
@@ -328,6 +318,21 @@ func cmdImportAll(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func importRepoExtras(dbPath, token, org string, repos []string) {
+	for _, r := range repos {
+		slog.Info("importing metadata", "org", org, "repo", r)
+		if err := data.ImportRepoMeta(dbPath, token, org, r); err != nil {
+			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", err)
+		}
+	}
+	for _, r := range repos {
+		slog.Info("importing releases", "org", org, "repo", r)
+		if err := data.ImportReleases(dbPath, token, org, r); err != nil {
+			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
+		}
+	}
 }
 
 func cmdImportEvents(c *cli.Context) error {
@@ -375,9 +380,9 @@ func cmdImportEvents(c *cli.Context) error {
 	}
 
 	for _, r := range repos {
-		m, err := data.ImportEvents(cfg.DBPath, token, org, r, months)
-		if err != nil {
-			return fmt.Errorf("failed to import events: %w", err)
+		m, _, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
+		if importErr != nil {
+			return fmt.Errorf("failed to import events: %w", importErr)
 		}
 		for k, v := range m {
 			res.Imported[k] = v

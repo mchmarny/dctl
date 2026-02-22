@@ -102,9 +102,9 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 	results := make(map[string]int)
 
 	for _, r := range list {
-		m, err := ImportEvents(dbPath, token, r.Org, r.Repo, EventAgeMonthsDefault)
-		if err != nil {
-			slog.Error("error importing events", "org", r.Org, "repo", r.Repo, "error", err)
+		m, _, importErr := ImportEvents(dbPath, token, r.Org, r.Repo, EventAgeMonthsDefault)
+		if importErr != nil {
+			slog.Error("error importing events", "org", r.Org, "repo", r.Repo, "error", importErr)
 		}
 		for k, v := range m {
 			results[k] += v
@@ -115,9 +115,9 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 }
 
 // ImportEvents imports events from GitHub for a given org/repo combination.
-func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int, error) {
+func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int, *ImportSummary, error) {
 	if dbPath == "" || token == "" || owner == "" || repo == "" {
-		return nil, errors.New("stateDir, token, owner, and repo are required")
+		return nil, nil, errors.New("stateDir, token, owner, and repo are required")
 	}
 
 	if months < 1 {
@@ -148,7 +148,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	}
 
 	if err := imp.loadState(); err != nil {
-		return nil, fmt.Errorf("error loading last page state: %s/%s: %w", owner, repo, err)
+		return nil, nil, fmt.Errorf("error loading last page state: %s/%s: %w", owner, repo, err)
 	}
 
 	// Log resume state so users understand what period is being imported.
@@ -183,7 +183,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	}
 
 	if err := imp.flush(); err != nil {
-		return nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
+		return nil, nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
 	}
 
 	total := 0
@@ -196,7 +196,30 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		"developers", len(imp.users),
 		"window", imp.minEventTime.Format("2006-01-02")+" to now")
 
-	return imp.counts, nil
+	// Find the earliest "since" across all event types for the summary.
+	var earliest time.Time
+	for _, s := range imp.state {
+		if earliest.IsZero() || s.Since.Before(earliest) {
+			earliest = s.Since
+		}
+	}
+
+	summary := &ImportSummary{
+		Repo:       owner + "/" + repo,
+		Since:      earliest.Format("2006-01-02"),
+		Events:     total,
+		Developers: len(imp.users),
+	}
+
+	return imp.counts, summary, nil
+}
+
+// ImportSummary contains per-repo import metadata.
+type ImportSummary struct {
+	Repo       string `json:"repo"`
+	Since      string `json:"since"`
+	Events     int    `json:"events"`
+	Developers int    `json:"developers"`
 }
 
 type EventImporter struct {
