@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"os"
-	"strings"
 
 	"github.com/mchmarny/dctl/pkg/data"
 	"github.com/mchmarny/dctl/pkg/net"
@@ -18,28 +16,21 @@ const (
 )
 
 var (
-	queryLimitFlag = &cli.IntFlag{
-		Name:     "limit",
-		Usage:    "Limits number of result returned",
-		Value:    queryResultLimitDefault,
-		Required: false,
+	ghUserNameQueryFlag = &cli.StringFlag{
+		Name:     "username",
+		Usage:    "GitHub username",
+		Required: true,
 	}
 
 	developerLikeQueryFlag = &cli.StringFlag{
 		Name:     "like",
-		Usage:    "Fuzzy search developers, identities, or entities",
+		Usage:    "GitHub user like query (e.g. username, email, company)",
 		Required: true,
-	}
-
-	ghUserNameQueryFlag = &cli.StringFlag{
-		Name:     "name",
-		Usage:    "GitHub username",
-		Required: false,
 	}
 
 	entityLikeQueryFlag = &cli.StringFlag{
 		Name:     "like",
-		Usage:    "Fuzzy entities search",
+		Usage:    "Entity like query (e.g. company name)",
 		Required: true,
 	}
 
@@ -49,34 +40,29 @@ var (
 		Required: true,
 	}
 
-	eventSinceFlag = &cli.StringFlag{
-		Name:     "since",
-		Usage:    "Event since date (YYYY-MM-DD)",
-		Required: false,
-	}
-
 	eventAuthorFlag = &cli.StringFlag{
-		Name:     "author",
-		Usage:    "Event author (GitHub username)",
-		Required: false,
+		Name:  "author",
+		Usage: "Event author (GitHub username)",
 	}
 
 	eventEntityFlag = &cli.StringFlag{
-		Name:     "entity",
-		Usage:    "Event entity (company name or affiliated organization)",
-		Required: false,
+		Name:  "entity",
+		Usage: "Event entity (company name or affiliated organization)",
 	}
 
 	eventTypeFlag = &cli.StringFlag{
-		Name:     "type",
-		Usage:    fmt.Sprintf("Event type (%s)", strings.Join(data.EventTypes, ", ")),
-		Required: false,
+		Name:  "type",
+		Usage: "Event type (pr, issue, issue_comment, pr_review, fork)",
+	}
+
+	eventSinceFlag = &cli.StringFlag{
+		Name:  "since",
+		Usage: "Event since date (YYYY-MM-DD)",
 	}
 
 	eventMentionFlag = &cli.StringFlag{
-		Name:     "mention",
-		Usage:    "GitHub mention (like query on @username in body or assignments)",
-		Required: false,
+		Name:  "mention",
+		Usage: "GitHub mention (like query on @username in body or assignments)",
 	}
 
 	eventLabelFlag = &cli.StringFlag{
@@ -85,11 +71,20 @@ var (
 		Required: false,
 	}
 
+	queryLimitFlag = &cli.IntFlag{
+		Name:  "limit",
+		Usage: fmt.Sprintf("Limits number of result returned (default: %d)", queryResultLimitDefault),
+		Value: queryResultLimitDefault,
+	}
+
+	// commonFlags are shared across all query subcommands.
+	commonFlags = []cli.Flag{formatFlag, debugFlag}
+
 	queryCmd = &cli.Command{
 		Name:            "query",
 		HideHelpCommand: true,
 		Usage:           "Query imported data",
-		Flags:           []cli.Flag{formatFlag},
+		Flags:           commonFlags,
 		UsageText: `dctl query <subcommand> [options]
 
 Examples:
@@ -109,19 +104,19 @@ Examples:
 						Name:   "list",
 						Usage:  "List developers",
 						Action: cmdQueryDevelopers,
-						Flags: []cli.Flag{
+						Flags: append(commonFlags,
 							developerLikeQueryFlag,
 							queryLimitFlag,
-						},
+						),
 					},
 					{
 						Name:    "details",
 						Aliases: []string{"detail"},
 						Usage:   "Get specific developer details, identities and associated entities",
 						Action:  cmdQueryDeveloper,
-						Flags: []cli.Flag{
+						Flags: append(commonFlags,
 							ghUserNameQueryFlag,
-						},
+						),
 					},
 				},
 			},
@@ -134,19 +129,19 @@ Examples:
 						Name:   "list",
 						Usage:  "List entities (companies or organizations with which users are affiliated)",
 						Action: cmdQueryEntities,
-						Flags: []cli.Flag{
+						Flags: append(commonFlags,
 							entityLikeQueryFlag,
 							queryLimitFlag,
-						},
+						),
 					},
 					{
 						Name:    "details",
 						Aliases: []string{"detail"},
 						Usage:   "Get specific entity and its associated developers",
 						Action:  cmdQueryEntity,
-						Flags: []cli.Flag{
+						Flags: append(commonFlags,
 							entityNameQueryFlag,
-						},
+						),
 					},
 				},
 			},
@@ -159,9 +154,9 @@ Examples:
 						Aliases: []string{"repo"},
 						Usage:   "List GitHub org/user repositories",
 						Action:  cmdQueryOrgRepos,
-						Flags: []cli.Flag{
+						Flags: append(commonFlags,
 							orgNameFlag,
-						},
+						),
 					},
 				},
 			},
@@ -170,7 +165,7 @@ Examples:
 				Usage:   "List GitHub events",
 				Aliases: []string{"event"},
 				Action:  cmdQueryEvents,
-				Flags: []cli.Flag{
+				Flags: append(commonFlags,
 					orgNameFlag,
 					repoNameFlag,
 					eventTypeFlag,
@@ -180,14 +175,14 @@ Examples:
 					eventMentionFlag,
 					eventLabelFlag,
 					queryLimitFlag,
-				},
+				),
 			},
 		},
 	}
 )
 
 func optional(val string) *string {
-	if val == "" || val == "undefined" {
+	if val == "" {
 		return nil
 	}
 	return &val
@@ -249,12 +244,13 @@ func cmdQueryEvents(c *cli.Context) error {
 	q := &data.EventSearchCriteria{
 		Org:      optional(org),
 		Repo:     optional(repo),
+		Type:     optional(etype),
 		Username: optional(author),
 		Entity:   optional(entity),
-		Type:     optional(etype),
 		FromDate: optional(since),
 		Mention:  optional(mention),
 		Label:    optional(label),
+		Page:     1,
 		PageSize: limit,
 	}
 
@@ -262,11 +258,11 @@ func cmdQueryEvents(c *cli.Context) error {
 
 	list, err := data.SearchEvents(cfg.DB, q)
 	if err != nil {
-		return fmt.Errorf("failed to query events: %w", err)
+		return fmt.Errorf("error searching events: %w", err)
 	}
 
 	if err := encode(list); err != nil {
-		return fmt.Errorf("error encoding list: %+v: %w", list, err)
+		return fmt.Errorf("error encoding: %w", err)
 	}
 
 	return nil
@@ -279,16 +275,16 @@ func cmdQueryList[T any](c *cli.Context, flag *cli.StringFlag, fn func(*sql.DB, 
 		return cli.ShowSubcommandHelp(c)
 	}
 
+	cfg := getConfig(c)
+
 	limit := c.Int(queryLimitFlag.Name)
 	if limit == 0 || limit > queryResultLimitDefault {
 		limit = queryResultLimitDefault
 	}
 
-	cfg := getConfig(c)
-
 	list, err := fn(cfg.DB, val, limit)
 	if err != nil {
-		return fmt.Errorf("failed to query %s: %w", flag.Name, err)
+		return fmt.Errorf("error searching: %w", err)
 	}
 
 	return encode(list)
@@ -312,24 +308,19 @@ func cmdQueryDeveloper(c *cli.Context) error {
 
 	cfg := getConfig(c)
 
-	slog.Debug("query developer data", "name", val)
 	dev, err := data.GetDeveloper(cfg.DB, val)
 	if err != nil {
 		return fmt.Errorf("failed to query developer: %w", err)
 	}
-
-	if dev == nil || dev.Username == "" {
-		fmt.Fprint(os.Stdout, "{}")
-		return nil
+	if dev == nil {
+		return fmt.Errorf("developer not found: %s", val)
 	}
 
 	ctx := context.Background()
 	client := net.GetOAuthClient(ctx, token)
-
-	slog.Debug("query developer gh organizations", "name", dev.Username)
-	dev.Organizations, err = data.GetUserOrgs(ctx, client, dev.Username, queryResultLimitDefault)
+	dev.Organizations, err = data.GetUserOrgs(ctx, client, val, 0)
 	if err != nil {
-		return fmt.Errorf("failed to query orgs: %w", err)
+		slog.Warn("failed to get user orgs", "error", err)
 	}
 
 	if err := encode(dev); err != nil {
@@ -359,11 +350,11 @@ func cmdQueryOrgRepos(c *cli.Context) error {
 	client := net.GetOAuthClient(ctx, token)
 	list, err := data.GetOrgRepos(ctx, client, org)
 	if err != nil {
-		return fmt.Errorf("failed to query repos: %w", err)
+		return fmt.Errorf("failed to list org repos: %w", err)
 	}
 
 	if err := encode(list); err != nil {
-		return fmt.Errorf("error encoding: %+v: %w", list, err)
+		return fmt.Errorf("error encoding: %w", err)
 	}
 
 	return nil
