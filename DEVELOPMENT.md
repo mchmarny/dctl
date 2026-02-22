@@ -214,7 +214,6 @@ make server
 | Target | Description |
 |--------|-------------|
 | `make tidy` | Format code and update dependencies |
-| `make fmt-check` | Check code formatting (CI-friendly) |
 | `make upgrade` | Upgrade all dependencies |
 
 ### Utilities

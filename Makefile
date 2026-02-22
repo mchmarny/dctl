@@ -34,12 +34,6 @@ tidy: ## Formats code and updates Go module dependencies
 	go mod tidy
 	go mod vendor
 
-.PHONY: fmt-check
-fmt-check: ## Checks if code is formatted (CI-friendly, no modifications)
-	@UNFORMATTED=$$(gofmt -l $$(go list -f '{{.Dir}}' ./...)); \
-	test -z "$$UNFORMATTED" || (echo "Code not formatted. Run 'make tidy':" && echo "$$UNFORMATTED" && exit 1)
-	@echo "Code formatting check passed"
-
 .PHONY: upgrade
 upgrade: ## Upgrades all dependencies to latest versions
 	go get -u ./...
@@ -112,11 +106,6 @@ release: ## Runs the full release process with goreleaser
 .PHONY: server
 server: ## Starts local development server with debug logging
 	go run ./cmd/devpulse --debug s
-
-.PHONY: local
-local: build ## Copies latest binary to local bin directory
-	sudo cp $$(find dist -name devpulse -type f | head -1) /usr/local/bin/devpulse
-	sudo chmod 755 /usr/local/bin/devpulse
 
 .PHONY: bump-major
 bump-major: ## Bumps major version (1.2.3 → 2.0.0)
