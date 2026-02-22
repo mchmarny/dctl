@@ -27,9 +27,11 @@ var (
 	}
 
 	substituteCmd = &cli.Command{
-		Name:            "substitute",
-		Aliases:         []string{"sub"},
-		Usage:           "Create a global data substitution (e.g. standardize entity name)",
+		Name:    "substitute",
+		Aliases: []string{"sub"},
+		Usage:   "Create a global data substitution (e.g. standardize entity name)",
+		UsageText: `dctl substitute --type entity --old "Old Corp" --new "NEW CORP"   # rename entity
+   dctl sub --type entity --old "ACME INC" --new "ACME"              # standardize name`,
 		HideHelpCommand: true,
 		Action:          cmdSubstitutes,
 		Flags: []cli.Flag{

@@ -86,9 +86,14 @@ var (
 	}
 
 	queryCmd = &cli.Command{
-		Name:    "query",
-		Aliases: []string{"q"},
-		Usage:   "List data query operations",
+		Name:            "query",
+		HideHelpCommand: true,
+		Usage:           "Query imported data",
+		UsageText: `dctl query events --org NVIDIA --repo NVSentinel              # list events for a repo
+   dctl query events --org NVIDIA --type pr --since 2025-01-01   # PRs since date
+   dctl query developer list --org NVIDIA                        # list developers
+   dctl query entity list --org NVIDIA                           # list entities
+   dctl query org repos --org NVIDIA                             # list org repos`,
 		Subcommands: []*cli.Command{
 			{
 				Name:    "developer",
@@ -96,19 +101,18 @@ var (
 				Aliases: []string{"d"},
 				Subcommands: []*cli.Command{
 					{
-						Name:    "list",
-						Usage:   "List developers",
-						Aliases: []string{"l"},
-						Action:  cmdQueryDevelopers,
+						Name:   "list",
+						Usage:  "List developers",
+						Action: cmdQueryDevelopers,
 						Flags: []cli.Flag{
 							developerLikeQueryFlag,
 							queryLimitFlag,
 						},
 					},
 					{
-						Name:    "detail",
+						Name:    "details",
+						Aliases: []string{"detail"},
 						Usage:   "Get specific developer details, identities and associated entities",
-						Aliases: []string{"d"},
 						Action:  cmdQueryDeveloper,
 						Flags: []cli.Flag{
 							ghUserNameQueryFlag,
@@ -122,19 +126,18 @@ var (
 				Aliases: []string{"c"},
 				Subcommands: []*cli.Command{
 					{
-						Name:    "list",
-						Usage:   "List entities (companies or organizations with which users are affiliated)",
-						Aliases: []string{"l"},
-						Action:  cmdQueryEntities,
+						Name:   "list",
+						Usage:  "List entities (companies or organizations with which users are affiliated)",
+						Action: cmdQueryEntities,
 						Flags: []cli.Flag{
 							entityLikeQueryFlag,
 							queryLimitFlag,
 						},
 					},
 					{
-						Name:    "detail",
+						Name:    "details",
+						Aliases: []string{"detail"},
 						Usage:   "Get specific entity and its associated developers",
-						Aliases: []string{"d"},
 						Action:  cmdQueryEntity,
 						Flags: []cli.Flag{
 							entityNameQueryFlag,
@@ -143,14 +146,14 @@ var (
 				},
 			},
 			{
-				Name:    "org",
-				Usage:   "List GitHub org/user operations",
-				Aliases: []string{"o"},
+				Name:  "org",
+				Usage: "List GitHub org/user operations",
 				Subcommands: []*cli.Command{
 					{
-						Name:   "repos",
-						Usage:  "List GitHub org/user repositories",
-						Action: cmdQueryOrgRepos,
+						Name:    "repos",
+						Aliases: []string{"repo"},
+						Usage:   "List GitHub org/user repositories",
+						Action:  cmdQueryOrgRepos,
 						Flags: []cli.Flag{
 							orgNameFlag,
 						},
@@ -160,7 +163,7 @@ var (
 			{
 				Name:    "events",
 				Usage:   "List GitHub events",
-				Aliases: []string{"e"},
+				Aliases: []string{"event"},
 				Action:  cmdQueryEvents,
 				Flags: []cli.Flag{
 					orgNameFlag,
