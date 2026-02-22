@@ -58,7 +58,7 @@ func cmdSubstitutes(c *cli.Context) error {
 		return fmt.Errorf("failed to apply substitution: %w", err)
 	}
 
-	if err := getEncoder().Encode(res); err != nil {
+	if err := encode(res); err != nil {
 		return fmt.Errorf("error encoding result: %w", err)
 	}
 

@@ -168,7 +168,7 @@ func cmdImport(c *cli.Context) error {
 
 	res.Duration = time.Since(start).String()
 
-	if err := getEncoder().Encode(res); err != nil {
+	if err := encode(res); err != nil {
 		return fmt.Errorf("error encoding result: %w", err)
 	}
 
@@ -214,7 +214,7 @@ func cmdUpdate(_ *cli.Context, cfg *appConfig, token string, start time.Time) er
 		Duration:     time.Since(start).String(),
 	}
 
-	if err := getEncoder().Encode(res); err != nil {
+	if err := encode(res); err != nil {
 		return fmt.Errorf("error encoding result: %w", err)
 	}
 

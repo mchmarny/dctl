@@ -13,17 +13,23 @@ import (
 
 	"github.com/mchmarny/dctl/pkg/data"
 	urfave "github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	dirMode      = 0700
 	appConfigKey = "app-config"
+
+	formatJSON = "json"
+	formatYAML = "yaml"
 )
 
 var (
 	version = "v0.0.1-default"
 	commit  = ""
 	date    = ""
+
+	outputFormat = formatJSON
 
 	debugFlag = &urfave.BoolFlag{
 		Name:  "debug",
@@ -33,6 +39,12 @@ var (
 	dbFilePathFlag = &urfave.StringFlag{
 		Name:  "db",
 		Usage: "Path to the Sqlite database file",
+	}
+
+	formatFlag = &urfave.StringFlag{
+		Name:  "format",
+		Usage: "Output format [json, yaml]",
+		Value: formatJSON,
 	}
 )
 
@@ -59,13 +71,16 @@ func getConfig(c *urfave.Context) *appConfig {
 
 func newApp() *urfave.App {
 	return &urfave.App{
-		Name:     "dctl",
-		Version:  fmt.Sprintf("%s (%s - %s)", version, commit, date),
-		Compiled: time.Now(),
-		Usage:    "CLI for quick insight into the GitHub org/repo activity",
+		Name:                 "dctl",
+		Version:              fmt.Sprintf("%s (%s - %s)", version, commit, date),
+		Compiled:             time.Now(),
+		EnableBashCompletion: true,
+		HideHelpCommand:      true,
+		Usage:                "CLI for quick insight into the GitHub org/repo activity",
 		Flags: []urfave.Flag{
 			debugFlag,
 			dbFilePathFlag,
+			formatFlag,
 		},
 		Commands: []*urfave.Command{
 			authCmd,
@@ -77,6 +92,11 @@ func newApp() *urfave.App {
 		Before: func(c *urfave.Context) error {
 			if c.Bool(debugFlag.Name) {
 				initLogging(true)
+			}
+
+			f := c.String(formatFlag.Name)
+			if f == formatYAML || f == "yml" {
+				outputFormat = formatYAML
 			}
 
 			dbPath := c.String(dbFilePathFlag.Name)
@@ -139,8 +159,11 @@ func getHomeDir() string {
 	return dirPath
 }
 
-func getEncoder() *json.Encoder {
+func encode(v any) error {
+	if outputFormat == formatYAML {
+		return yaml.NewEncoder(os.Stdout).Encode(v)
+	}
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "  ")
-	return e
+	return e.Encode(v)
 }

@@ -89,16 +89,20 @@ var (
 		Name:            "query",
 		HideHelpCommand: true,
 		Usage:           "Query imported data",
-		UsageText: `dctl query events --org NVIDIA --repo NVSentinel              # list events for a repo
-   dctl query events --org NVIDIA --type pr --since 2025-01-01   # PRs since date
-   dctl query developer list --org NVIDIA                        # list developers
-   dctl query entity list --org NVIDIA                           # list entities
-   dctl query org repos --org NVIDIA                             # list org repos`,
+		UsageText: `dctl query <subcommand> [options]
+
+Examples:
+  dctl query events --org <ORG> --repo <REPO>                  # list events for a repo
+  dctl query events --org <ORG> --type pr --since 2025-01-01   # PRs since date
+  dctl query developer list --org <ORG>                        # list developers
+  dctl query entity list --org <ORG>                           # list entities
+  dctl query org repos --org <ORG>                             # list org repos`,
 		Subcommands: []*cli.Command{
 			{
-				Name:    "developer",
-				Usage:   "List developer operations",
-				Aliases: []string{"d"},
+				Name:            "developers",
+				Aliases:         []string{"developer", "dev"},
+				HideHelpCommand: true,
+				Usage:           "List developer operations",
 				Subcommands: []*cli.Command{
 					{
 						Name:   "list",
@@ -121,9 +125,9 @@ var (
 				},
 			},
 			{
-				Name:    "entity",
+				Name:    "entities",
 				Usage:   "List entity operations",
-				Aliases: []string{"c"},
+				Aliases: []string{"entity"},
 				Subcommands: []*cli.Command{
 					{
 						Name:   "list",
@@ -201,7 +205,7 @@ func cmdQueryEntity(c *cli.Context) error {
 		return fmt.Errorf("failed to query entity: %w", err)
 	}
 
-	if err := getEncoder().Encode(ent); err != nil {
+	if err := encode(ent); err != nil {
 		return fmt.Errorf("error encoding: %+v: %w", ent, err)
 	}
 
@@ -258,7 +262,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		return fmt.Errorf("failed to query events: %w", err)
 	}
 
-	if err := getEncoder().Encode(list); err != nil {
+	if err := encode(list); err != nil {
 		return fmt.Errorf("error encoding list: %+v: %w", list, err)
 	}
 
@@ -283,7 +287,7 @@ func cmdQueryList[T any](c *cli.Context, flag *cli.StringFlag, fn func(*sql.DB, 
 		return fmt.Errorf("failed to query %s: %w", flag.Name, err)
 	}
 
-	return getEncoder().Encode(list)
+	return encode(list)
 }
 
 func cmdQueryEntities(c *cli.Context) error {
@@ -323,7 +327,7 @@ func cmdQueryDeveloper(c *cli.Context) error {
 		return fmt.Errorf("failed to query orgs: %w", err)
 	}
 
-	if err := getEncoder().Encode(dev); err != nil {
+	if err := encode(dev); err != nil {
 		return fmt.Errorf("error encoding: %+v: %w", dev, err)
 	}
 
@@ -352,7 +356,7 @@ func cmdQueryOrgRepos(c *cli.Context) error {
 		return fmt.Errorf("failed to query repos: %w", err)
 	}
 
-	if err := getEncoder().Encode(list); err != nil {
+	if err := encode(list); err != nil {
 		return fmt.Errorf("error encoding: %+v: %w", list, err)
 	}
 
