@@ -2,7 +2,7 @@
 
 All data is stored locally in an embedded [SQLite](https://www.sqlite.org/) database. Subsequent imports only download new data since the last run.
 
-> All commands assume you have already [authenticated](../README.md#1-authenticate).
+> All commands assume you have already [authenticated](../README.md#1-authenticate). Importing private repositories requires the default `repo` scope (omit `--public` during `devpulse auth`).
 
 ## Import all (recommended)
 

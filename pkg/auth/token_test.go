@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetDeviceCode_EmptyClientID(t *testing.T) {
-	_, err := GetDeviceCode("")
+	_, err := GetDeviceCode("", "repo")
 	assert.Error(t, err)
 }
 

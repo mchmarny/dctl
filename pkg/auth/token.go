@@ -14,7 +14,6 @@ import (
 const (
 	deviceCodeURL = "https://github.com/login/device/code"
 	accessCodeURL = "https://github.com/login/oauth/access_token"
-	deviceScopes  = "" // no scopes requested (read-only public access)
 	grantType     = "urn:ietf:params:oauth:grant-type:device_code"
 )
 
@@ -43,7 +42,7 @@ type AccessTokenResponse struct {
 	Scope       string `json:"scope,omitempty"`
 }
 
-func GetDeviceCode(clientID string) (*DeviceCode, error) {
+func GetDeviceCode(clientID, scope string) (*DeviceCode, error) {
 	if clientID == "" {
 		return nil, errors.New("clientID is required")
 	}
@@ -55,7 +54,9 @@ func GetDeviceCode(clientID string) (*DeviceCode, error) {
 
 	q := req.URL.Query()
 	q.Add("client_id", clientID)
-	q.Add("scope", deviceScopes)
+	if scope != "" {
+		q.Add("scope", scope)
+	}
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")

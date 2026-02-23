@@ -53,10 +53,11 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ### 1. Authenticate
 
-`devpulse` uses GitHub's device flow for OAuth. The token is read-only (no scopes requested) and stored in your OS keychain.
+`devpulse` uses GitHub's device flow for OAuth. By default the token requests the `repo` scope for private repository access. Use `--public` to skip the `repo` scope when you only work with public repos. The token is stored in your OS keychain.
 
 ```shell
-devpulse auth
+devpulse auth            # private + public repo access (default)
+devpulse auth --public   # public repo access only
 ```
 
 ### 2. Import data

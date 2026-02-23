@@ -16,19 +16,31 @@ const (
 	tokenFileName  = "github_token"
 	keyringService = "devpulse"
 	keyringUser    = "github_token"
+	scopeRepo      = "repo" // OAuth scope for private repository access
 )
 
 var (
+	publicFlag = &cli.BoolFlag{
+		Name:  "public",
+		Usage: "Authenticate for public repositories only (no private repo access)",
+	}
+
 	authCmd = &cli.Command{
 		Name:            "auth",
 		HideHelpCommand: true,
 		Usage:           "Authenticate to GitHub to obtain an access token",
+		Flags:           []cli.Flag{publicFlag},
 		Action:          cmdInitAuthFlow,
 	}
 )
 
 func cmdInitAuthFlow(c *cli.Context) error {
-	code, err := auth.GetDeviceCode(clientID)
+	scope := scopeRepo
+	if c.Bool(publicFlag.Name) {
+		scope = ""
+	}
+
+	code, err := auth.GetDeviceCode(clientID, scope)
 	if err != nil {
 		return fmt.Errorf("getting device code: %w", err)
 	}
