@@ -93,7 +93,7 @@ const (
 		  AND e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
-		  AND e.date >= ?
+		  AND e.created_at >= ?
 		GROUP BY month
 		ORDER BY month
 	`
@@ -110,6 +110,21 @@ const (
 		  AND e.created_at IS NOT NULL
 		  AND e.state = 'closed'
 		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.created_at >= ?
+		GROUP BY month
+		ORDER BY month
+	`
+
+	// Forks and activity: monthly fork count and total event count.
+	selectForksAndActivitySQL = `SELECT
+			substr(e.date, 1, 7) AS month,
+			SUM(CASE WHEN e.type = 'fork' THEN 1 ELSE 0 END) AS forks,
+			COUNT(*) AS events
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
@@ -293,4 +308,43 @@ func GetTimeToMerge(db *sql.DB, org, repo, entity *string, months int) (*Velocit
 
 func GetTimeToClose(db *sql.DB, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	return getVelocitySeries(db, selectTimeToCloseSQL, org, repo, entity, months)
+}
+
+type ForksAndActivitySeries struct {
+	Months []string `json:"months" yaml:"months"`
+	Forks  []int    `json:"forks" yaml:"forks"`
+	Events []int    `json:"events" yaml:"events"`
+}
+
+func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*ForksAndActivitySeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectForksAndActivitySQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query forks and activity: %w", err)
+	}
+	defer rows.Close()
+
+	s := &ForksAndActivitySeries{
+		Months: make([]string, 0),
+		Forks:  make([]int, 0),
+		Events: make([]int, 0),
+	}
+
+	for rows.Next() {
+		var month string
+		var forks, events int
+		if err := rows.Scan(&month, &forks, &events); err != nil {
+			return nil, fmt.Errorf("failed to scan forks and activity row: %w", err)
+		}
+		s.Months = append(s.Months, month)
+		s.Forks = append(s.Forks, forks)
+		s.Events = append(s.Events, events)
+	}
+
+	return s, nil
 }

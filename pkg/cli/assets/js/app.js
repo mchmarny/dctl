@@ -110,6 +110,7 @@ let timeToCloseChart;
 let releaseCadenceChart;
 let reputationChart;
 let reputationChartURL;
+let forksAndActivityChart;
 let searchItem;
 
 const searchPrefixes = ['org', 'repo', 'entity'];
@@ -196,6 +197,7 @@ function loadAllCharts(months, org, repo, entity) {
     loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
     loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-close-chart', 'timeToClose');
+    loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
     loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}&e=${entity}`);
@@ -391,6 +393,9 @@ function resetCharts() {
     }
     if (reputationChart) {
         reputationChart.destroy();
+    }
+    if (forksAndActivityChart) {
+        forksAndActivityChart.destroy();
     }
 }
 
@@ -830,6 +835,50 @@ function loadVelocityChart(url, canvasId, key) {
         });
         if (key === 'timeToMerge') { timeToMergeChart = chart; }
         if (key === 'timeToClose') { timeToCloseChart = chart; }
+    });
+}
+
+function loadForksAndActivityChart(url) {
+    $.get(url, function (data) {
+        forksAndActivityChart = new Chart($("#forks-activity-chart")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Forks',
+                    data: data.forks,
+                    borderColor: colors[0],
+                    backgroundColor: colors[0] + '20',
+                    borderWidth: 3,
+                    fill: true,
+                    yAxisID: 'y',
+                    tension: 0.3
+                }, {
+                    label: 'Events',
+                    data: data.events,
+                    borderColor: colors[3],
+                    borderWidth: 3,
+                    fill: false,
+                    yAxisID: 'y1',
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, position: 'left', ticks: { precision: 0, font: { size: 14 } },
+                        title: { display: true, text: 'Forks' } },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
+                        ticks: { precision: 0, font: { size: 14 } },
+                        title: { display: true, text: 'Events' } }
+                }
+            }
+        });
     });
 }
 

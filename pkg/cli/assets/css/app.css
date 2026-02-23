@@ -369,11 +369,7 @@ fieldset {
   margin-top: 20px;
 }
 
-.page-content .grid > article:first-child {
-  grid-column: 1 / -1;
-}
-
-.page-content .grid > article:last-child {
+.page-content .grid > article.grid-full-width {
   grid-column: 1 / -1;
 }
 
@@ -654,8 +650,8 @@ a.link {
 }
 
 .ac-item {
-  padding: 8px 15px;
-  font-size: 1rem;
+  padding: 12px 15px;
+  font-size: 1.25rem;
   color: var(--dark-color);
   cursor: pointer;
   border-bottom: 1px solid var(--light-color);

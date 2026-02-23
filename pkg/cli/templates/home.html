@@ -63,6 +63,17 @@
         <article>
             <div class="tbl">
                 <div class="content-header">
+                    Repository Metadata
+                </div>
+                <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
+                    <span class="insight-label">No metadata imported yet</span>
+                </div>
+                <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
                     Monthly Activity
                 </div>
                 <div class="tbl-chart tbl-home">
@@ -178,16 +189,15 @@
         <article>
             <div class="tbl">
                 <div class="content-header">
-                    Repository Metadata
+                    Forks &amp; Activity
                 </div>
-                <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
-                    <span class="insight-label">No metadata imported yet</span>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="forks-activity-chart"></canvas>
                 </div>
-                <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
+                <span class="insight-desc">Monthly fork count vs total events (PRs, issues, reviews, comments). Correlation may indicate interest-driven development.</span>
             </div>
         </article>
-
-        <article>
+        <article class="grid-full-width">
             <div class="tbl bordered">
                 <div class="tbl-header">
                     <div class="content-header">
