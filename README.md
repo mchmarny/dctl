@@ -60,6 +60,12 @@ devpulse auth            # private + public repo access (default)
 devpulse auth --public   # public repo access only
 ```
 
+Alternatively, set `GITHUB_TOKEN` to skip the auth command entirely:
+
+```shell
+export GITHUB_TOKEN=ghp_...
+```
+
 ### 2. Import data
 
 Import everything for an org (events, affiliations, metadata, releases):

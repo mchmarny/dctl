@@ -29,12 +29,14 @@ var (
 		Name:            "auth",
 		HideHelpCommand: true,
 		Usage:           "Authenticate to GitHub to obtain an access token",
-		Flags:           []cli.Flag{publicFlag},
+		Flags:           []cli.Flag{publicFlag, debugFlag},
 		Action:          cmdInitAuthFlow,
 	}
 )
 
 func cmdInitAuthFlow(c *cli.Context) error {
+	applyFlags(c)
+
 	scope := scopeRepo
 	if c.Bool(publicFlag.Name) {
 		scope = ""
@@ -81,6 +83,11 @@ func saveGitHubToken(token string) error {
 }
 
 func getGitHubToken() (string, error) {
+	// Environment variable takes highest precedence
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		return token, nil
+	}
+
 	// Try keychain first
 	token, err := keyring.Get(keyringService, keyringUser)
 	if err == nil && token != "" {

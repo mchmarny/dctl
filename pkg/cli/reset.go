@@ -15,10 +15,12 @@ var resetCmd = &cli.Command{
 	Name:            "reset",
 	Usage:           "Delete all imported data and start fresh",
 	HideHelpCommand: true,
+	Flags:           []cli.Flag{debugFlag},
 	Action:          cmdReset,
 }
 
 func cmdReset(c *cli.Context) error {
+	applyFlags(c)
 	cfg := getConfig(c)
 
 	fmt.Printf("This will permanently delete all data in %s\n", cfg.DBPath)

@@ -56,6 +56,7 @@ Examples:
 			monthsFlag,
 			freshFlag,
 			formatFlag,
+			debugFlag,
 		},
 	}
 )

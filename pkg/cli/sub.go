@@ -39,6 +39,7 @@ var (
 			oldValFlag,
 			newValFlag,
 			formatFlag,
+			debugFlag,
 		},
 	}
 )

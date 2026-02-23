@@ -57,6 +57,7 @@ var (
 )
 
 func cmdStartServer(c *cli.Context) error {
+	applyFlags(c)
 	cfg := getConfig(c)
 	port := c.Int(portFlag.Name)
 	address := fmt.Sprintf("127.0.0.1:%d", port)
