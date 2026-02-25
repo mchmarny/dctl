@@ -206,3 +206,34 @@ func GetReleaseCadence(db *sql.DB, org, repo *string, months int) (*ReleaseCaden
 
 	return s, nil
 }
+
+func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDownloadsSeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectReleaseDownloadsSQL, org, repo, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query release downloads: %w", err)
+	}
+	defer rows.Close()
+
+	s := &ReleaseDownloadsSeries{
+		Months:    make([]string, 0),
+		Downloads: make([]int, 0),
+	}
+
+	for rows.Next() {
+		var month string
+		var downloads int
+		if err := rows.Scan(&month, &downloads); err != nil {
+			return nil, fmt.Errorf("failed to scan release downloads row: %w", err)
+		}
+		s.Months = append(s.Months, month)
+		s.Downloads = append(s.Downloads, downloads)
+	}
+
+	return s, nil
+}
