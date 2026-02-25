@@ -77,6 +77,11 @@ func ImportReleases(dbPath, token, owner, repo string) error {
 		return fmt.Errorf("error preparing release insert: %w", err)
 	}
 
+	assetStmt, err := db.Prepare(insertReleaseAssetSQL)
+	if err != nil {
+		return fmt.Errorf("error preparing release asset insert: %w", err)
+	}
+
 	opt := &github.ListOptions{PerPage: pageSizeDefault, Page: 1}
 
 	for {
@@ -113,6 +118,23 @@ func ImportReleases(dbPath, token, owner, repo string) error {
 			); err != nil {
 				rollbackTransaction(tx)
 				return fmt.Errorf("error inserting release %s: %w", tag, err)
+			}
+
+			for _, a := range r.Assets {
+				aName := a.GetName()
+				if aName == "" {
+					continue
+				}
+				ct := a.GetContentType()
+				sz := a.GetSize()
+				dc := a.GetDownloadCount()
+				if _, err := tx.Stmt(assetStmt).Exec(
+					owner, repo, tag, aName, ct, sz, dc,
+					ct, sz, dc,
+				); err != nil {
+					rollbackTransaction(tx)
+					return fmt.Errorf("error inserting release asset %s/%s: %w", tag, aName, err)
+				}
 			}
 		}
 
