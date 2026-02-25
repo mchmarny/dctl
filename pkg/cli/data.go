@@ -339,6 +339,19 @@ func insightsReleaseDownloadsAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsReleaseDownloadsByTagAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := data.GetReleaseDownloadsByTag(db, p.org, p.repo, p.months)
+		if err != nil {
+			slog.Error("failed to get release downloads by tag", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying release downloads by tag")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsTimeToMergeAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
