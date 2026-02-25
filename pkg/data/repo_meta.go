@@ -77,7 +77,7 @@ func ImportRepoMeta(dbPath, token, owner, repo string) error {
 		return fmt.Errorf("error upserting repo meta %s/%s: %w", owner, repo, err)
 	}
 
-	slog.Debug("imported repo metadata", "org", owner, "repo", repo)
+	slog.Debug("metadata done", "org", owner, "repo", repo)
 	return nil
 }
 
@@ -95,7 +95,7 @@ func ImportAllRepoMeta(dbPath, token string) error {
 
 	for _, r := range list {
 		if err := ImportRepoMeta(dbPath, token, r.Org, r.Repo); err != nil {
-			slog.Error("error importing repo metadata", "org", r.Org, "repo", r.Repo, "error", err)
+			slog.Error("metadata failed", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 	}
 

@@ -229,7 +229,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		limit = queryResultLimitDefault
 	}
 
-	slog.Debug("query events",
+	slog.Debug("events",
 		"org", org,
 		"repo", repo,
 		"author", author,

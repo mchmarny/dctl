@@ -154,7 +154,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	// Log resume state so users understand what period is being imported.
 	for _, t := range EventTypes {
 		s := imp.state[t]
-		slog.Info("import state",
+		slog.Info("state",
 			"repo", owner+"/"+repo,
 			"type", t,
 			"since", s.Since.Format("2006-01-02"),
@@ -179,7 +179,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	wg.Wait()
 
 	for _, err := range importErrors {
-		slog.Error("import error", "error", err)
+		slog.Error("error", "error", err)
 	}
 
 	if err := imp.flush(); err != nil {
@@ -190,7 +190,7 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 	for _, v := range imp.counts {
 		total += v
 	}
-	slog.Info("import complete",
+	slog.Info("complete",
 		"repo", owner+"/"+repo,
 		"total_events", total,
 		"developers", len(imp.users),
@@ -394,7 +394,7 @@ func (e *EventImporter) flush() error {
 	}
 
 	e.flushed += len(events)
-	slog.Info("events imported",
+	slog.Info("done",
 		"repo", e.owner+"/"+e.repo,
 		"batch", len(events),
 		"total", e.flushed,

@@ -126,7 +126,7 @@ func cmdImport(c *cli.Context) error {
 
 	// 1. events
 	for _, r := range repos {
-		slog.Info("importing events", "org", org, "repo", r)
+		slog.Info("events", "org", org, "repo", r)
 		m, summary, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
 		if importErr != nil {
 			slog.Error("failed to import events", "org", org, "repo", r, "error", importErr)
@@ -141,7 +141,7 @@ func cmdImport(c *cli.Context) error {
 	}
 
 	// 2. affiliations
-	slog.Info("importing affiliations")
+	slog.Info("affiliations")
 	a, err := importAffiliations(cfg.DB)
 	if err != nil {
 		slog.Error("failed to import affiliations", "error", err)
@@ -150,7 +150,7 @@ func cmdImport(c *cli.Context) error {
 	}
 
 	// 3. substitutions
-	slog.Info("applying substitutions")
+	slog.Info("substitutions")
 	sub, err := data.ApplySubstitutions(cfg.DB)
 	if err != nil {
 		slog.Error("failed to apply substitutions", "error", err)
@@ -162,7 +162,7 @@ func cmdImport(c *cli.Context) error {
 	importRepoExtras(cfg.DBPath, token, org, repos)
 
 	// 5. reputation (shallow — local DB only)
-	slog.Info("computing reputation scores")
+	slog.Info("reputation")
 	repResult, err := data.ImportReputation(cfg.DB)
 	if err != nil {
 		slog.Error("failed to compute reputation scores", "error", err)
@@ -180,7 +180,7 @@ func cmdImport(c *cli.Context) error {
 }
 
 func cmdUpdate(_ *cli.Context, cfg *appConfig, token string, start time.Time) error {
-	slog.Info("no org specified, updating all previously imported data")
+	slog.Info("updating all previously imported data")
 
 	m, err := data.UpdateEvents(cfg.DBPath, token)
 	if err != nil {
@@ -227,13 +227,13 @@ func cmdUpdate(_ *cli.Context, cfg *appConfig, token string, start time.Time) er
 
 func importRepoExtras(dbPath, token, org string, repos []string) {
 	for _, r := range repos {
-		slog.Info("importing metadata", "org", org, "repo", r)
+		slog.Info("metadata", "org", org, "repo", r)
 		if err := data.ImportRepoMeta(dbPath, token, org, r); err != nil {
 			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", err)
 		}
 	}
 	for _, r := range repos {
-		slog.Info("importing releases", "org", org, "repo", r)
+		slog.Info("releases", "org", org, "repo", r)
 		if err := data.ImportReleases(dbPath, token, org, r); err != nil {
 			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
 		}

@@ -177,7 +177,7 @@ func ImportReleases(dbPath, token, owner, repo string) error {
 			return fmt.Errorf("error committing release tx: %w", err)
 		}
 
-		slog.Debug("imported releases", "org", owner, "repo", repo, "count", len(releases))
+		slog.Debug("releases done", "org", owner, "repo", repo, "count", len(releases))
 
 		if resp.NextPage == 0 {
 			break
@@ -202,7 +202,7 @@ func ImportAllReleases(dbPath, token string) error {
 
 	for _, r := range list {
 		if err := ImportReleases(dbPath, token, r.Org, r.Repo); err != nil {
-			slog.Error("error importing releases", "org", r.Org, "repo", r.Repo, "error", err)
+			slog.Error("releases failed", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 	}
 

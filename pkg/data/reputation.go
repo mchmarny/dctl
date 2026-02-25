@@ -135,11 +135,11 @@ func ImportReputation(db *sql.DB) (*ReputationResult, error) {
 	}
 
 	if len(usernames) == 0 {
-		slog.Info("no stale reputation scores to update")
+		slog.Info("reputation up to date")
 		return &ReputationResult{}, nil
 	}
 
-	slog.Info("computing shallow reputation scores", "users", len(usernames))
+	slog.Info("scoring reputation", "users", len(usernames))
 
 	since := time.Now().UTC().AddDate(0, -EventAgeMonthsDefault, 0).Format("2006-01-02")
 
@@ -187,7 +187,7 @@ func ImportReputation(db *sql.DB) (*ReputationResult, error) {
 		return nil, fmt.Errorf("error committing reputation tx: %w", err)
 	}
 
-	slog.Info("shallow reputation scores computed", "updated", res.Updated)
+	slog.Info("reputation done", "updated", res.Updated)
 
 	return res, nil
 }

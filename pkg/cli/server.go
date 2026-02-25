@@ -76,12 +76,12 @@ func cmdStartServer(c *cli.Context) error {
 
 	go func() {
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("error starting server", "error", err)
+			slog.Error("failed to start", "error", err)
 		}
 	}()
 
 	url := fmt.Sprintf("http://%s", address)
-	slog.Info("server started", "address", url)
+	slog.Info("started", "address", url)
 
 	if !c.Bool(noBrowserFlag.Name) {
 		openBrowser(url)
@@ -93,7 +93,7 @@ func cmdStartServer(c *cli.Context) error {
 	defer cancel()
 
 	if err := s.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		slog.Error("error shutting down server", "error", err)
+		slog.Error("shutdown failed", "error", err)
 	}
 	return nil
 }
