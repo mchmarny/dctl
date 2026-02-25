@@ -31,12 +31,35 @@ const (
 		GROUP BY month
 		ORDER BY month
 	`
+
+	insertReleaseAssetSQL = `INSERT INTO release_asset (org, repo, tag, name, content_type, size, download_count)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(org, repo, tag, name) DO UPDATE SET
+			content_type = ?, size = ?, download_count = ?
+	`
+
+	selectReleaseDownloadsSQL = `SELECT
+			substr(r.published_at, 1, 7) AS month,
+			SUM(ra.download_count) AS downloads
+		FROM release_asset ra
+		JOIN release r ON ra.org = r.org AND ra.repo = r.repo AND ra.tag = r.tag
+		WHERE ra.org = COALESCE(?, ra.org)
+		  AND ra.repo = COALESCE(?, ra.repo)
+		  AND r.published_at >= ?
+		GROUP BY month
+		ORDER BY month
+	`
 )
 
 type ReleaseCadenceSeries struct {
 	Months []string `json:"months" yaml:"months"`
 	Total  []int    `json:"total" yaml:"total"`
 	Stable []int    `json:"stable" yaml:"stable"`
+}
+
+type ReleaseDownloadsSeries struct {
+	Months    []string `json:"months" yaml:"months"`
+	Downloads []int    `json:"downloads" yaml:"downloads"`
 }
 
 func ImportReleases(dbPath, token, owner, repo string) error {
