@@ -128,6 +128,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /data/insights/forks-and-activity", insightsForksAndActivityAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/repo-meta", insightsRepoMetaAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/release-cadence", insightsReleaseCadenceAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/release-downloads", insightsReleaseDownloadsAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/reputation", insightsReputationAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/reputation/user", reputationUserAPIHandler(db))
 

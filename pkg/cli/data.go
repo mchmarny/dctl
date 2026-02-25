@@ -326,6 +326,19 @@ func insightsReleaseCadenceAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsReleaseDownloadsAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := data.GetReleaseDownloads(db, p.org, p.repo, p.months)
+		if err != nil {
+			slog.Error("failed to get release downloads", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying release downloads")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsTimeToMergeAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
