@@ -157,6 +157,9 @@ func applyFlags(c *urfave.Context) {
 	if c.Bool(debugFlag.Name) {
 		initLogging(true)
 	}
+	if c.Command != nil && c.Command.Name != "" {
+		slog.SetDefault(slog.Default().WithGroup(c.Command.Name))
+	}
 	f := c.String(formatFlag.Name)
 	if f == formatYAML || f == "yml" {
 		outputFormat = formatYAML

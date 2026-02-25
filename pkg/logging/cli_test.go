@@ -96,18 +96,6 @@ func TestCLIHandler_IncludesAttributes(t *testing.T) {
 	assert.Contains(t, output, "key2=value2")
 }
 
-func TestGetLogPrefix(t *testing.T) {
-	t.Run("default", func(t *testing.T) {
-		t.Setenv(LogPrefixEnvVar, "")
-		assert.Equal(t, "devpulse", getLogPrefix())
-	})
-
-	t.Run("custom", func(t *testing.T) {
-		t.Setenv(LogPrefixEnvVar, "myapp")
-		assert.Equal(t, "myapp", getLogPrefix())
-	})
-}
-
 func TestCLIHandler_WithAttrs(t *testing.T) {
 	var buf bytes.Buffer
 	handler := NewCLIHandler(&buf, slog.LevelInfo)
@@ -123,11 +111,28 @@ func TestCLIHandler_WithGroup(t *testing.T) {
 	var buf bytes.Buffer
 	handler := NewCLIHandler(&buf, slog.LevelInfo)
 
-	result := handler.WithGroup("test-group")
-	assert.Equal(t, handler, result)
+	grouped := handler.WithGroup("import")
+	require.NotEqual(t, handler, grouped)
 
-	result = handler.WithGroup("")
-	assert.Equal(t, handler, result)
+	logger := slog.New(grouped)
+	logger.Info("test message")
+
+	output := buf.String()
+	assert.Contains(t, output, "[import]")
+	assert.Contains(t, output, "test message")
+}
+
+func TestCLIHandler_WithGroup_Empty(t *testing.T) {
+	var buf bytes.Buffer
+	handler := NewCLIHandler(&buf, slog.LevelInfo)
+
+	grouped := handler.WithGroup("")
+	logger := slog.New(grouped)
+	logger.Info("no prefix")
+
+	output := buf.String()
+	assert.NotContains(t, output, "] no prefix")
+	assert.Contains(t, output, "no prefix")
 }
 
 func TestSetDefaultCLILogger(t *testing.T) {
@@ -166,13 +171,13 @@ func TestParseLogLevel(t *testing.T) {
 }
 
 func TestCLIHandler_PrefixInOutput(t *testing.T) {
-	t.Setenv(LogPrefixEnvVar, "")
 	var buf bytes.Buffer
 	handler := NewCLIHandler(&buf, slog.LevelInfo)
-	logger := slog.New(handler)
+	logger := slog.New(handler).WithGroup("server")
 
 	logger.Info("hello")
 
 	output := buf.String()
-	assert.True(t, strings.Contains(output, "[devpulse]"))
+	assert.True(t, strings.Contains(output, "[server]"))
+	assert.True(t, strings.Contains(output, "hello"))
 }

@@ -15,19 +15,11 @@ const (
 	colorRed   = "\033[31m"
 )
 
-const LogPrefixEnvVar = "DEVPULSE_LOG_PREFIX"
-
-func getLogPrefix() string {
-	if prefix := os.Getenv(LogPrefixEnvVar); prefix != "" {
-		return prefix
-	}
-	return "devpulse"
-}
-
 // CLIHandler is a custom slog.Handler for CLI output.
 type CLIHandler struct {
 	writer io.Writer
 	level  slog.Level
+	prefix string
 }
 
 func NewCLIHandler(w io.Writer, level slog.Level) *CLIHandler {
@@ -42,7 +34,10 @@ func (h *CLIHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *CLIHandler) Handle(_ context.Context, r slog.Record) error {
-	msg := "[" + getLogPrefix() + "] " + r.Message
+	msg := r.Message
+	if h.prefix != "" {
+		msg = "[" + h.prefix + "] " + msg
+	}
 
 	if r.NumAttrs() > 0 {
 		var attrs []string
@@ -69,8 +64,12 @@ func (h *CLIHandler) WithAttrs(_ []slog.Attr) slog.Handler {
 	return h
 }
 
-func (h *CLIHandler) WithGroup(_ string) slog.Handler {
-	return h
+func (h *CLIHandler) WithGroup(name string) slog.Handler {
+	return &CLIHandler{
+		writer: h.writer,
+		level:  h.level,
+		prefix: name,
+	}
 }
 
 func NewCLILogger(level string) *slog.Logger {
