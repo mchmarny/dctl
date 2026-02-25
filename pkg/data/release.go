@@ -49,6 +49,36 @@ const (
 		GROUP BY month
 		ORDER BY month
 	`
+
+	selectReleaseDownloadsByTagSQL = `WITH recent AS (
+			SELECT r.org, r.repo, r.tag, r.published_at
+			FROM release r
+			WHERE r.org = COALESCE(?, r.org)
+			  AND r.repo = COALESCE(?, r.repo)
+			  AND r.published_at >= ?
+			ORDER BY r.published_at DESC
+			LIMIT 9
+		), top AS (
+			SELECT ra.org, ra.repo, ra.tag, r.published_at
+			FROM release_asset ra
+			JOIN release r ON ra.org = r.org AND ra.repo = r.repo AND ra.tag = r.tag
+			WHERE ra.org = COALESCE(?, ra.org)
+			  AND ra.repo = COALESCE(?, ra.repo)
+			  AND r.published_at >= ?
+			GROUP BY ra.org, ra.repo, ra.tag
+			ORDER BY SUM(ra.download_count) DESC
+			LIMIT 1
+		), combined AS (
+			SELECT org, repo, tag, published_at FROM recent
+			UNION
+			SELECT org, repo, tag, published_at FROM top
+		)
+		SELECT c.tag, COALESCE(SUM(ra.download_count), 0) AS downloads
+		FROM combined c
+		LEFT JOIN release_asset ra ON c.org = ra.org AND c.repo = ra.repo AND c.tag = ra.tag
+		GROUP BY c.tag, c.published_at
+		ORDER BY c.published_at
+	`
 )
 
 type ReleaseCadenceSeries struct {
@@ -59,6 +89,11 @@ type ReleaseCadenceSeries struct {
 
 type ReleaseDownloadsSeries struct {
 	Months    []string `json:"months" yaml:"months"`
+	Downloads []int    `json:"downloads" yaml:"downloads"`
+}
+
+type ReleaseDownloadsByTagSeries struct {
+	Tags      []string `json:"tags" yaml:"tags"`
 	Downloads []int    `json:"downloads" yaml:"downloads"`
 }
 
@@ -232,6 +267,37 @@ func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDow
 			return nil, fmt.Errorf("failed to scan release downloads row: %w", err)
 		}
 		s.Months = append(s.Months, month)
+		s.Downloads = append(s.Downloads, downloads)
+	}
+
+	return s, nil
+}
+
+func GetReleaseDownloadsByTag(db *sql.DB, org, repo *string, months int) (*ReleaseDownloadsByTagSeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectReleaseDownloadsByTagSQL, org, repo, since, org, repo, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query release downloads by tag: %w", err)
+	}
+	defer rows.Close()
+
+	s := &ReleaseDownloadsByTagSeries{
+		Tags:      make([]string, 0),
+		Downloads: make([]int, 0),
+	}
+
+	for rows.Next() {
+		var tag string
+		var downloads int
+		if err := rows.Scan(&tag, &downloads); err != nil {
+			return nil, fmt.Errorf("failed to scan release downloads by tag row: %w", err)
+		}
+		s.Tags = append(s.Tags, tag)
 		s.Downloads = append(s.Downloads, downloads)
 	}
 
