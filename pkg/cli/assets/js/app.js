@@ -108,6 +108,7 @@ let prRatioChart;
 let timeToMergeChart;
 let timeToCloseChart;
 let releaseCadenceChart;
+let releaseDownloadsChart;
 let reputationChart;
 let reputationChartURL;
 let forksAndActivityChart;
@@ -200,6 +201,7 @@ function loadAllCharts(months, org, repo, entity) {
     loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
+    loadReleaseDownloadsChart(`/data/insights/release-downloads?m=${months}&o=${org}&r=${repo}`);
     loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}&e=${entity}`);
 }
 
@@ -390,6 +392,9 @@ function resetCharts() {
     }
     if (releaseCadenceChart) {
         releaseCadenceChart.destroy();
+    }
+    if (releaseDownloadsChart) {
+        releaseDownloadsChart.destroy();
     }
     if (reputationChart) {
         reputationChart.destroy();
@@ -948,6 +953,38 @@ function loadReleaseCadenceChart(url) {
                 scales: {
                     x: { ticks: { font: { size: 14 } } },
                     y: { beginAtZero: true, ticks: { precision: 0, font: { size: 14 } } }
+                }
+            }
+        });
+    });
+}
+
+function loadReleaseDownloadsChart(url) {
+    $.get(url, function (data) {
+        releaseDownloadsChart = new Chart($("#release-downloads-chart")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Downloads',
+                    data: data.downloads,
+                    borderColor: colors[0],
+                    backgroundColor: colors[0] + '20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, ticks: { precision: 0, font: { size: 14 } },
+                        title: { display: true, text: 'Downloads' } }
                 }
             }
         });
