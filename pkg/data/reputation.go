@@ -100,18 +100,26 @@ type UserReputation struct {
 
 // SignalSummary exposes gathered signals to the UI.
 type SignalSummary struct {
-	AgeDays           int64 `json:"age_days" yaml:"ageDays"`
-	Followers         int64 `json:"followers" yaml:"followers"`
-	Following         int64 `json:"following" yaml:"following"`
-	PublicRepos       int64 `json:"public_repos" yaml:"publicRepos"`
-	PrivateRepos      int64 `json:"private_repos" yaml:"privateRepos"`
-	StrongAuth        bool  `json:"strong_auth" yaml:"strongAuth"`
-	Suspended         bool  `json:"suspended" yaml:"suspended"`
-	OrgMember         bool  `json:"org_member" yaml:"orgMember"`
-	Commits           int64 `json:"commits" yaml:"commits"`
-	TotalCommits      int64 `json:"total_commits" yaml:"totalCommits"`
-	TotalContributors int   `json:"total_contributors" yaml:"totalContributors"`
-	LastCommitDays    int64 `json:"last_commit_days" yaml:"lastCommitDays"`
+	AgeDays           int64  `json:"age_days" yaml:"ageDays"`
+	Followers         int64  `json:"followers" yaml:"followers"`
+	Following         int64  `json:"following" yaml:"following"`
+	PublicRepos       int64  `json:"public_repos" yaml:"publicRepos"`
+	Suspended         bool   `json:"suspended" yaml:"suspended"`
+	OrgMember         bool   `json:"org_member" yaml:"orgMember"`
+	Commits           int64  `json:"commits" yaml:"commits"`
+	TotalCommits      int64  `json:"total_commits" yaml:"totalCommits"`
+	TotalContributors int    `json:"total_contributors" yaml:"totalContributors"`
+	LastCommitDays    int64  `json:"last_commit_days" yaml:"lastCommitDays"`
+	AuthorAssociation string `json:"author_association" yaml:"authorAssociation"`
+	HasBio            bool   `json:"has_bio" yaml:"hasBio"`
+	HasCompany        bool   `json:"has_company" yaml:"hasCompany"`
+	HasLocation       bool   `json:"has_location" yaml:"hasLocation"`
+	HasWebsite        bool   `json:"has_website" yaml:"hasWebsite"`
+	PRsMerged         int64  `json:"prs_merged" yaml:"prsMerged"`
+	PRsClosed         int64  `json:"prs_closed" yaml:"prsClosed"`
+	RecentPRRepoCount int64  `json:"recent_pr_repo_count" yaml:"recentPRRepoCount"`
+	ForkedRepos       int64  `json:"forked_repos" yaml:"forkedRepos"`
+	TrustedOrgMember  bool   `json:"trusted_org_member" yaml:"trustedOrgMember"`
 }
 
 // globalStats holds DB-wide statistics computed once per import run.
@@ -266,14 +274,22 @@ func ComputeDeepReputation(db *sql.DB, token, username string) (*UserReputation,
 		Followers:         signals.Followers,
 		Following:         signals.Following,
 		PublicRepos:       signals.PublicRepos,
-		PrivateRepos:      signals.PrivateRepos,
-		StrongAuth:        signals.StrongAuth,
 		Suspended:         signals.Suspended,
 		OrgMember:         signals.OrgMember,
 		Commits:           signals.Commits,
 		TotalCommits:      signals.TotalCommits,
 		TotalContributors: signals.TotalContributors,
 		LastCommitDays:    signals.LastCommitDays,
+		AuthorAssociation: signals.AuthorAssociation,
+		HasBio:            signals.HasBio,
+		HasCompany:        signals.HasCompany,
+		HasLocation:       signals.HasLocation,
+		HasWebsite:        signals.HasWebsite,
+		PRsMerged:         signals.PRsMerged,
+		PRsClosed:         signals.PRsClosed,
+		RecentPRRepoCount: signals.RecentPRRepoCount,
+		ForkedRepos:       signals.ForkedRepos,
+		TrustedOrgMember:  signals.TrustedOrgMember,
 	}
 
 	if updateErr := updateReputation(db, username, rep, now, true, ss); updateErr != nil {
@@ -361,9 +377,11 @@ func gatherFullSignals(ctx context.Context, client *github.Client, db *sql.DB, u
 	s.Followers = int64(usr.GetFollowers())
 	s.Following = int64(usr.GetFollowing())
 	s.PublicRepos = int64(usr.GetPublicRepos())
-	s.PrivateRepos = usr.GetOwnedPrivateRepos()
-	s.StrongAuth = usr.GetTwoFactorAuthentication()
 	s.Suspended = usr.SuspendedAt != nil
+	s.HasBio = usr.GetBio() != ""
+	s.HasCompany = usr.GetCompany() != ""
+	s.HasLocation = usr.GetLocation() != ""
+	s.HasWebsite = usr.GetBlog() != ""
 
 	// Check org membership: first try profile company field, then API.
 	company := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(usr.GetCompany(), "@", "")))
@@ -383,6 +401,81 @@ func gatherFullSignals(ctx context.Context, client *github.Client, db *sql.DB, u
 			}
 		}
 	}
+
+	s.TrustedOrgMember = s.OrgMember
+
+	// Count forked repos.
+	var forkedCount int64
+	repoOpts := &github.RepositoryListByUserOptions{
+		Type:        "owner",
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	for {
+		repos, repoResp, repoErr := client.Repositories.ListByUser(ctx, username, repoOpts)
+		if repoErr != nil {
+			slog.Debug("error listing repos for fork count", "username", username, "error", repoErr)
+			break
+		}
+		checkRateLimit(repoResp)
+		for _, r := range repos {
+			if r.GetFork() {
+				forkedCount++
+			}
+		}
+		if repoResp.NextPage == 0 {
+			break
+		}
+		repoOpts.Page = repoResp.NextPage
+	}
+	s.ForkedRepos = forkedCount
+
+	// PR signals via search API.
+	mergedQuery := fmt.Sprintf("type:pr author:%s is:merged", username)
+	mergedResult, mergedResp, mergedErr := client.Search.Issues(ctx, mergedQuery, &github.SearchOptions{
+		ListOptions: github.ListOptions{PerPage: 1},
+	})
+	if mergedErr != nil {
+		slog.Debug("error searching merged PRs", "username", username, "error", mergedErr)
+	} else {
+		checkRateLimit(mergedResp)
+		s.PRsMerged = int64(mergedResult.GetTotal())
+	}
+
+	closedQuery := fmt.Sprintf("type:pr author:%s is:unmerged is:closed", username)
+	closedResult, closedResp, closedErr := client.Search.Issues(ctx, closedQuery, &github.SearchOptions{
+		ListOptions: github.ListOptions{PerPage: 1},
+	})
+	if closedErr != nil {
+		slog.Debug("error searching closed PRs", "username", username, "error", closedErr)
+	} else {
+		checkRateLimit(closedResp)
+		s.PRsClosed = int64(closedResult.GetTotal())
+	}
+
+	cutoff := time.Now().AddDate(0, 0, -90).Format("2006-01-02")
+	recentQuery := fmt.Sprintf("type:pr author:%s created:>=%s", username, cutoff)
+	recentRepoSet := make(map[string]bool)
+	recentOpts := &github.SearchOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	for {
+		recentResult, recentResp, recentErr := client.Search.Issues(ctx, recentQuery, recentOpts)
+		if recentErr != nil {
+			slog.Debug("error searching recent PRs", "username", username, "error", recentErr)
+			break
+		}
+		checkRateLimit(recentResp)
+		for _, issue := range recentResult.Issues {
+			if repoURL := issue.GetRepositoryURL(); repoURL != "" {
+				recentRepoSet[repoURL] = true
+			}
+		}
+		if recentResp.NextPage == 0 {
+			break
+		}
+		recentOpts.Page = recentResp.NextPage
+	}
+	s.RecentPRRepoCount = int64(len(recentRepoSet))
 
 	return s, nil
 }
