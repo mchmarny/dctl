@@ -53,7 +53,7 @@ const (
 		  AND d.reputation IS NOT NULL
 		  AND d.username NOT LIKE '%[bot]'
 		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
-		GROUP BY d.username, d.reputation
+		GROUP BY d.username
 		ORDER BY d.reputation ASC
 		LIMIT 20
 	`

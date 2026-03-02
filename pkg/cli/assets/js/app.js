@@ -1052,7 +1052,9 @@ function loadReputationChart(url) {
                     label: 'Score',
                     data: data.data,
                     backgroundColor: reputationBarColors(data.data),
-                    borderWidth: 1
+                    borderWidth: 0,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
                 }]
             },
             options: {
@@ -1069,7 +1071,8 @@ function loadReputationChart(url) {
                         ticks: { font: { size: 14 } }
                     },
                     y: {
-                        ticks: { font: { size: 14 } }
+                        ticks: { font: { size: 14 } },
+                        afterFit: (axis) => { axis.paddingTop = 4; axis.paddingBottom = 4; }
                     }
                 },
                 onClick: (evt, item) => {
@@ -1100,16 +1103,20 @@ function showDeepReputation(username) {
         list.append(`<li><b>Score:</b> <span style="color:${color};font-weight:bold;">${data.reputation.toFixed(2)} (${label})</span>${cached}</li>`);
         if (data.signals) {
             const s = data.signals;
-            list.append(`<li><b>Account Age:</b> ${Math.round(s.age_days / 365)}y (${s.age_days}d)</li>`);
-            list.append(`<li><b>2FA Enabled:</b> ${s.strong_auth ? 'Yes' : 'No'}</li>`);
-            list.append(`<li><b>Org Member:</b> ${s.org_member ? 'Yes' : 'No'}</li>`);
-            list.append(`<li><b>Followers:</b> ${s.followers} &middot; <b>Following:</b> ${s.following}</li>`);
-            list.append(`<li><b>Repos:</b> ${s.public_repos} public, ${s.private_repos} private</li>`);
-            list.append(`<li><b>Events:</b> ${s.commits} of ${s.total_commits} total</li>`);
-            list.append(`<li><b>Last Active:</b> ${s.last_commit_days}d ago</li>`);
-            list.append(`<li><b>Suspended:</b> ${s.suspended ? 'Yes' : 'No'}</li>`);
+            const verified = s.commits > 0 ? Math.round(((s.commits - (s.unverified_commits || 0)) / s.commits) * 100) : 0;
+            list.append(`<li style="margin-top:6px;"><b>Code Provenance</b> <span style="opacity:0.5;">(15%)</span></li>`);
+            list.append(`<li style="padding-left:12px;">Verified commits: ${verified}% &middot; Account maturity: ${Math.round(s.age_days / 365)}y</li>`);
+            list.append(`<li style="margin-top:6px;"><b>Identity</b> <span style="opacity:0.5;">(25%)</span></li>`);
+            list.append(`<li style="padding-left:12px;">Age: ${s.age_days}d &middot; Association: ${s.author_association || 'n/a'} &middot; Profile: ${[s.has_bio, s.has_company, s.has_location, s.has_website].filter(Boolean).length}/4</li>`);
+            list.append(`<li style="margin-top:6px;"><b>Engagement</b> <span style="opacity:0.5;">(25%)</span></li>`);
+            list.append(`<li style="padding-left:12px;">Commits: ${s.commits}/${s.total_commits} &middot; Last active: ${s.last_commit_days}d ago &middot; PRs merged: ${s.prs_merged || 0}</li>`);
+            list.append(`<li style="margin-top:6px;"><b>Community</b> <span style="opacity:0.5;">(15%)</span></li>`);
+            list.append(`<li style="padding-left:12px;">Followers: ${s.followers}/${s.following} &middot; Repos: ${s.public_repos}</li>`);
+            list.append(`<li style="margin-top:6px;"><b>Behavioral</b> <span style="opacity:0.5;">(20%)</span></li>`);
+            list.append(`<li style="padding-left:12px;">Recent PR repos: ${s.recent_pr_repo_count || 0} &middot; Forked: ${s.forked_repos || 0}/${s.public_repos}</li>`);
+            if (s.suspended) { list.append(`<li style="margin-top:6px;color:#cf222e;"><b>Account suspended</b></li>`); }
         }
-        list.append(`<li><a href="https://github.com/${username}" target="_blank">View on GitHub</a></li>`);
+        list.append(`<li style="margin-top:6px;"><a href="https://github.com/${username}" target="_blank">View on GitHub</a></li>`);
 
         // refresh the chart so updated scores are reflected
         if (reputationChartURL) {

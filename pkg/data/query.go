@@ -42,6 +42,8 @@ const (
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
 			AND d.entity = COALESCE(?, d.entity)
+			AND e.username NOT LIKE '%[bot]'
+			AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		) dt
 		GROUP BY date
 		ORDER BY 1
@@ -79,6 +81,8 @@ const (
 		AND e.mentions LIKE COALESCE(?, e.mentions)
 		AND e.labels LIKE COALESCE(?, e.labels)
 		AND d.entity = COALESCE(?, d.entity)
+		AND e.username NOT LIKE '%[bot]'
+		AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		ORDER BY 1 DESC, 2, 3
 		LIMIT ? OFFSET ?
 	`

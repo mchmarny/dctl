@@ -17,6 +17,8 @@ const (
 			  AND e.repo = COALESCE(?, e.repo)
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
+			  AND e.username NOT LIKE '%[bot]'
+			  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 			GROUP BY e.username
 			ORDER BY cnt DESC
 		),
@@ -60,6 +62,8 @@ const (
 			  AND e.repo = COALESCE(?, e.repo)
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
+			  AND e.username NOT LIKE '%[bot]'
+			  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 			GROUP BY e.username
 		),
 		monthly AS (
@@ -70,6 +74,8 @@ const (
 			  AND e.repo = COALESCE(?, e.repo)
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
+			  AND e.username NOT LIKE '%[bot]'
+			  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		)
 		SELECT m.month,
 			SUM(CASE WHEN f.first_month = m.month THEN 1 ELSE 0 END) AS new_contributors,
@@ -94,6 +100,8 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.created_at >= ?
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		GROUP BY month
 		ORDER BY month
 	`
@@ -113,6 +121,8 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.created_at >= ?
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		GROUP BY month
 		ORDER BY month
 	`
@@ -128,6 +138,8 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		GROUP BY month
 		ORDER BY month
 	`
@@ -144,6 +156,8 @@ const (
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
 		  AND e.type IN (?, ?)
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		GROUP BY month
 		ORDER BY month
 	`
