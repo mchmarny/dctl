@@ -1,3 +1,4 @@
+# Scores PR author reputation using mchmarny/reputer action.
 name: reputation
 
 on:
