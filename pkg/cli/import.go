@@ -36,18 +36,25 @@ var (
 		Usage: "Clear pagination state and re-import from scratch",
 	}
 
+	deepFlag = &cli.IntFlag{
+		Name:  "deep",
+		Usage: "Deep-score the N lowest-reputation contributors via GitHub API (runs after import)",
+		Value: 0,
+	}
+
 	importCmd = &cli.Command{
 		Name:            "import",
 		Aliases:         []string{"imp"},
 		HideHelpCommand: true,
 		Usage:           "Import GitHub data (events, affiliations, metadata, releases, reputation)",
-		UsageText: `devpulse import --org <ORG> --repo <REPO> [--months <N>] [--fresh]
+		UsageText: `devpulse import --org <ORG> --repo <REPO> [--months <N>] [--fresh] [--deep <N>]
 
 Examples:
   devpulse import --org <ORG> --repo <REPO1> --repo <REPO2>    # import specific repos
   devpulse import --org <ORG> --repo <REPO1> --months 24       # import last 24 months for specific repo
   devpulse import --org <ORG>                                  # import all org repos
   devpulse import --org <ORG> --fresh                          # re-import from scratch
+  devpulse import --org <ORG> --deep 10                        # deep-score 10 lowest-reputation users
   devpulse import                                              # update all previously imported data`,
 		Action: cmdImport,
 		Flags: []cli.Flag{
@@ -55,6 +62,7 @@ Examples:
 			repoNameFlag,
 			monthsFlag,
 			freshFlag,
+			deepFlag,
 			formatFlag,
 			debugFlag,
 		},
@@ -62,13 +70,14 @@ Examples:
 )
 
 type ImportResult struct {
-	Org          string                        `json:"org,omitempty" yaml:"org,omitempty"`
-	Repos        []*data.ImportSummary         `json:"repos,omitempty" yaml:"repos,omitempty"`
-	Duration     string                        `json:"duration" yaml:"duration,omitempty"`
-	Events       map[string]int                `json:"events,omitempty" yaml:"events,omitempty"`
-	Affiliations *data.AffiliationImportResult `json:"affiliations,omitempty" yaml:"affiliations,omitempty"`
-	Substituted  []*data.Substitution          `json:"substituted,omitempty" yaml:"substituted,omitempty"`
-	Reputation   *data.ReputationResult        `json:"reputation,omitempty" yaml:"reputation,omitempty"`
+	Org            string                        `json:"org,omitempty" yaml:"org,omitempty"`
+	Repos          []*data.ImportSummary         `json:"repos,omitempty" yaml:"repos,omitempty"`
+	Duration       string                        `json:"duration" yaml:"duration,omitempty"`
+	Events         map[string]int                `json:"events,omitempty" yaml:"events,omitempty"`
+	Affiliations   *data.AffiliationImportResult `json:"affiliations,omitempty" yaml:"affiliations,omitempty"`
+	Substituted    []*data.Substitution          `json:"substituted,omitempty" yaml:"substituted,omitempty"`
+	Reputation     *data.ReputationResult        `json:"reputation,omitempty" yaml:"reputation,omitempty"`
+	DeepReputation *data.DeepReputationResult    `json:"deep_reputation,omitempty" yaml:"deep_reputation,omitempty"`
 }
 
 func cmdImport(c *cli.Context) error {
@@ -170,6 +179,17 @@ func cmdImport(c *cli.Context) error {
 		res.Reputation = repResult
 	}
 
+	// 6. deep reputation (GitHub API — runs last to avoid impacting core import)
+	if deep := c.Int(deepFlag.Name); deep > 0 {
+		slog.Info("deep reputation", "limit", deep)
+		deepResult, deepErr := data.ImportDeepReputation(cfg.DB, token, deep)
+		if deepErr != nil {
+			slog.Error("failed to compute deep reputation scores", "error", deepErr)
+		} else {
+			res.DeepReputation = deepResult
+		}
+	}
+
 	res.Duration = time.Since(start).String()
 
 	if err := encode(res); err != nil {
@@ -179,7 +199,7 @@ func cmdImport(c *cli.Context) error {
 	return nil
 }
 
-func cmdUpdate(_ *cli.Context, cfg *appConfig, token string, start time.Time) error {
+func cmdUpdate(c *cli.Context, cfg *appConfig, token string, start time.Time) error {
 	slog.Info("updating all previously imported data")
 
 	m, err := data.UpdateEvents(cfg.DBPath, token)
@@ -210,12 +230,23 @@ func cmdUpdate(_ *cli.Context, cfg *appConfig, token string, start time.Time) er
 		slog.Error("failed to compute reputation scores", "error", repErr)
 	}
 
+	var deepResult *data.DeepReputationResult
+	if deep := c.Int(deepFlag.Name); deep > 0 {
+		slog.Info("deep reputation", "limit", deep)
+		var deepErr error
+		deepResult, deepErr = data.ImportDeepReputation(cfg.DB, token, deep)
+		if deepErr != nil {
+			slog.Error("failed to compute deep reputation scores", "error", deepErr)
+		}
+	}
+
 	res := &ImportResult{
-		Events:       m,
-		Affiliations: a,
-		Substituted:  sub,
-		Reputation:   repResult,
-		Duration:     time.Since(start).String(),
+		Events:         m,
+		Affiliations:   a,
+		Substituted:    sub,
+		Reputation:     repResult,
+		DeepReputation: deepResult,
+		Duration:       time.Since(start).String(),
 	}
 
 	if err := encode(res); err != nil {
