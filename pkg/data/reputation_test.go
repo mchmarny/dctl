@@ -289,6 +289,31 @@ func TestGetLowestReputationUsernames_SkipsBots(t *testing.T) {
 	assert.NotContains(t, usernames, "mybot[bot]")
 }
 
+func TestImportDeepReputation_NilDB(t *testing.T) {
+	_, err := ImportDeepReputation(nil, "token", 5)
+	assert.Error(t, err)
+}
+
+func TestImportDeepReputation_EmptyToken(t *testing.T) {
+	db := setupTestDB(t)
+	_, err := ImportDeepReputation(db, "", 5)
+	assert.Error(t, err)
+}
+
+func TestImportDeepReputation_ZeroLimit(t *testing.T) {
+	db := setupTestDB(t)
+	res, err := ImportDeepReputation(db, "token", 0)
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Scored)
+}
+
+func TestImportDeepReputation_NoCandidates(t *testing.T) {
+	db := setupTestDB(t)
+	res, err := ImportDeepReputation(db, "token", 5)
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Scored)
+}
+
 func TestGatherLocalSignals(t *testing.T) {
 	db := setupTestDB(t)
 

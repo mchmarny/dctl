@@ -98,6 +98,13 @@ type ReputationResult struct {
 	Errors  int `json:"errors" yaml:"errors"`
 }
 
+// DeepReputationResult is returned by the bulk deep scoring step.
+type DeepReputationResult struct {
+	Scored  int `json:"scored" yaml:"scored"`
+	Skipped int `json:"skipped" yaml:"skipped"`
+	Errors  int `json:"errors" yaml:"errors"`
+}
+
 // ReputationDistribution is the dashboard chart data.
 type ReputationDistribution struct {
 	Labels []string  `json:"labels" yaml:"labels"`
@@ -210,6 +217,55 @@ func ImportReputation(db *sql.DB) (*ReputationResult, error) {
 	}
 
 	slog.Info("reputation done", "updated", res.Updated)
+
+	return res, nil
+}
+
+// ImportDeepReputation deep-scores the N lowest-reputation contributors
+// using GitHub API signals. Runs after shallow scoring; errors are
+// per-user and never fatal to the overall import.
+func ImportDeepReputation(db *sql.DB, token string, limit int) (*DeepReputationResult, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	if token == "" {
+		return nil, errors.New("token is required for deep reputation scoring")
+	}
+
+	if limit <= 0 {
+		return &DeepReputationResult{}, nil
+	}
+
+	threshold := time.Now().UTC().Add(-reputationStaleHours * time.Hour).Format("2006-01-02T15:04:05Z")
+
+	usernames, err := getLowestReputationUsernames(db, threshold, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting lowest reputation usernames: %w", err)
+	}
+
+	if len(usernames) == 0 {
+		slog.Info("deep reputation: no candidates")
+		return &DeepReputationResult{}, nil
+	}
+
+	slog.Info("deep reputation scoring", "candidates", len(usernames))
+
+	res := &DeepReputationResult{}
+
+	for i, username := range usernames {
+		slog.Info("deep scoring", "user", username, "progress", fmt.Sprintf("%d/%d", i+1, len(usernames)))
+
+		if _, deepErr := ComputeDeepReputation(db, token, username); deepErr != nil {
+			slog.Error("deep reputation failed", "username", username, "error", deepErr)
+			res.Errors++
+			continue
+		}
+
+		res.Scored++
+	}
+
+	slog.Info("deep reputation done", "scored", res.Scored, "errors", res.Errors)
 
 	return res, nil
 }
