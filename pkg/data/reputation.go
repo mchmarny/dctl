@@ -60,6 +60,20 @@ const (
 
 	selectDistinctOrgsSQL = `SELECT DISTINCT org FROM event`
 
+	selectLowestReputationUsernamesSQL = `SELECT d.username
+		FROM developer d
+		JOIN event e ON d.username = e.username
+		WHERE d.reputation IS NOT NULL
+		  AND d.username NOT LIKE '%[bot]'
+		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  AND (d.reputation_deep IS NULL OR d.reputation_deep = 0
+		   OR d.reputation_updated_at IS NULL
+		   OR d.reputation_updated_at < ?)
+		GROUP BY d.username
+		ORDER BY d.reputation ASC
+		LIMIT ?
+	`
+
 	selectUserCommitCountSQL = `SELECT COUNT(*) FROM event
 		WHERE username = ? AND date >= ?
 	`
@@ -506,6 +520,29 @@ func getStaleReputationUsernames(db *sql.DB, threshold string) ([]string, error)
 	defer rows.Close()
 
 	list := make([]string, 0)
+	for rows.Next() {
+		var username string
+		if err := rows.Scan(&username); err != nil {
+			return nil, fmt.Errorf("failed to scan username: %w", err)
+		}
+		list = append(list, username)
+	}
+
+	return list, nil
+}
+
+func getLowestReputationUsernames(db *sql.DB, threshold string, limit int) ([]string, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	rows, err := db.Query(selectLowestReputationUsernamesSQL, threshold, limit)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query lowest reputation usernames: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]string, 0, limit)
 	for rows.Next() {
 		var username string
 		if err := rows.Scan(&username); err != nil {

@@ -190,6 +190,105 @@ func TestImportReputation_ComputesShallowScores(t *testing.T) {
 	assert.True(t, rep.Valid)
 }
 
+func TestGetLowestReputationUsernames_NilDB(t *testing.T) {
+	_, err := getLowestReputationUsernames(nil, "2025-01-01T00:00:00Z", 5)
+	assert.Error(t, err)
+}
+
+func TestGetLowestReputationUsernames_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	usernames, err := getLowestReputationUsernames(db, "2025-01-01T00:00:00Z", 5)
+	require.NoError(t, err)
+	assert.Empty(t, usernames)
+}
+
+func TestGetLowestReputationUsernames_ReturnsBottomN(t *testing.T) {
+	db := setupTestDB(t)
+
+	devs := []*Developer{
+		{Username: "low1", FullName: "Low One"},
+		{Username: "low2", FullName: "Low Two"},
+		{Username: "mid", FullName: "Mid"},
+		{Username: "high", FullName: "High"},
+	}
+	require.NoError(t, SaveDevelopers(db, devs))
+
+	// Set shallow scores (reputation_deep = 0)
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	require.NoError(t, updateReputation(db, "low1", 0.10, now, false, nil))
+	require.NoError(t, updateReputation(db, "low2", 0.20, now, false, nil))
+	require.NoError(t, updateReputation(db, "mid", 0.50, now, false, nil))
+	require.NoError(t, updateReputation(db, "high", 0.90, now, false, nil))
+
+	// Add events so JOIN finds them
+	for _, u := range []string{"low1", "low2", "mid", "high"} {
+		_, err := db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+			VALUES ('org1', 'repo1', ?, 'pr', '2025-01-10', 'http://example.com', '', '')`, u)
+		require.NoError(t, err)
+	}
+
+	// Threshold in the future so none are "fresh deep"
+	threshold := time.Now().UTC().Add(time.Hour).Format("2006-01-02T15:04:05Z")
+	usernames, err := getLowestReputationUsernames(db, threshold, 2)
+	require.NoError(t, err)
+	require.Len(t, usernames, 2)
+	assert.Equal(t, "low1", usernames[0])
+	assert.Equal(t, "low2", usernames[1])
+}
+
+func TestGetLowestReputationUsernames_SkipsFreshDeep(t *testing.T) {
+	db := setupTestDB(t)
+
+	devs := []*Developer{
+		{Username: "deepuser", FullName: "Deep User"},
+		{Username: "shallowuser", FullName: "Shallow User"},
+	}
+	require.NoError(t, SaveDevelopers(db, devs))
+
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	require.NoError(t, updateReputation(db, "deepuser", 0.10, now, true, nil))     // deep=true, fresh
+	require.NoError(t, updateReputation(db, "shallowuser", 0.15, now, false, nil)) // shallow
+
+	for _, u := range []string{"deepuser", "shallowuser"} {
+		_, err := db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+			VALUES ('org1', 'repo1', ?, 'pr', '2025-01-10', 'http://example.com', '', '')`, u)
+		require.NoError(t, err)
+	}
+
+	// Threshold before now — deepuser's fresh deep score should be excluded
+	threshold := time.Now().UTC().Add(-time.Hour).Format("2006-01-02T15:04:05Z")
+	usernames, err := getLowestReputationUsernames(db, threshold, 10)
+	require.NoError(t, err)
+	assert.Contains(t, usernames, "shallowuser")
+	assert.NotContains(t, usernames, "deepuser")
+}
+
+func TestGetLowestReputationUsernames_SkipsBots(t *testing.T) {
+	db := setupTestDB(t)
+
+	devs := []*Developer{
+		{Username: "realuser", FullName: "Real"},
+		{Username: "mybot[bot]", FullName: ""},
+	}
+	require.NoError(t, SaveDevelopers(db, devs))
+
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	require.NoError(t, updateReputation(db, "realuser", 0.10, now, false, nil))
+	require.NoError(t, updateReputation(db, "mybot[bot]", 0.05, now, false, nil))
+
+	for _, u := range []string{"realuser", "mybot[bot]"} {
+		_, err := db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+			VALUES ('org1', 'repo1', ?, 'pr', '2025-01-10', 'http://example.com', '', '')`, u)
+		require.NoError(t, err)
+	}
+
+	threshold := time.Now().UTC().Add(time.Hour).Format("2006-01-02T15:04:05Z")
+	usernames, err := getLowestReputationUsernames(db, threshold, 10)
+	require.NoError(t, err)
+	assert.Contains(t, usernames, "realuser")
+	assert.NotContains(t, usernames, "mybot[bot]")
+}
+
 func TestGatherLocalSignals(t *testing.T) {
 	db := setupTestDB(t)
 
