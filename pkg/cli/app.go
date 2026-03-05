@@ -47,6 +47,11 @@ var (
 		Usage: "Output format [json, yaml]",
 		Value: formatJSON,
 	}
+
+	forceFlag = &urfave.BoolFlag{
+		Name:  "force",
+		Usage: "Skip confirmation prompt",
+	}
 )
 
 // Execute creates and runs the CLI application.

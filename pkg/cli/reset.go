@@ -15,7 +15,7 @@ var resetCmd = &cli.Command{
 	Name:            "reset",
 	Usage:           "Delete all imported data and start fresh",
 	HideHelpCommand: true,
-	Flags:           []cli.Flag{debugFlag},
+	Flags:           []cli.Flag{debugFlag, forceFlag},
 	Action:          cmdReset,
 }
 
@@ -23,18 +23,20 @@ func cmdReset(c *cli.Context) error {
 	applyFlags(c)
 	cfg := getConfig(c)
 
-	fmt.Printf("This will permanently delete all data in %s\n", cfg.DBPath)
-	fmt.Print("Are you sure? [y/N]: ")
+	if !c.Bool(forceFlag.Name) {
+		fmt.Printf("This will permanently delete all data in %s\n", cfg.DBPath)
+		fmt.Print("Are you sure? [y/N]: ")
 
-	reader := bufio.NewReader(os.Stdin)
-	answer, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("reading input: %w", err)
-	}
+		reader := bufio.NewReader(os.Stdin)
+		answer, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("reading input: %w", err)
+		}
 
-	if strings.ToLower(strings.TrimSpace(answer)) != "y" {
-		fmt.Println("Aborted.")
-		return nil
+		if strings.ToLower(strings.TrimSpace(answer)) != "y" {
+			fmt.Println("Aborted.")
+			return nil
+		}
 	}
 
 	// close the DB before deleting the file
