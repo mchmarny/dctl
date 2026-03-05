@@ -119,6 +119,10 @@ bump-minor: ## Bumps minor version (1.2.3 → 1.3.0)
 bump-patch: ## Bumps patch version (1.2.3 → 1.2.4)
 	tools/bump patch
 
+.PHONY: changelog
+changelog: ## Previews changelog for next release (does not commit)
+	@git-cliff --unreleased --strip header
+
 # =============================================================================
 # Cleanup
 # =============================================================================
