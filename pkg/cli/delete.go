@@ -1,0 +1,116 @@
+package cli
+
+import (
+	"bufio"
+	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/urfave/cli/v2"
+)
+
+var deleteCmd = &cli.Command{
+	Name:            "delete",
+	Aliases:         []string{"del"},
+	HideHelpCommand: true,
+	Usage:           "Delete imported data for an org or specific repos",
+	UsageText: `devpulse delete --org <ORG> [--repo <REPO>...] [--force]
+
+Examples:
+  devpulse delete --org myorg                        # delete all repos in org
+  devpulse delete --org myorg --repo repo1           # delete specific repo
+  devpulse delete --org myorg --repo r1 --repo r2    # delete multiple repos
+  devpulse delete --org myorg --force                # skip confirmation`,
+	Action: cmdDelete,
+	Flags: []cli.Flag{
+		orgNameFlag,
+		repoNameFlag,
+		forceFlag,
+		formatFlag,
+		debugFlag,
+	},
+}
+
+type DeleteCommandResult struct {
+	Org      string               `json:"org" yaml:"org"`
+	Repos    []*data.DeleteResult `json:"repos" yaml:"repos"`
+	Duration string               `json:"duration" yaml:"duration"`
+}
+
+func cmdDelete(c *cli.Context) error {
+	start := time.Now()
+	applyFlags(c)
+
+	org := c.String(orgNameFlag.Name)
+	if org == "" {
+		return cli.ShowSubcommandHelp(c)
+	}
+
+	cfg := getConfig(c)
+
+	// Resolve repos
+	repoSlice := c.StringSlice(repoNameFlag.Name)
+	repos := repoSlice
+
+	if len(repos) == 0 {
+		// Find all repos for this org from existing data
+		items, err := data.GetAllOrgRepos(cfg.DB)
+		if err != nil {
+			return fmt.Errorf("listing repos for org %s: %w", org, err)
+		}
+		for _, item := range items {
+			if item.Org == org {
+				repos = append(repos, item.Repo)
+			}
+		}
+		if len(repos) == 0 {
+			slog.Info("no data found for org", "org", org)
+			return nil
+		}
+	}
+
+	// Confirmation prompt
+	if !c.Bool(forceFlag.Name) {
+		fmt.Println("Delete all data for:")
+		for _, r := range repos {
+			fmt.Printf("  - %s/%s\n", org, r)
+		}
+		fmt.Print("Continue? [y/N]: ")
+
+		reader := bufio.NewReader(os.Stdin)
+		answer, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("reading input: %w", err)
+		}
+		if strings.ToLower(strings.TrimSpace(answer)) != "y" {
+			fmt.Println("Aborted.")
+			return nil
+		}
+	}
+
+	res := &DeleteCommandResult{
+		Org:   org,
+		Repos: make([]*data.DeleteResult, 0, len(repos)),
+	}
+
+	for _, r := range repos {
+		slog.Info("deleting", "org", org, "repo", r)
+		dr, err := data.DeleteRepoData(cfg.DB, org, r)
+		if err != nil {
+			slog.Error("failed to delete repo data", "org", org, "repo", r, "error", err)
+			continue
+		}
+		res.Repos = append(res.Repos, dr)
+	}
+
+	res.Duration = time.Since(start).String()
+
+	if err := encode(res); err != nil {
+		return fmt.Errorf("encoding result: %w", err)
+	}
+
+	return nil
+}

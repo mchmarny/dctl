@@ -91,6 +91,7 @@ func newApp() *urfave.App {
 		Commands: []*urfave.Command{
 			authCmd,
 			importCmd,
+			deleteCmd,
 			substituteCmd,
 			queryCmd,
 			serverCmd,
