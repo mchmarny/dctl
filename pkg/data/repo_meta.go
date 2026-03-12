@@ -77,6 +77,16 @@ func ImportRepoMeta(dbPath, token, owner, repo string) error {
 		return fmt.Errorf("error upserting repo meta %s/%s: %w", owner, repo, err)
 	}
 
+	// Record today's snapshot in metric history.
+	today := time.Now().UTC().Format("2006-01-02")
+	_, err = db.Exec(upsertRepoMetricHistorySQL,
+		owner, repo, today, r.GetStargazersCount(), r.GetForksCount(),
+		r.GetStargazersCount(), r.GetForksCount(),
+	)
+	if err != nil {
+		return fmt.Errorf("error upserting repo metric history %s/%s: %w", owner, repo, err)
+	}
+
 	slog.Debug("metadata done", "org", owner, "repo", repo)
 	return nil
 }
