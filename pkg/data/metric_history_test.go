@@ -56,7 +56,7 @@ func TestGetRepoMetricHistory_WithFilter(t *testing.T) {
 
 func TestBuildDailyTotals(t *testing.T) {
 	starsByDay := map[string]int{
-		time.Now().UTC().Format("2006-01-02"):                    5,
+		time.Now().UTC().Format("2006-01-02"):                   5,
 		time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02"): 3,
 	}
 	forksByDay := map[string]int{
