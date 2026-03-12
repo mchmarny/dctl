@@ -269,6 +269,12 @@ func importRepoExtras(dbPath, token, org string, repos []string) {
 			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
 		}
 	}
+	for _, r := range repos {
+		slog.Info("metric history", "org", org, "repo", r)
+		if err := data.ImportRepoMetricHistory(dbPath, token, org, r); err != nil {
+			slog.Error("failed to import metric history", "org", org, "repo", r, "error", err)
+		}
+	}
 }
 
 func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
