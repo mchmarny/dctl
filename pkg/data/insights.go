@@ -534,8 +534,8 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 	for rows.Next() {
 		var month string
 		var failures int
-		if err := rows.Scan(&month, &failures); err != nil {
-			return nil, fmt.Errorf("failed to scan change failure row: %w", err)
+		if scanErr := rows.Scan(&month, &failures); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan change failure row: %w", scanErr)
 		}
 		failureMap[month] = failures
 	}
@@ -552,8 +552,8 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 	for dRows.Next() {
 		var month string
 		var cnt int
-		if err := dRows.Scan(&month, &cnt); err != nil {
-			return nil, fmt.Errorf("failed to scan deployment count row: %w", err)
+		if scanErr := dRows.Scan(&month, &cnt); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan deployment count row: %w", scanErr)
 		}
 		deployMap[month] = cnt
 	}
@@ -597,6 +597,7 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 	return s, nil
 }
 
+//nolint:dupl // similar structure to getVelocitySeries but different return type (ReviewLatencySeries vs VelocitySeries)
 func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*ReviewLatencySeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
@@ -631,6 +632,7 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 	return s, nil
 }
 
+//nolint:dupl // similar structure to GetReviewLatency but different return type (VelocitySeries vs ReviewLatencySeries)
 func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
