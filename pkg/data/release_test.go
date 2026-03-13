@@ -9,13 +9,13 @@ import (
 
 func TestGetReleaseCadence_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
-	series, err := GetReleaseCadence(db, nil, nil, 6)
+	series, err := GetReleaseCadence(db, nil, nil, nil, 6)
 	require.NoError(t, err)
 	assert.Empty(t, series.Months)
 }
 
 func TestGetReleaseCadence_NilDB(t *testing.T) {
-	_, err := GetReleaseCadence(nil, nil, nil, 6)
+	_, err := GetReleaseCadence(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
@@ -29,7 +29,7 @@ func TestGetReleaseCadence_WithData(t *testing.T) {
 		('org1', 'repo1', 'v1.1.0', 'Release 1.1', '2025-02-10T00:00:00Z', 0)`)
 	require.NoError(t, err)
 
-	series, err := GetReleaseCadence(db, nil, nil, 24)
+	series, err := GetReleaseCadence(db, nil, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, series.Months, 2)
 
@@ -54,7 +54,7 @@ func TestGetReleaseCadence_WithFilter(t *testing.T) {
 	require.NoError(t, err)
 
 	org := "org1"
-	series, err := GetReleaseCadence(db, &org, nil, 24)
+	series, err := GetReleaseCadence(db, &org, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, series.Months, 1)
 	assert.Equal(t, 1, series.Total[0])
@@ -179,6 +179,39 @@ func TestGetReleaseDownloadsByTag_WithData(t *testing.T) {
 	// Last entry should be v1.1.0 (most recent)
 	assert.Equal(t, "v1.1.0", series.Tags[9])
 	assert.Equal(t, 100, series.Downloads[9])
+}
+
+func TestGetReleaseCadence_WithDeployments(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO release (org, repo, tag, name, published_at, prerelease)
+		VALUES ('org1', 'repo1', 'v1.0', 'v1.0', '2025-01-15T00:00:00Z', 0)`)
+	require.NoError(t, err)
+
+	series, err := GetReleaseCadence(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+	assert.Equal(t, 1, series.Deployments[0])
+}
+
+func TestGetReleaseCadence_MergeFallback(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	// No releases for org2 — insert merged PRs instead
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, merged_at)
+		VALUES ('org2', 'repo2', 'alice', 'pr', '2025-01-10', 'http://a', '', '', 'merged', '2025-01-10T10:00:00Z', '2025-01-10T12:00:00Z'),
+		       ('org2', 'repo2', 'alice', 'pr', '2025-01-11', 'http://b', '', '', 'merged', '2025-01-11T10:00:00Z', '2025-01-11T12:00:00Z')`)
+	require.NoError(t, err)
+
+	org := "org2"
+	repo := "repo2"
+	series, err := GetReleaseCadence(db, &org, &repo, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+	assert.Equal(t, 2, series.Deployments[0])
 }
 
 func TestGetReleaseDownloadsByTag_Dedup(t *testing.T) {

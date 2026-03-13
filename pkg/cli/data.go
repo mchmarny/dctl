@@ -343,7 +343,8 @@ func insightsRepoMetricHistoryAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsReleaseCadenceAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetReleaseCadence(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetReleaseCadence(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get release cadence", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying release cadence")
