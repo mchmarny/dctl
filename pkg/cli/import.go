@@ -225,6 +225,10 @@ func cmdUpdate(c *cli.Context, cfg *appConfig, token string, start time.Time) er
 		slog.Error("failed to import releases", "error", relErr)
 	}
 
+	if histErr := data.ImportAllRepoMetricHistory(cfg.DBPath, token); histErr != nil {
+		slog.Error("failed to import metric history", "error", histErr)
+	}
+
 	repResult, repErr := data.ImportReputation(cfg.DB)
 	if repErr != nil {
 		slog.Error("failed to compute reputation scores", "error", repErr)
@@ -267,6 +271,12 @@ func importRepoExtras(dbPath, token, org string, repos []string) {
 		slog.Info("releases", "org", org, "repo", r)
 		if err := data.ImportReleases(dbPath, token, org, r); err != nil {
 			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
+		}
+	}
+	for _, r := range repos {
+		slog.Info("metric history", "org", org, "repo", r)
+		if err := data.ImportRepoMetricHistory(dbPath, token, org, r); err != nil {
+			slog.Error("failed to import metric history", "org", org, "repo", r, "error", err)
 		}
 	}
 }

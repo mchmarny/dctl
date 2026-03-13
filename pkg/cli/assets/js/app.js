@@ -113,6 +113,8 @@ let releaseDownloadsByTagChart;
 let reputationChart;
 let reputationChartURL;
 let forksAndActivityChart;
+let starsTrendChart;
+let forksTrendChart;
 let searchItem;
 
 const searchPrefixes = ['org', 'repo', 'entity'];
@@ -201,6 +203,8 @@ function loadAllCharts(months, org, repo, entity) {
     loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-close-chart', 'timeToClose');
     loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
+    loadStarsTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
+    loadForksTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
     loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
     loadReleaseDownloadsChart(`/data/insights/release-downloads?m=${months}&o=${org}&r=${repo}`);
     loadReleaseDownloadsByTagChart(`/data/insights/release-downloads-by-tag?m=${months}&o=${org}&r=${repo}`);
@@ -927,6 +931,126 @@ function loadRepoMeta(url) {
                 .append(`<span class="insight-label">${item.label}</span>`)
                 .append(`<span class="insight-val">${item.val}</span>`)
                 .appendTo(container);
+        });
+
+        // Sparkline for stars/forks trend.
+        $.get(`/data/insights/repo-metric-history?o=${new URLSearchParams(url.split('?')[1]).get('o') || ''}&r=${new URLSearchParams(url.split('?')[1]).get('r') || ''}`, function (hist) {
+            if (!hist || hist.length === 0) return;
+            var sLabels = [], sStars = [], sForks = [];
+            $.each(hist, function (i, d) {
+                sLabels.push(d.date);
+                sStars.push(d.stars);
+                sForks.push(d.forks);
+            });
+            new Chart($("#repo-meta-sparkline")[0].getContext("2d"), {
+                type: 'line',
+                data: {
+                    labels: sLabels,
+                    datasets: [
+                        {
+                            label: 'Stars',
+                            data: sStars,
+                            borderColor: colors[0],
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Forks',
+                            data: sForks,
+                            borderColor: colors[1],
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        });
+    });
+}
+
+function loadStarsTrendChart(url) {
+    $.get(url, function (data) {
+        if (!data || data.length === 0) return;
+        var labels = [];
+        var stars = [];
+        $.each(data, function (i, d) {
+            labels.push(d.date);
+            stars.push(d.stars);
+        });
+        if (starsTrendChart) starsTrendChart.destroy();
+        starsTrendChart = new Chart($("#stars-trend-chart")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Stars',
+                    data: stars,
+                    borderColor: colors[0],
+                    backgroundColor: colors[0] + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: false, ticks: { precision: 0 } }
+                }
+            }
+        });
+    });
+}
+
+function loadForksTrendChart(url) {
+    $.get(url, function (data) {
+        if (!data || data.length === 0) return;
+        var labels = [];
+        var forks = [];
+        $.each(data, function (i, d) {
+            labels.push(d.date);
+            forks.push(d.forks);
+        });
+        if (forksTrendChart) forksTrendChart.destroy();
+        forksTrendChart = new Chart($("#forks-trend-chart")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Forks',
+                    data: forks,
+                    borderColor: colors[1],
+                    backgroundColor: colors[1] + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: false, ticks: { precision: 0 } }
+                }
+            }
         });
     });
 }

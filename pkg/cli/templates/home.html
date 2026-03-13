@@ -68,6 +68,9 @@
                 <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
                     <span class="insight-label">No metadata imported yet</span>
                 </div>
+                <div style="height:80px;padding:0 1rem;">
+                    <canvas id="repo-meta-sparkline"></canvas>
+                </div>
                 <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
             </div>
         </article>
@@ -217,6 +220,28 @@
                     <canvas class="chart" id="forks-activity-chart"></canvas>
                 </div>
                 <span class="insight-desc">Monthly fork count vs total events (PRs, issues, reviews, comments). Correlation may indicate interest-driven development.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Stars Trend
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="stars-trend-chart"></canvas>
+                </div>
+                <span class="insight-desc">Daily star count over the last 30 days.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Forks Trend
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="forks-trend-chart"></canvas>
+                </div>
+                <span class="insight-desc">Daily fork count over the last 30 days.</span>
             </div>
         </article>
         <article class="grid-full-width">

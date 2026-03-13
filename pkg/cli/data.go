@@ -313,6 +313,19 @@ func insightsRepoMetaAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsRepoMetricHistoryAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := data.GetRepoMetricHistory(db, p.org, p.repo)
+		if err != nil {
+			slog.Error("failed to get repo metric history", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying repo metric history")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsReleaseCadenceAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
