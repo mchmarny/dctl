@@ -52,6 +52,8 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ## Quick start
 
+![](docs/img/dash2.png)
+
 ### 1. Authenticate
 
 `devpulse` uses GitHub's device flow for OAuth. By default the token requests the `repo` scope for private repository access. Use `--public` to skip the `repo` scope when you only work with public repos. The token is stored in your OS keychain.
@@ -101,7 +103,7 @@ See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
 devpulse server
 ```
 
-![](docs/img/dash2.png)
+![](docs/img/dash3.png)
 
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
@@ -147,7 +149,7 @@ devpulse reset
 
 Prompts for confirmation before deleting the database.
 
-![](docs/img/dash3.png)
+![](docs/img/dash4.png)
 
 ## Data sources
 
