@@ -275,6 +275,28 @@ const (
 	ORDER BY month
 	`
 
+	// Contributor momentum: rolling 3-month active contributor count.
+	selectContributorMomentumSQL = `WITH months AS (
+		SELECT DISTINCT substr(date, 1, 7) AS month
+		FROM event
+		WHERE date >= ?
+	)
+	SELECT
+		m.month,
+		COUNT(DISTINCT e.username) AS active
+	FROM months m
+	JOIN event e ON substr(e.date, 1, 7) >= substr(date(m.month || '-01', '-2 months'), 1, 7)
+		AND substr(e.date, 1, 7) <= m.month
+	JOIN developer d ON e.username = d.username
+	WHERE e.org = COALESCE(?, e.org)
+	  AND e.repo = COALESCE(?, e.repo)
+	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+	  AND e.username NOT LIKE '%[bot]'
+	  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	GROUP BY m.month
+	ORDER BY m.month
+	`
+
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
 		JOIN developer d ON e.username = d.username
@@ -660,6 +682,12 @@ func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*
 	return s, nil
 }
 
+type MomentumSeries struct {
+	Months []string `json:"months" yaml:"months"`
+	Active []int    `json:"active" yaml:"active"`
+	Delta  []int    `json:"delta" yaml:"delta"`
+}
+
 type ForksAndActivitySeries struct {
 	Months []string `json:"months" yaml:"months"`
 	Forks  []int    `json:"forks" yaml:"forks"`
@@ -694,6 +722,47 @@ func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*Fo
 		s.Months = append(s.Months, month)
 		s.Forks = append(s.Forks, forks)
 		s.Events = append(s.Events, events)
+	}
+
+	return s, nil
+}
+
+func GetContributorMomentum(db *sql.DB, org, repo, entity *string, months int) (*MomentumSeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectContributorMomentumSQL, since, org, repo, entity)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query contributor momentum: %w", err)
+	}
+	defer rows.Close()
+
+	s := &MomentumSeries{
+		Months: make([]string, 0),
+		Active: make([]int, 0),
+		Delta:  make([]int, 0),
+	}
+
+	for rows.Next() {
+		var month string
+		var active int
+		if err := rows.Scan(&month, &active); err != nil {
+			return nil, fmt.Errorf("failed to scan contributor momentum row: %w", err)
+		}
+		s.Months = append(s.Months, month)
+		s.Active = append(s.Active, active)
+	}
+
+	// Compute month-over-month delta
+	for i := range s.Active {
+		if i == 0 {
+			s.Delta = append(s.Delta, 0)
+		} else {
+			s.Delta = append(s.Delta, s.Active[i]-s.Active[i-1])
+		}
 	}
 
 	return s, nil

@@ -374,6 +374,50 @@ func TestGetPRSizeDistribution_WithData(t *testing.T) {
 	assert.Equal(t, 1, series.XLarge[0])
 }
 
+func TestGetContributorMomentum_NilDB(t *testing.T) {
+	_, err := GetContributorMomentum(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetContributorMomentum_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetContributorMomentum(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetContributorMomentum_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// Both active in Jan 2025
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://a', '', ''),
+		       ('org1', 'repo1', 'bob', 'pr', '2025-01-11', 'http://b', '', '')`)
+	require.NoError(t, err)
+
+	// Only alice in Feb 2025
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-02-10', 'http://c', '', '')`)
+	require.NoError(t, err)
+
+	series, err := GetContributorMomentum(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 2)
+
+	// Jan: 2 active (alice + bob)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 2, series.Active[0])
+	assert.Equal(t, 0, series.Delta[0]) // first month, delta=0
+
+	// Feb: still 2 active (rolling 3-month window includes Jan, so bob is still counted)
+	assert.Equal(t, "2025-02", series.Months[1])
+	assert.Equal(t, 2, series.Active[1])
+	assert.Equal(t, 0, series.Delta[1])
+}
+
 func padDay(i int) string {
 	return fmt.Sprintf("%02d", (i%28)+1)
 }
