@@ -197,6 +197,284 @@ func TestGetTimeToClose_WithData(t *testing.T) {
 	assert.InDelta(t, 5.5, series.AvgDays[0], 0.01) // (5+6)/2
 }
 
+func TestGetTimeToRestoreBugs_NilDB(t *testing.T) {
+	_, err := GetTimeToRestoreBugs(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetTimeToRestoreBugs_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetTimeToRestoreBugs(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetTimeToRestoreBugs_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	// Insert a release
+	_, err = db.Exec(`INSERT INTO release (org, repo, tag, name, published_at, prerelease)
+		VALUES ('org1', 'repo1', 'v1.0', 'v1.0', '2025-01-15T00:00:00Z', 0)`)
+	require.NoError(t, err)
+
+	// Bug issue near release, closed in 1 day
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-01-17', 'http://a', '', 'bug', 'closed', '2025-01-17T10:00:00Z', '2025-01-18T10:00:00Z')`)
+	require.NoError(t, err)
+
+	// Non-bug issue, closed in 3 days (should NOT be included)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-01-18', 'http://b', '', 'enhancement', 'closed', '2025-01-18T10:00:00Z', '2025-01-21T10:00:00Z')`)
+	require.NoError(t, err)
+
+	// Bug issue NOT near any release (30 days later), should NOT be included
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-02-17', 'http://c', '', 'bug', 'closed', '2025-02-17T10:00:00Z', '2025-02-20T10:00:00Z')`)
+	require.NoError(t, err)
+
+	series, err := GetTimeToRestoreBugs(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 1) // Only January has a qualifying bug
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 1, series.Count[0])
+	assert.InDelta(t, 1.0, series.AvgDays[0], 0.01) // 1 day
+}
+
+func TestGetChangeFailureRate_NilDB(t *testing.T) {
+	_, err := GetChangeFailureRate(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetChangeFailureRate_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetChangeFailureRate(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetChangeFailureRate_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	// Insert a release (deployment)
+	_, err = db.Exec(`INSERT INTO release (org, repo, tag, name, published_at, prerelease)
+		VALUES ('org1', 'repo1', 'v1.0', 'v1.0', '2025-01-15T00:00:00Z', 0)`)
+	require.NoError(t, err)
+
+	// Insert a bug issue within 7 days of release
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, title)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-01-17', 'http://a', '', 'bug', 'open', '2025-01-17T10:00:00Z', 'Bug in feature')`)
+	require.NoError(t, err)
+
+	// Insert a revert PR in same month
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, title)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-16', 'http://b', '', '', 'merged', '2025-01-16T10:00:00Z', 'Revert "Add feature"')`)
+	require.NoError(t, err)
+
+	series, err := GetChangeFailureRate(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 2, series.Failures[0])
+	assert.Equal(t, 1, series.Deployments[0])
+	assert.InDelta(t, 200.0, series.Rate[0], 0.1) // 2 failures / 1 deployment * 100
+}
+
+func TestGetReviewLatency_NilDB(t *testing.T) {
+	_, err := GetReviewLatency(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetReviewLatency_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetReviewLatency(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetReviewLatency_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// PR created by alice
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, number, created_at)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://a', '', '', 'open', 42, '2025-01-10T10:00:00Z')`)
+	require.NoError(t, err)
+
+	// First review by bob, 6 hours later
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, number, created_at)
+		VALUES ('org1', 'repo1', 'bob', 'pr_review', '2025-01-10', 'http://b', '', '', 42, '2025-01-10T16:00:00Z')`)
+	require.NoError(t, err)
+
+	// Second review by bob, 12 hours later (should NOT affect — we take MIN)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, number, created_at)
+		VALUES ('org1', 'repo1', 'bob', 'pr_review', '2025-01-11', 'http://c', '', '', 42, '2025-01-10T22:00:00Z')`)
+	require.NoError(t, err)
+
+	series, err := GetReviewLatency(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+
+	// Find January in results
+	found := false
+	for i, m := range series.Months {
+		if m == "2025-01" {
+			found = true
+			assert.Equal(t, 1, series.Count[i])
+			assert.InDelta(t, 6.0, series.AvgHours[i], 0.1) // 6 hours
+			break
+		}
+	}
+	assert.True(t, found, "expected 2025-01 in results")
+}
+
+func TestGetPRSizeDistribution_NilDB(t *testing.T) {
+	_, err := GetPRSizeDistribution(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetPRSizeDistribution_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetPRSizeDistribution(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetPRSizeDistribution_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	// Small PR (20 lines)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, additions, deletions)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://a', '', '', 'merged', '2025-01-10T10:00:00Z', 15, 5)`)
+	require.NoError(t, err)
+
+	// Medium PR (100 lines)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, additions, deletions)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-11', 'http://b', '', '', 'merged', '2025-01-11T10:00:00Z', 70, 30)`)
+	require.NoError(t, err)
+
+	// Large PR (500 lines)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, additions, deletions)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-12', 'http://c', '', '', 'merged', '2025-01-12T10:00:00Z', 400, 100)`)
+	require.NoError(t, err)
+
+	// XL PR (1500 lines)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, additions, deletions)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-13', 'http://d', '', '', 'merged', '2025-01-13T10:00:00Z', 1000, 500)`)
+	require.NoError(t, err)
+
+	series, err := GetPRSizeDistribution(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 1)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 1, series.Small[0])
+	assert.Equal(t, 1, series.Medium[0])
+	assert.Equal(t, 1, series.Large[0])
+	assert.Equal(t, 1, series.XLarge[0])
+}
+
+func TestGetContributorMomentum_NilDB(t *testing.T) {
+	_, err := GetContributorMomentum(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetContributorMomentum_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetContributorMomentum(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetContributorMomentum_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// Both active in Jan 2025
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://a', '', ''),
+		       ('org1', 'repo1', 'bob', 'pr', '2025-01-11', 'http://b', '', '')`)
+	require.NoError(t, err)
+
+	// Only alice in Feb 2025
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-02-10', 'http://c', '', '')`)
+	require.NoError(t, err)
+
+	series, err := GetContributorMomentum(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 2)
+
+	// Jan: 2 active (alice + bob)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 2, series.Active[0])
+	assert.Equal(t, 0, series.Delta[0]) // first month, delta=0
+
+	// Feb: still 2 active (rolling 3-month window includes Jan, so bob is still counted)
+	assert.Equal(t, "2025-02", series.Months[1])
+	assert.Equal(t, 2, series.Active[1])
+	assert.Equal(t, 0, series.Delta[1])
+}
+
+func TestGetContributorFunnel_NilDB(t *testing.T) {
+	_, err := GetContributorFunnel(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetContributorFunnel_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetContributorFunnel(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetContributorFunnel_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// Alice: first comment, first PR, first merge — all in Jan
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, merged_at)
+		VALUES
+		('org1', 'repo1', 'alice', 'issue_comment', '2025-01-05', 'http://a', '', '', NULL, '2025-01-05T10:00:00Z', NULL),
+		('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://b', '', '', 'merged', '2025-01-10T10:00:00Z', '2025-01-10T12:00:00Z')`)
+	require.NoError(t, err)
+
+	// Bob: first comment only in Jan
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'bob', 'issue_comment', '2025-01-08', 'http://c', '', '')`)
+	require.NoError(t, err)
+
+	series, err := GetContributorFunnel(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+
+	// Find January
+	found := false
+	for i, m := range series.Months {
+		if m == "2025-01" {
+			found = true
+			assert.Equal(t, 2, series.FirstComment[i]) // Alice + Bob
+			assert.Equal(t, 1, series.FirstPR[i])      // Alice only
+			assert.Equal(t, 1, series.FirstMerge[i])   // Alice only
+			break
+		}
+	}
+	assert.True(t, found, "expected 2025-01 in results")
+}
+
 func padDay(i int) string {
 	return fmt.Sprintf("%02d", (i%28)+1)
 }

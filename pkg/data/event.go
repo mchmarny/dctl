@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,9 +38,9 @@ const (
 
 	insertEventSQL = `INSERT INTO event (
 			org, repo, username, type, date, url, mentions, labels,
-			state, number, created_at, closed_at, merged_at, additions, deletions
+			state, number, created_at, closed_at, merged_at, additions, deletions, title
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(org, repo, username, type, date) DO UPDATE SET
 			url = ?, mentions = ?, labels = ?,
 			state = COALESCE(?, event.state),
@@ -48,7 +49,8 @@ const (
 			closed_at = COALESCE(?, event.closed_at),
 			merged_at = COALESCE(?, event.merged_at),
 			additions = COALESCE(?, event.additions),
-			deletions = COALESCE(?, event.deletions)
+			deletions = COALESCE(?, event.deletions),
+			title = ?
 	`
 )
 
@@ -78,6 +80,7 @@ type Event struct {
 	MergedAt  *string `json:"merged_at,omitempty" yaml:"mergedAt,omitempty"`
 	Additions *int    `json:"additions,omitempty" yaml:"additions,omitempty"`
 	Deletions *int    `json:"deletions,omitempty" yaml:"deletions,omitempty"`
+	Title     string  `json:"title,omitempty" yaml:"title,omitempty"`
 }
 
 type importer func(ctx context.Context) error
@@ -248,6 +251,7 @@ type eventExtra struct {
 	MergedAt  *string
 	Additions *int
 	Deletions *int
+	Title     string
 }
 
 func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.Time, mentions []string, labels []string, extra *eventExtra) error {
@@ -270,6 +274,7 @@ func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.T
 		item.MergedAt = extra.MergedAt
 		item.Additions = extra.Additions
 		item.Deletions = extra.Deletions
+		item.Title = extra.Title
 	}
 
 	e.mu.Lock()
@@ -369,9 +374,9 @@ func (e *EventImporter) flush() error {
 		_, err = tx.Stmt(eventStmt).Exec(
 			e.Org, e.Repo, e.Username, e.Type, e.Date,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
 		)
 		if err != nil {
 			rollbackTransaction(tx)
@@ -444,6 +449,20 @@ func intPtr(v int) *int {
 	return &v
 }
 
+// parsePRNumberFromURL extracts the PR number from a GitHub API pull request URL.
+// e.g. "https://api.github.com/repos/owner/repo/pulls/123" -> 123
+func parsePRNumberFromURL(url string) int {
+	parts := strings.Split(url, "/")
+	if len(parts) == 0 {
+		return 0
+	}
+	n, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
 func (e *EventImporter) importPREvents(ctx context.Context) error {
 	slog.Debug("starting pr event import", "page", e.state[EventTypePR].Page, "since", e.state[EventTypePR].Since.Format("2006-01-02"))
 
@@ -489,10 +508,16 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 				MergedAt:  timestampStr(items[i].MergedAt),
 				Additions: intPtr(items[i].GetAdditions()),
 				Deletions: intPtr(items[i].GetDeletions()),
+				Title:     items[i].GetTitle(),
 			}
 			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), mentions,
 				getLabels(items[i].Labels), extra); err != nil {
 				return fmt.Errorf("error adding pr event: %s/%s: %w", e.owner, e.repo, err)
+			}
+
+			// Fetch reviews for this PR to capture approve/request-changes events
+			if err := e.importPRReviews(ctx, items[i].GetNumber()); err != nil {
+				slog.Warn("error importing PR reviews", "pr", items[i].GetNumber(), "error", err)
 			}
 		}
 
@@ -503,6 +528,44 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		}
 
 		opt.ListOptions.Page = resp.NextPage
+	}
+
+	return nil
+}
+
+func (e *EventImporter) importPRReviews(ctx context.Context, prNumber int) error {
+	if prNumber == 0 {
+		return nil
+	}
+
+	opts := &github.ListOptions{PerPage: pageSizeDefault}
+
+	for {
+		reviews, resp, err := e.client.PullRequests.ListReviews(ctx, e.owner, e.repo, prNumber, opts)
+		if err != nil {
+			return fmt.Errorf("error listing reviews for PR #%d: %w", prNumber, err)
+		}
+		checkRateLimit(resp)
+
+		for i := range reviews {
+			if reviews[i].User == nil || reviews[i].HTMLURL == nil {
+				continue
+			}
+			n := prNumber
+			extra := &eventExtra{
+				Number:    &n,
+				CreatedAt: timestampStr(reviews[i].SubmittedAt),
+			}
+			if err := e.add(EventTypePRReview, *reviews[i].HTMLURL, reviews[i].User,
+				timestampToTime(reviews[i].SubmittedAt), nil, nil, extra); err != nil {
+				return fmt.Errorf("error adding PR review event: %w", err)
+			}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 
 	return nil
@@ -544,6 +607,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 				Number:    items[i].Number,
 				CreatedAt: timestampStr(items[i].CreatedAt),
 				ClosedAt:  timestampStr(items[i].ClosedAt),
+				Title:     items[i].GetTitle(),
 			}
 			if err := e.add(EventTypeIssue, *items[i].HTMLURL, items[i].User,
 				timestampToTime(items[i].UpdatedAt), mentions, getLabels(items[i].Labels), extra); err != nil {
@@ -570,7 +634,6 @@ func getStrPtr(s string) *string {
 	return &s
 }
 
-//nolint:dupl // similar loop structure but different GitHub API types (IssueComment vs PullRequestComment)
 func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	slog.Debug("starting issue comment event import", "page", e.state[EventTypeIssueComment].Page, "since", e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
 
@@ -615,7 +678,6 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	return nil
 }
 
-//nolint:dupl // similar loop structure but different GitHub API types (PullRequestComment vs IssueComment)
 func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 	slog.Debug("starting pr review event import", "page", e.state[EventTypePRReview].Page, "since", e.state[EventTypePRReview].Since.Format("2006-01-02"))
 
@@ -643,7 +705,15 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, nil); err != nil {
+			extra := &eventExtra{
+				CreatedAt: timestampStr(items[i].CreatedAt),
+			}
+			if items[i].PullRequestURL != nil {
+				if n := parsePRNumberFromURL(*items[i].PullRequestURL); n > 0 {
+					extra.Number = &n
+				}
+			}
+			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, extra); err != nil {
 				return fmt.Errorf("error adding PR comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}

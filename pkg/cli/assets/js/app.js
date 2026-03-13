@@ -115,6 +115,11 @@ let reputationChartURL;
 let forksAndActivityChart;
 let starsTrendChart;
 let forksTrendChart;
+let changeFailureRateChart;
+let reviewLatencyChart;
+let prSizeChart;
+let contributorFunnelChart;
+let contributorMomentumChart;
 let searchItem;
 
 const searchPrefixes = ['org', 'repo', 'entity'];
@@ -197,18 +202,25 @@ function loadAllCharts(months, org, repo, entity) {
     loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect, onLeftExclude);
     loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect, onRightExclude);
     loadInsightsSummary(`/data/insights/summary?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadHealthActivitySparkline(`/data/insights/daily-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRetentionChart(`/data/insights/retention?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
-    loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-close-chart', 'timeToClose');
+    loadTimeToCloseChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`,
+        `/data/insights/time-to-restore?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadStarsTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
     loadForksTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
-    loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
+    loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadReleaseDownloadsChart(`/data/insights/release-downloads?m=${months}&o=${org}&r=${repo}`);
     loadReleaseDownloadsByTagChart(`/data/insights/release-downloads-by-tag?m=${months}&o=${org}&r=${repo}`);
     loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadReviewLatencyChart(`/data/insights/review-latency?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadChangeFailureRateChart(`/data/insights/change-failure-rate?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadPRSizeChart(`/data/insights/pr-size?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadContributorFunnelChart(`/data/insights/contributor-funnel?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadContributorMomentumChart(`/data/insights/contributor-momentum?m=${months}&o=${org}&r=${repo}&e=${entity}`);
 }
 
 function applySelection(scope, item) {
@@ -410,6 +422,21 @@ function resetCharts() {
     }
     if (forksAndActivityChart) {
         forksAndActivityChart.destroy();
+    }
+    if (changeFailureRateChart) {
+        changeFailureRateChart.destroy();
+    }
+    if (reviewLatencyChart) {
+        reviewLatencyChart.destroy();
+    }
+    if (prSizeChart) {
+        prSizeChart.destroy();
+    }
+    if (contributorFunnelChart) {
+        contributorFunnelChart.destroy();
+    }
+    if (contributorMomentumChart) {
+        contributorMomentumChart.destroy();
     }
 }
 
@@ -725,6 +752,39 @@ function loadInsightsSummary(url) {
     });
 }
 
+function loadHealthActivitySparkline(url) {
+    $.get(url, function (data) {
+        if (!data || !data.dates || data.dates.length === 0) return;
+        new Chart($("#health-activity-sparkline")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Events',
+                    data: data.counts,
+                    borderColor: colors[0],
+                    backgroundColor: colors[0] + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 1.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    });
+}
+
 function loadRetentionChart(url) {
     $.get(url, function (data) {
         retentionChart = new Chart($("#retention-chart")[0].getContext("2d"), {
@@ -800,6 +860,42 @@ function loadPRRatioChart(url) {
                     x: { ticks: { font: { size: 14 } } },
                     y: { beginAtZero: true, position: 'left', ticks: { precision: 0, font: { size: 14 } } },
                     y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { size: 14 } } }
+                }
+            }
+        });
+    });
+}
+
+function loadTimeToCloseChart(closeURL, restoreURL) {
+    $.when($.get(closeURL), $.get(restoreURL)).done(function (closeRes, restoreRes) {
+        const close = closeRes[0];
+        const restore = restoreRes[0];
+        timeToCloseChart = new Chart($("#time-to-close-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: close.months,
+                datasets: [{
+                    label: 'All Issues',
+                    data: close.avg_days,
+                    backgroundColor: colors[2],
+                    borderWidth: 1,
+                    order: 2
+                }, {
+                    label: 'Bug (near release)',
+                    data: restore.avg_days,
+                    backgroundColor: colors[3],
+                    borderWidth: 1,
+                    order: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, ticks: { font: { size: 14 } },
+                        title: { display: true, text: 'Avg Days' } }
                 }
             }
         });
@@ -1071,6 +1167,16 @@ function loadReleaseCadenceChart(url) {
                     data: data.stable,
                     backgroundColor: colors[1],
                     borderWidth: 1
+                }, {
+                    label: 'Deployments',
+                    type: 'line',
+                    data: data.deployments,
+                    borderColor: colors[3],
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    order: 0
                 }]
             },
             options: {
@@ -1394,5 +1500,189 @@ function showEntityDevelopers(entity) {
         list.append(`<li class="entity-popover-hint">Wrong affiliation? Fix locally:<br><code>devpulse import substitutions --type entity --old '${escaped}' --new 'CORRECT'</code><br>Or update the source: <a href="https://github.com/cncf/gitdm" target="_blank">cncf/gitdm</a></li>`);
     }).fail(function () {
         list.empty().append('<li>Failed to load contributors</li>');
+    });
+}
+
+function loadReviewLatencyChart(url) {
+    $.get(url, function (data) {
+        reviewLatencyChart = new Chart($("#review-latency-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Avg Hours',
+                    data: data.avg_hours,
+                    backgroundColor: colors[2],
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    order: 2
+                }, {
+                    label: 'Count',
+                    type: 'line',
+                    data: data.count,
+                    borderColor: colors[5],
+                    borderWidth: 3,
+                    fill: false,
+                    yAxisID: 'y1',
+                    order: 1,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, position: 'left', ticks: { font: { size: 14 } },
+                        title: { display: true, text: 'Avg Hours' } },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
+                        ticks: { precision: 0, font: { size: 14 } },
+                        title: { display: true, text: 'Count' } }
+                }
+            }
+        });
+    });
+}
+
+function loadChangeFailureRateChart(url) {
+    $.get(url, function (data) {
+        changeFailureRateChart = new Chart($("#change-failure-rate-chart")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Failure Rate %',
+                    data: data.rate,
+                    borderColor: colors[3],
+                    backgroundColor: colors[3] + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, ticks: { font: { size: 14 },
+                        callback: function(v) { return v + '%'; } },
+                        title: { display: true, text: 'Failure Rate' } }
+                }
+            }
+        });
+    });
+}
+
+function loadPRSizeChart(url) {
+    $.get(url, function (data) {
+        prSizeChart = new Chart($("#pr-size-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'S (<50)',
+                    data: data.small,
+                    backgroundColor: colors[1]
+                }, {
+                    label: 'M (50-250)',
+                    data: data.medium,
+                    backgroundColor: colors[0]
+                }, {
+                    label: 'L (250-1K)',
+                    data: data.large,
+                    backgroundColor: colors[2]
+                }, {
+                    label: 'XL (>1K)',
+                    data: data.xlarge,
+                    backgroundColor: colors[3]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { stacked: true, ticks: { font: { size: 14 } } },
+                    y: { stacked: true, beginAtZero: true, ticks: { precision: 0, font: { size: 14 } } }
+                }
+            }
+        });
+    });
+}
+
+function loadContributorFunnelChart(url) {
+    $.get(url, function (data) {
+        contributorFunnelChart = new Chart($("#contributor-funnel-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'First Comment',
+                    data: data.first_comment,
+                    backgroundColor: colors[0]
+                }, {
+                    label: 'First PR',
+                    data: data.first_pr,
+                    backgroundColor: colors[1]
+                }, {
+                    label: 'First Merge',
+                    data: data.first_merge,
+                    backgroundColor: colors[4]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, ticks: { precision: 0, font: { size: 14 } } }
+                }
+            }
+        });
+    });
+}
+
+function loadContributorMomentumChart(url) {
+    $.get(url, function (data) {
+        contributorMomentumChart = new Chart($("#contributor-momentum-chart")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Active (3mo rolling)',
+                    data: data.active,
+                    borderColor: colors[0],
+                    backgroundColor: colors[0] + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }, {
+                    label: 'Delta',
+                    type: 'bar',
+                    data: data.delta,
+                    backgroundColor: data.delta.map(d => d >= 0 ? colors[1] + '88' : colors[3] + '88'),
+                    borderWidth: 0,
+                    yAxisID: 'y1',
+                    order: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, position: 'left', ticks: { precision: 0, font: { size: 14 } },
+                        title: { display: true, text: 'Active Contributors' } },
+                    y1: { position: 'right', grid: { drawOnChartArea: false },
+                        ticks: { precision: 0, font: { size: 14 } },
+                        title: { display: true, text: 'Delta' } }
+                }
+            }
+        });
     });
 }

@@ -45,7 +45,7 @@ var (
 
 	serverCmd = &cli.Command{
 		Name:    "server",
-		Aliases: []string{"serve"},
+		Aliases: []string{"serve", "view"},
 		Usage:   "Start local HTTP server",
 		Action:  cmdStartServer,
 		Flags: []cli.Flag{
@@ -121,13 +121,20 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 
 	// Insights API
 	mux.HandleFunc("GET /data/insights/summary", insightsSummaryAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/daily-activity", insightsDailyActivityAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/retention", insightsRetentionAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/pr-ratio", insightsPRRatioAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/time-to-merge", insightsTimeToMergeAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/time-to-close", insightsTimeToCloseAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/time-to-restore", insightsTimeToRestoreAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/review-latency", insightsReviewLatencyAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/forks-and-activity", insightsForksAndActivityAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/repo-meta", insightsRepoMetaAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/repo-metric-history", insightsRepoMetricHistoryAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/change-failure-rate", insightsChangeFailureRateAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/pr-size", insightsPRSizeAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/contributor-momentum", insightsContributorMomentumAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/contributor-funnel", insightsContributorFunnelAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/release-cadence", insightsReleaseCadenceAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/release-downloads", insightsReleaseDownloadsAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/release-downloads-by-tag", insightsReleaseDownloadsByTagAPIHandler(db))

@@ -32,9 +32,9 @@ func seedTestData(t *testing.T, db *sql.DB) {
 		_, err = tx.Stmt(stmt).Exec(
 			e.Org, e.Repo, e.Username, e.Type, e.Date,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
 		)
 		require.NoError(t, err)
 	}

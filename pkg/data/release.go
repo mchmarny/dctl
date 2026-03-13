@@ -50,6 +50,24 @@ const (
 		ORDER BY month
 	`
 
+	selectMergedPRDeploymentsSQL = `SELECT
+			substr(e.merged_at, 1, 7) AS month,
+			COUNT(*) AS cnt
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.type = 'pr'
+		  AND e.state = 'merged'
+		  AND e.merged_at IS NOT NULL
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.merged_at >= ?
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		GROUP BY month
+		ORDER BY month
+	`
+
 	selectReleaseDownloadsByTagSQL = `WITH recent AS (
 			SELECT r.org, r.repo, r.tag, r.published_at
 			FROM release r
@@ -82,9 +100,10 @@ const (
 )
 
 type ReleaseCadenceSeries struct {
-	Months []string `json:"months" yaml:"months"`
-	Total  []int    `json:"total" yaml:"total"`
-	Stable []int    `json:"stable" yaml:"stable"`
+	Months      []string `json:"months" yaml:"months"`
+	Total       []int    `json:"total" yaml:"total"`
+	Stable      []int    `json:"stable" yaml:"stable"`
+	Deployments []int    `json:"deployments" yaml:"deployments"`
 }
 
 type ReleaseDownloadsSeries struct {
@@ -209,7 +228,7 @@ func ImportAllReleases(dbPath, token string) error {
 	return nil
 }
 
-func GetReleaseCadence(db *sql.DB, org, repo *string, months int) (*ReleaseCadenceSeries, error) {
+func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*ReleaseCadenceSeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
@@ -223,20 +242,44 @@ func GetReleaseCadence(db *sql.DB, org, repo *string, months int) (*ReleaseCaden
 	defer rows.Close()
 
 	s := &ReleaseCadenceSeries{
-		Months: make([]string, 0),
-		Total:  make([]int, 0),
-		Stable: make([]int, 0),
+		Months:      make([]string, 0),
+		Total:       make([]int, 0),
+		Stable:      make([]int, 0),
+		Deployments: make([]int, 0),
 	}
 
 	for rows.Next() {
 		var month string
 		var total, stable int
-		if err := rows.Scan(&month, &total, &stable); err != nil {
-			return nil, fmt.Errorf("failed to scan release cadence row: %w", err)
+		if scanErr := rows.Scan(&month, &total, &stable); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan release cadence row: %w", scanErr)
 		}
 		s.Months = append(s.Months, month)
 		s.Total = append(s.Total, total)
 		s.Stable = append(s.Stable, stable)
+	}
+
+	// When releases exist, each release counts as a deployment.
+	if len(s.Months) > 0 {
+		s.Deployments = append(s.Deployments, s.Total...)
+		return s, nil
+	}
+
+	// Fallback: count merged PRs as deployments when no releases exist.
+	fallbackRows, err := db.Query(selectMergedPRDeploymentsSQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query merged PR deployments: %w", err)
+	}
+	defer fallbackRows.Close()
+
+	for fallbackRows.Next() {
+		var month string
+		var cnt int
+		if scanErr := fallbackRows.Scan(&month, &cnt); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan merged PR deployment row: %w", scanErr)
+		}
+		s.Months = append(s.Months, month)
+		s.Deployments = append(s.Deployments, cnt)
 	}
 
 	return s, nil

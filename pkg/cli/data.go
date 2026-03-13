@@ -253,6 +253,20 @@ func insightsSummaryAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsDailyActivityAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := r.URL.Query().Get("e")
+		res, err := data.GetDailyActivity(db, p.org, p.repo, optional(entity), p.months)
+		if err != nil {
+			slog.Error("failed to get daily activity", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying daily activity")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsRetentionAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
@@ -329,7 +343,8 @@ func insightsRepoMetricHistoryAPIHandler(db *sql.DB) http.HandlerFunc {
 func insightsReleaseCadenceAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := data.GetReleaseCadence(db, p.org, p.repo, p.months)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetReleaseCadence(db, p.org, p.repo, entity, p.months)
 		if err != nil {
 			slog.Error("failed to get release cadence", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying release cadence")
@@ -387,6 +402,90 @@ func insightsTimeToCloseAPIHandler(db *sql.DB) http.HandlerFunc {
 		if err != nil {
 			slog.Error("failed to get time to close", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying time to close")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsTimeToRestoreAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetTimeToRestoreBugs(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get time to restore", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying time to restore")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsChangeFailureRateAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetChangeFailureRate(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get change failure rate", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying change failure rate")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsReviewLatencyAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetReviewLatency(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get review latency", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying review latency")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsPRSizeAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetPRSizeDistribution(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get PR size distribution", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying PR size distribution")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsContributorMomentumAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetContributorMomentum(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get contributor momentum", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying contributor momentum")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsContributorFunnelAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetContributorFunnel(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get contributor funnel", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying contributor funnel")
 			return
 		}
 		writeJSON(w, http.StatusOK, res)

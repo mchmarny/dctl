@@ -58,6 +58,10 @@
                         <span class="insight-desc">Organizations behind >=50% of all work (lower means higher dependency on fewer companies)</span>
                     </div>
                 </div>
+                <div style="height:80px;padding:0 1rem;">
+                    <canvas id="health-activity-sparkline"></canvas>
+                </div>
+                <span class="insight-desc">Daily contributor activity over the selected period.</span>
             </div>
         </article>
         <article>
@@ -159,12 +163,12 @@
         <article>
             <div class="tbl">
                 <div class="content-header">
-                    Time to Merge (PRs)
+                    Lead Time (PR to Merge)
                 </div>
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="time-to-merge-chart"></canvas>
                 </div>
-                <span class="insight-desc">Average days from PR open to merge. Based on GitHub created/merged timestamps.</span>
+                <span class="insight-desc">Average days from PR creation to merge. Based on GitHub created/merged timestamps.</span>
             </div>
         </article>
         <article>
@@ -175,7 +179,7 @@
                 <div class="tbl-chart tbl-home">
                     <canvas class="chart" id="time-to-close-chart"></canvas>
                 </div>
-                <span class="insight-desc">Average days from issue open to close. Based on GitHub created/closed timestamps.</span>
+                <span class="insight-desc">Average days to close. All issues vs bug issues filed within 7 days of a release.</span>
             </div>
         </article>
         <article>
@@ -242,6 +246,61 @@
                     <canvas class="chart" id="forks-trend-chart"></canvas>
                 </div>
                 <span class="insight-desc">Daily fork count over the last 30 days.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Review Latency
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="review-latency-chart"></canvas>
+                </div>
+                <span class="insight-desc">Average hours from PR creation to first review. Lower is better.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Change Failure Rate
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="change-failure-rate-chart"></canvas>
+                </div>
+                <span class="insight-desc">Percentage of deployments causing failures. Based on bug issues near releases and revert PRs.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    PR Size Distribution
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="pr-size-chart"></canvas>
+                </div>
+                <span class="insight-desc">Pull request size by lines changed. S (&lt;50), M (50-250), L (250-1000), XL (&gt;1000).</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    First-Time Contributors
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="contributor-funnel-chart"></canvas>
+                </div>
+                <span class="insight-desc">New contributor milestones per month: first comment, first PR, first merged PR.</span>
+            </div>
+        </article>
+        <article>
+            <div class="tbl">
+                <div class="content-header">
+                    Contributor Momentum
+                </div>
+                <div class="tbl-chart tbl-home">
+                    <canvas class="chart" id="contributor-momentum-chart"></canvas>
+                </div>
+                <span class="insight-desc">Rolling 3-month active contributor count with month-over-month change.</span>
             </div>
         </article>
         <article class="grid-full-width">
