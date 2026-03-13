@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/mchmarny/devpulse/actions/workflows/test-on-push.yaml/badge.svg)](https://github.com/mchmarny/devpulse/actions/workflows/test-on-push.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mchmarny/devpulse)](https://goreportcard.com/report/github.com/mchmarny/devpulse)
-[![Go Reference](https://pkg.go.dev/badge/github.com/mchmarny/repudevpulseter.svg)](https://pkg.go.dev/github.com/mchmarny/devpulse)
+[![Go Reference](https://pkg.go.dev/badge/github.com/mchmarny/devpulse.svg)](https://pkg.go.dev/github.com/mchmarny/devpulse)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Community health analytics for GitHub organizations and repositories. `devpulse` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard.
@@ -18,7 +18,8 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **Time to close / merge** -- average days to close issues and merge PRs
 - **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers (GitHub profile + CNCF gitdm)
 - **Contributor reputation** -- two-tier scoring (shallow local, deep GitHub API) with known bot filtering
-- **Repository metadata** -- stars, forks, open issues, language, license
+- **Repository metadata** -- stars, forks, open issues, language, license with 30-day sparkline
+- **Stars & forks trends** -- daily star and fork counts over the last 30 days with historical backfill
 - **Release cadence** -- monthly release counts (total vs stable)
 - **Event search filters** -- filter by type, date range, username, or entity directly from the dashboard
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
@@ -68,22 +69,28 @@ export GITHUB_TOKEN=ghp_...
 
 ### 2. Import data
 
-Import everything for an org (events, affiliations, metadata, releases):
+Import everything for an org (events, affiliations, metadata, releases, reputation):
 
 ```shell
-devpulse import all --org <org>
+devpulse import --org <org>
 ```
 
-Or target a specific repo:
+Or target specific repos:
 
 ```shell
-devpulse import all --org <org> --repo <repo>
+devpulse import --org <org> --repo <repo1> --repo <repo2>
 ```
 
 Use `--fresh` to clear pagination state and re-import from scratch:
 
 ```shell
-devpulse import all --org <org> --fresh
+devpulse import --org <org> --fresh
+```
+
+Update all previously imported data (no flags needed):
+
+```shell
+devpulse import
 ```
 
 See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
@@ -120,7 +127,17 @@ devpulse query entity detail --name GOOGLE
 
 See [docs/QUERY.md](docs/QUERY.md) for all query options.
 
-### 5. Reset
+### 5. Delete data
+
+Remove imported data for a specific org or repo:
+
+```shell
+devpulse delete --org <org>                          # delete all data for org
+devpulse delete --org <org> --repo <repo>            # delete data for specific repo
+devpulse delete --org <org> --repo <repo> --force    # skip confirmation prompt
+```
+
+### 6. Reset
 
 Delete all imported data and start fresh:
 
@@ -139,10 +156,10 @@ Prompts for confirmation before deleting the database.
 | [GitHub API](https://docs.github.com/en/rest) | PRs, issues, comments, reviews, forks, repo metadata, releases |
 | [cncf/gitdm](https://github.com/cncf/gitdm) | Developer-to-company affiliations |
 
-Entity names are normalized automatically. Use `devpulse import substitutions` to correct misattributions:
+Entity names are normalized automatically. Use `devpulse substitute` to correct misattributions:
 
 ```shell
-devpulse import substitutions --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new "IBM"
+devpulse substitute --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new "IBM"
 ```
 
 ## Architecture

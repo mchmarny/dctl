@@ -44,7 +44,7 @@ GitHub events (PRs, reviews, issues, comments, forks) grouped by month with a to
 Entity and developer contribution distribution. Entity affiliations come from GitHub profile company fields and CNCF gitdm data (self-reported, not verified). Click an entity to see its affiliated developers in a popover. Legend items can be clicked to exclude them.
 
 ### Project Health
-Bus factor and pony factor: the minimum number of developers (or organizations) producing 50% of all contributions.
+Bus factor and pony factor: the minimum number of developers (or organizations) producing 50% of all contributions. Includes a daily activity sparkline showing event volume over the selected period.
 
 ### Contributor Retention
 New (first contribution that month) vs returning (contributed in a prior month) contributors per month.
@@ -56,7 +56,13 @@ Two-tier scoring: shallow scores use local data only; click a bar for a full Git
 Monthly PR and review counts with the ratio on a secondary axis. Higher ratio suggests stronger code review culture.
 
 ### Repository Metadata
-Snapshot from GitHub API at last import. Aggregated stars, forks, open issues, primary language, license, and repo count.
+Snapshot from GitHub API at last import. Aggregated stars, forks, open issues, primary language, license, and repo count. Includes a sparkline showing stars and forks trends over the last 30 days.
+
+### Stars Trend
+Daily star count over the last 30 days. Backfilled from GitHub's ListStargazers API on first import, then updated with each subsequent import.
+
+### Forks Trend
+Daily fork count over the last 30 days. Backfilled from GitHub's ListForks API on first import, then updated with each subsequent import.
 
 ### Release Cadence
 GitHub releases per month. Stable excludes pre-releases and drafts.

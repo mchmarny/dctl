@@ -4,92 +4,76 @@ All data is stored locally in an embedded [SQLite](https://www.sqlite.org/) data
 
 > All commands assume you have already [authenticated](../README.md#1-authenticate). Importing private repositories requires the default `repo` scope (omit `--public` during `devpulse auth`).
 
-## Import all (recommended)
+## Import an org (recommended)
 
-Import events, affiliations, substitutions, metadata, and releases in one command:
+Import events, affiliations, metadata, releases, and reputation in one command:
 
 ```shell
-devpulse import all --org <org>
+devpulse import --org <org>
 ```
 
-Target a specific repo:
+Target specific repos:
 
 ```shell
-devpulse import all --org <org> --repo <repo>
+devpulse import --org <org> --repo <repo1> --repo <repo2>
 ```
 
 Force a full re-import (clears pagination state):
 
 ```shell
-devpulse import all --org <org> --fresh
+devpulse import --org <org> --fresh
 ```
 
-By default, `devpulse` downloads the last 6 months of data. Use `--months` to adjust:
+By default, `devpulse` downloads the last 6 months of events. Use `--months` to adjust:
 
 ```shell
-devpulse import all --org <org> --months 12
+devpulse import --org <org> --months 12
 ```
 
-## Individual import commands
-
-### Events
-
-Import GitHub activity data (PRs, reviews, issues, comments, forks):
+Deep-score the N lowest-reputation contributors via the GitHub API (runs after the main import):
 
 ```shell
-devpulse import events --org <org> --repo <repo>
+devpulse import --org <org> --deep 10
 ```
 
-Omit `--repo` to import all repos in the org. Use `--fresh` to re-import from page 1.
+## Update all previously imported data
 
-### Affiliations
-
-Enrich developer profiles with company affiliations from [cncf/gitdm](https://github.com/cncf/gitdm) and GitHub profile data:
+Run `import` with no flags to refresh all previously imported orgs/repos:
 
 ```shell
-devpulse import affiliations
+devpulse import
 ```
 
-### Substitutions
+This re-imports events, affiliations, substitutions, metadata, releases, metric history, and reputation for every org/repo already in the database.
 
-Create entity name mappings to normalize inconsistent affiliations:
+## What gets imported
 
-```shell
-devpulse import substitutions --type entity --old "GOOGLE LLC" --new "GOOGLE"
-```
+| Step | Data | Source |
+|------|------|--------|
+| Events | PRs, reviews, issues, comments, forks | GitHub API |
+| Affiliations | Developer-to-company mappings | [cncf/gitdm](https://github.com/cncf/gitdm) + GitHub profiles |
+| Substitutions | Entity name normalizations | Local DB (user-defined via `devpulse substitute`) |
+| Metadata | Stars, forks, open issues, language, license | GitHub API |
+| Metric history | Daily star/fork counts (30-day backfill) | GitHub API (ListStargazers, ListForks) |
+| Releases | Tags, publish dates, asset downloads | GitHub API |
+| Reputation | Contributor reputation scores | Local DB + optional GitHub API (with `--deep`) |
 
-Substitutions are saved and re-applied on every subsequent import.
+## Flags
 
-### Metadata
-
-Import repository metadata (stars, forks, language, license):
-
-```shell
-devpulse import metadata --org <org> --repo <repo>
-```
-
-Omit flags to import metadata for all previously imported repos.
-
-### Releases
-
-Import release tags and publish dates:
-
-```shell
-devpulse import releases --org <org> --repo <repo>
-```
-
-### Updates
-
-Re-import all previously configured orgs/repos plus affiliations and substitutions:
-
-```shell
-devpulse import updates
-```
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--org` | GitHub organization or user | (required for first import) |
+| `--repo` | Repository name (repeatable) | all repos in org |
+| `--months` | Months of event history to import | 6 |
+| `--fresh` | Clear pagination state and re-import from scratch | false |
+| `--deep` | Deep-score N lowest-reputation contributors via GitHub API | 0 (disabled) |
+| `--format` | Output format: `json` or `yaml` | json |
+| `--debug` | Enable verbose logging | false |
 
 ## Debug output
 
 Add `--debug` to any command for verbose logging:
 
 ```shell
-devpulse --debug import all --org <org>
+devpulse --debug import --org <org>
 ```
