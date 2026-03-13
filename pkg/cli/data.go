@@ -253,6 +253,20 @@ func insightsSummaryAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsDailyActivityAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := r.URL.Query().Get("e")
+		res, err := data.GetDailyActivity(db, p.org, p.repo, optional(entity), p.months)
+		if err != nil {
+			slog.Error("failed to get daily activity", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying daily activity")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsRetentionAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)

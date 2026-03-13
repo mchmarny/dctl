@@ -161,7 +161,25 @@ const (
 		GROUP BY month
 		ORDER BY month
 	`
+
+	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.date >= ?
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		GROUP BY e.date
+		ORDER BY e.date
+	`
 )
+
+type DailyActivitySeries struct {
+	Dates  []string `json:"dates"`
+	Counts []int    `json:"counts"`
+}
 
 type VelocitySeries struct {
 	Months  []string  `json:"months" yaml:"months"`
@@ -204,6 +222,33 @@ func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*Ins
 	}
 
 	return summary, nil
+}
+
+func GetDailyActivity(db *sql.DB, org, repo, entity *string, months int) (*DailyActivitySeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectDailyActivitySQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query daily activity: %w", err)
+	}
+	defer rows.Close()
+
+	series := &DailyActivitySeries{}
+	for rows.Next() {
+		var date string
+		var count int
+		if err := rows.Scan(&date, &count); err != nil {
+			return nil, fmt.Errorf("failed to scan daily activity row: %w", err)
+		}
+		series.Dates = append(series.Dates, date)
+		series.Counts = append(series.Counts, count)
+	}
+
+	return series, nil
 }
 
 func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) (*RetentionSeries, error) {

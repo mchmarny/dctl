@@ -197,6 +197,7 @@ function loadAllCharts(months, org, repo, entity) {
     loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect, onLeftExclude);
     loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect, onRightExclude);
     loadInsightsSummary(`/data/insights/summary?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    loadHealthActivitySparkline(`/data/insights/daily-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRetentionChart(`/data/insights/retention?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
@@ -722,6 +723,39 @@ function loadInsightsSummary(url) {
     $.get(url, function (data) {
         $("#bus-factor-val").text(data.bus_factor);
         $("#pony-factor-val").text(data.pony_factor);
+    });
+}
+
+function loadHealthActivitySparkline(url) {
+    $.get(url, function (data) {
+        if (!data || !data.dates || data.dates.length === 0) return;
+        new Chart($("#health-activity-sparkline")[0].getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Events',
+                    data: data.counts,
+                    borderColor: colors[0],
+                    backgroundColor: colors[0] + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 1.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
     });
 }
 
