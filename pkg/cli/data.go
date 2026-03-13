@@ -478,6 +478,20 @@ func insightsContributorMomentumAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsContributorFunnelAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetContributorFunnel(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get contributor funnel", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying contributor funnel")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsForksAndActivityAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)

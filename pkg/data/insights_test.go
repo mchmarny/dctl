@@ -418,6 +418,54 @@ func TestGetContributorMomentum_WithData(t *testing.T) {
 	assert.Equal(t, 0, series.Delta[1])
 }
 
+func TestGetContributorFunnel_NilDB(t *testing.T) {
+	_, err := GetContributorFunnel(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetContributorFunnel_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetContributorFunnel(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetContributorFunnel_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// Alice: first comment, first PR, first merge — all in Jan
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, merged_at)
+		VALUES
+		('org1', 'repo1', 'alice', 'issue_comment', '2025-01-05', 'http://a', '', '', NULL, '2025-01-05T10:00:00Z', NULL),
+		('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://b', '', '', 'merged', '2025-01-10T10:00:00Z', '2025-01-10T12:00:00Z')`)
+	require.NoError(t, err)
+
+	// Bob: first comment only in Jan
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'bob', 'issue_comment', '2025-01-08', 'http://c', '', '')`)
+	require.NoError(t, err)
+
+	series, err := GetContributorFunnel(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+
+	// Find January
+	found := false
+	for i, m := range series.Months {
+		if m == "2025-01" {
+			found = true
+			assert.Equal(t, 2, series.FirstComment[i]) // Alice + Bob
+			assert.Equal(t, 1, series.FirstPR[i])      // Alice only
+			assert.Equal(t, 1, series.FirstMerge[i])   // Alice only
+			break
+		}
+	}
+	assert.True(t, found, "expected 2025-01 in results")
+}
+
 func padDay(i int) string {
 	return fmt.Sprintf("%02d", (i%28)+1)
 }

@@ -297,6 +297,38 @@ const (
 	ORDER BY m.month
 	`
 
+	// Contributor funnel: first comment, first PR, first merge per user, counted by month.
+	selectContributorFunnelSQL = `WITH firsts AS (
+		SELECT
+			e.username,
+			MIN(CASE WHEN e.type = 'issue_comment' THEN e.date END) AS first_comment,
+			MIN(CASE WHEN e.type = 'pr' THEN e.date END) AS first_pr,
+			MIN(CASE WHEN e.type = 'pr' AND e.state = 'merged' THEN e.date END) AS first_merge
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		GROUP BY e.username
+	),
+	months AS (
+		SELECT DISTINCT substr(date, 1, 7) AS month FROM event WHERE date >= ?
+	)
+	SELECT
+		m.month,
+		SUM(CASE WHEN f.first_comment IS NOT NULL AND substr(f.first_comment, 1, 7) = m.month THEN 1 ELSE 0 END) AS fc,
+		SUM(CASE WHEN f.first_pr IS NOT NULL AND substr(f.first_pr, 1, 7) = m.month THEN 1 ELSE 0 END) AS fp,
+		SUM(CASE WHEN f.first_merge IS NOT NULL AND substr(f.first_merge, 1, 7) = m.month THEN 1 ELSE 0 END) AS fm
+	FROM months m
+	CROSS JOIN firsts f
+	WHERE substr(COALESCE(f.first_comment, f.first_pr, f.first_merge), 1, 7) >= (SELECT MIN(month) FROM months)
+	GROUP BY m.month
+	HAVING fc > 0 OR fp > 0 OR fm > 0
+	ORDER BY m.month
+	`
+
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
 		JOIN developer d ON e.username = d.username
@@ -694,6 +726,13 @@ type ForksAndActivitySeries struct {
 	Events []int    `json:"events" yaml:"events"`
 }
 
+type ContributorFunnelSeries struct {
+	Months       []string `json:"months" yaml:"months"`
+	FirstComment []int    `json:"first_comment" yaml:"firstComment"`
+	FirstPR      []int    `json:"first_pr" yaml:"firstPR"`
+	FirstMerge   []int    `json:"first_merge" yaml:"firstMerge"`
+}
+
 func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*ForksAndActivitySeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
@@ -722,6 +761,41 @@ func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*Fo
 		s.Months = append(s.Months, month)
 		s.Forks = append(s.Forks, forks)
 		s.Events = append(s.Events, events)
+	}
+
+	return s, nil
+}
+
+func GetContributorFunnel(db *sql.DB, org, repo, entity *string, months int) (*ContributorFunnelSeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectContributorFunnelSQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query contributor funnel: %w", err)
+	}
+	defer rows.Close()
+
+	s := &ContributorFunnelSeries{
+		Months:       make([]string, 0),
+		FirstComment: make([]int, 0),
+		FirstPR:      make([]int, 0),
+		FirstMerge:   make([]int, 0),
+	}
+
+	for rows.Next() {
+		var month string
+		var fc, fp, fm int
+		if err := rows.Scan(&month, &fc, &fp, &fm); err != nil {
+			return nil, fmt.Errorf("failed to scan contributor funnel row: %w", err)
+		}
+		s.Months = append(s.Months, month)
+		s.FirstComment = append(s.FirstComment, fc)
+		s.FirstPR = append(s.FirstPR, fp)
+		s.FirstMerge = append(s.FirstMerge, fm)
 	}
 
 	return s, nil
