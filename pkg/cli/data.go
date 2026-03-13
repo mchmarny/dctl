@@ -450,6 +450,20 @@ func insightsReviewLatencyAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsPRSizeAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := data.GetPRSizeDistribution(db, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get PR size distribution", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying PR size distribution")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsForksAndActivityAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)

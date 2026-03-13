@@ -255,6 +255,26 @@ const (
 	ORDER BY month
 	`
 
+	selectPRSizeDistributionSQL = `SELECT
+		substr(e.created_at, 1, 7) AS month,
+		SUM(CASE WHEN COALESCE(e.additions, 0) + COALESCE(e.deletions, 0) < 50 THEN 1 ELSE 0 END) AS small,
+		SUM(CASE WHEN COALESCE(e.additions, 0) + COALESCE(e.deletions, 0) BETWEEN 50 AND 249 THEN 1 ELSE 0 END) AS medium,
+		SUM(CASE WHEN COALESCE(e.additions, 0) + COALESCE(e.deletions, 0) BETWEEN 250 AND 999 THEN 1 ELSE 0 END) AS large,
+		SUM(CASE WHEN COALESCE(e.additions, 0) + COALESCE(e.deletions, 0) >= 1000 THEN 1 ELSE 0 END) AS xlarge
+	FROM event e
+	JOIN developer d ON e.username = d.username
+	WHERE e.type = 'pr'
+	  AND e.created_at IS NOT NULL
+	  AND e.org = COALESCE(?, e.org)
+	  AND e.repo = COALESCE(?, e.repo)
+	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+	  AND e.created_at >= ?
+	  AND e.username NOT LIKE '%[bot]'
+	  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	GROUP BY month
+	ORDER BY month
+	`
+
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
 		JOIN developer d ON e.username = d.username
@@ -309,6 +329,14 @@ type ReviewLatencySeries struct {
 	Months   []string  `json:"months" yaml:"months"`
 	Count    []int     `json:"count" yaml:"count"`
 	AvgHours []float64 `json:"avg_hours" yaml:"avgHours"`
+}
+
+type PRSizeSeries struct {
+	Months []string `json:"months" yaml:"months"`
+	Small  []int    `json:"small" yaml:"small"`
+	Medium []int    `json:"medium" yaml:"medium"`
+	Large  []int    `json:"large" yaml:"large"`
+	XLarge []int    `json:"xlarge" yaml:"xlarge"`
 }
 
 func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*InsightsSummary, error) {
@@ -593,6 +621,43 @@ func GetTimeToClose(db *sql.DB, org, repo, entity *string, months int) (*Velocit
 
 func GetTimeToRestoreBugs(db *sql.DB, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	return getVelocitySeries(db, selectTimeToRestoreBugsSQL, org, repo, entity, months)
+}
+
+func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*PRSizeSeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectPRSizeDistributionSQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query PR size distribution: %w", err)
+	}
+	defer rows.Close()
+
+	s := &PRSizeSeries{
+		Months: make([]string, 0),
+		Small:  make([]int, 0),
+		Medium: make([]int, 0),
+		Large:  make([]int, 0),
+		XLarge: make([]int, 0),
+	}
+
+	for rows.Next() {
+		var month string
+		var small, medium, large, xlarge int
+		if err := rows.Scan(&month, &small, &medium, &large, &xlarge); err != nil {
+			return nil, fmt.Errorf("failed to scan PR size row: %w", err)
+		}
+		s.Months = append(s.Months, month)
+		s.Small = append(s.Small, small)
+		s.Medium = append(s.Medium, medium)
+		s.Large = append(s.Large, large)
+		s.XLarge = append(s.XLarge, xlarge)
+	}
+
+	return s, nil
 }
 
 type ForksAndActivitySeries struct {
