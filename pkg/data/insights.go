@@ -107,6 +107,33 @@ const (
 		ORDER BY month
 	`
 
+	// Time-to-restore (bugs): avg days to close bug issues filed within 7 days of a release.
+	selectTimeToRestoreBugsSQL = `SELECT
+			substr(e.created_at, 1, 7) AS month,
+			COUNT(*) AS cnt,
+			AVG(julianday(e.closed_at) - julianday(e.created_at)) AS avg_days
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.type = 'issue'
+		  AND e.closed_at IS NOT NULL
+		  AND e.created_at IS NOT NULL
+		  AND e.state = 'closed'
+		  AND LOWER(e.labels) LIKE '%bug%'
+		  AND EXISTS (
+		      SELECT 1 FROM release r
+		      WHERE r.org = e.org AND r.repo = e.repo
+		        AND julianday(e.created_at) - julianday(r.published_at) BETWEEN 0 AND 7
+		  )
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.created_at >= ?
+		  AND e.username NOT LIKE '%[bot]'
+		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		GROUP BY month
+		ORDER BY month
+	`
+
 	// Time-to-close: avg days from created_at to closed_at for closed issues, per month.
 	selectTimeToCloseSQL = `SELECT
 			substr(e.created_at, 1, 7) AS month,
@@ -493,6 +520,10 @@ func GetTimeToMerge(db *sql.DB, org, repo, entity *string, months int) (*Velocit
 
 func GetTimeToClose(db *sql.DB, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	return getVelocitySeries(db, selectTimeToCloseSQL, org, repo, entity, months)
+}
+
+func GetTimeToRestoreBugs(db *sql.DB, org, repo, entity *string, months int) (*VelocitySeries, error) {
+	return getVelocitySeries(db, selectTimeToRestoreBugsSQL, org, repo, entity, months)
 }
 
 type ForksAndActivitySeries struct {

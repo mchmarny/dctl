@@ -197,6 +197,52 @@ func TestGetTimeToClose_WithData(t *testing.T) {
 	assert.InDelta(t, 5.5, series.AvgDays[0], 0.01) // (5+6)/2
 }
 
+func TestGetTimeToRestoreBugs_NilDB(t *testing.T) {
+	_, err := GetTimeToRestoreBugs(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetTimeToRestoreBugs_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetTimeToRestoreBugs(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetTimeToRestoreBugs_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	// Insert a release
+	_, err = db.Exec(`INSERT INTO release (org, repo, tag, name, published_at, prerelease)
+		VALUES ('org1', 'repo1', 'v1.0', 'v1.0', '2025-01-15T00:00:00Z', 0)`)
+	require.NoError(t, err)
+
+	// Bug issue near release, closed in 1 day
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-01-17', 'http://a', '', 'bug', 'closed', '2025-01-17T10:00:00Z', '2025-01-18T10:00:00Z')`)
+	require.NoError(t, err)
+
+	// Non-bug issue, closed in 3 days (should NOT be included)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-01-18', 'http://b', '', 'enhancement', 'closed', '2025-01-18T10:00:00Z', '2025-01-21T10:00:00Z')`)
+	require.NoError(t, err)
+
+	// Bug issue NOT near any release (30 days later), should NOT be included
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-02-17', 'http://c', '', 'bug', 'closed', '2025-02-17T10:00:00Z', '2025-02-20T10:00:00Z')`)
+	require.NoError(t, err)
+
+	series, err := GetTimeToRestoreBugs(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 1) // Only January has a qualifying bug
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 1, series.Count[0])
+	assert.InDelta(t, 1.0, series.AvgDays[0], 0.01) // 1 day
+}
+
 func TestGetChangeFailureRate_NilDB(t *testing.T) {
 	_, err := GetChangeFailureRate(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
