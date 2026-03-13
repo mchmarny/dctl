@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -448,6 +449,20 @@ func intPtr(v int) *int {
 	return &v
 }
 
+// parsePRNumberFromURL extracts the PR number from a GitHub API pull request URL.
+// e.g. "https://api.github.com/repos/owner/repo/pulls/123" -> 123
+func parsePRNumberFromURL(url string) int {
+	parts := strings.Split(url, "/")
+	if len(parts) == 0 {
+		return 0
+	}
+	n, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
 func (e *EventImporter) importPREvents(ctx context.Context) error {
 	slog.Debug("starting pr event import", "page", e.state[EventTypePR].Page, "since", e.state[EventTypePR].Since.Format("2006-01-02"))
 
@@ -649,7 +664,15 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, nil); err != nil {
+			extra := &eventExtra{
+				CreatedAt: timestampStr(items[i].CreatedAt),
+			}
+			if items[i].PullRequestURL != nil {
+				if n := parsePRNumberFromURL(*items[i].PullRequestURL); n > 0 {
+					extra.Number = &n
+				}
+			}
+			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, extra); err != nil {
 				return fmt.Errorf("error adding PR comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
