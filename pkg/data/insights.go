@@ -227,32 +227,39 @@ const (
 	`
 
 	// Review latency: avg hours from PR creation to first review, per month.
-	selectReviewLatencySQL = `SELECT
-		month,
-		COUNT(*) AS cnt,
-		AVG(hours) AS avg_hours
-	FROM (
-	    SELECT
-	        substr(pr.created_at, 1, 7) AS month,
-	        (julianday(MIN(rev.created_at)) - julianday(pr.created_at)) * 24 AS hours
-	    FROM event pr
-	    JOIN event rev ON pr.org = rev.org AND pr.repo = rev.repo AND pr.number = rev.number
-	        AND rev.type = 'pr_review'
-	    JOIN developer d ON pr.username = d.username
-	    WHERE pr.type = 'pr'
-	      AND pr.number IS NOT NULL
-	      AND pr.created_at IS NOT NULL
-	      AND rev.created_at IS NOT NULL
-	      AND pr.org = COALESCE(?, pr.org)
-	      AND pr.repo = COALESCE(?, pr.repo)
-	      AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
-	      AND pr.created_at >= ?
-	      AND pr.username NOT LIKE '%[bot]'
-	      AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
-	    GROUP BY pr.org, pr.repo, pr.number, month
+	selectReviewLatencySQL = `WITH months AS (
+		SELECT DISTINCT substr(date, 1, 7) AS month
+		FROM event
+		WHERE date >= ?
+	),
+	latency AS (
+		SELECT
+			substr(pr.created_at, 1, 7) AS month,
+			(julianday(MIN(rev.created_at)) - julianday(pr.created_at)) * 24 AS hours
+		FROM event pr
+		JOIN event rev ON pr.org = rev.org AND pr.repo = rev.repo AND pr.number = rev.number
+			AND rev.type = 'pr_review'
+		JOIN developer d ON pr.username = d.username
+		WHERE pr.type = 'pr'
+		  AND pr.number IS NOT NULL
+		  AND pr.created_at IS NOT NULL
+		  AND rev.created_at IS NOT NULL
+		  AND pr.org = COALESCE(?, pr.org)
+		  AND pr.repo = COALESCE(?, pr.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND pr.created_at >= ?
+		  AND pr.username NOT LIKE '%[bot]'
+		  AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		GROUP BY pr.org, pr.repo, pr.number, month
 	)
-	GROUP BY month
-	ORDER BY month
+	SELECT
+		m.month,
+		COALESCE(COUNT(l.hours), 0) AS cnt,
+		COALESCE(AVG(l.hours), 0) AS avg_hours
+	FROM months m
+	LEFT JOIN latency l ON m.month = l.month
+	GROUP BY m.month
+	ORDER BY m.month
 	`
 
 	selectPRSizeDistributionSQL = `SELECT
@@ -605,7 +612,7 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
-	rows, err := db.Query(selectReviewLatencySQL, org, repo, entity, since)
+	rows, err := db.Query(selectReviewLatencySQL, since, org, repo, entity, since)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query review latency: %w", err)
 	}

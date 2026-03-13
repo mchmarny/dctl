@@ -514,6 +514,11 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 				getLabels(items[i].Labels), extra); err != nil {
 				return fmt.Errorf("error adding pr event: %s/%s: %w", e.owner, e.repo, err)
 			}
+
+			// Fetch reviews for this PR to capture approve/request-changes events
+			if err := e.importPRReviews(ctx, items[i].GetNumber()); err != nil {
+				slog.Warn("error importing PR reviews", "pr", items[i].GetNumber(), "error", err)
+			}
 		}
 
 		e.state[EventTypePR].Page = opt.ListOptions.Page
@@ -523,6 +528,44 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		}
 
 		opt.ListOptions.Page = resp.NextPage
+	}
+
+	return nil
+}
+
+func (e *EventImporter) importPRReviews(ctx context.Context, prNumber int) error {
+	if prNumber == 0 {
+		return nil
+	}
+
+	opts := &github.ListOptions{PerPage: pageSizeDefault}
+
+	for {
+		reviews, resp, err := e.client.PullRequests.ListReviews(ctx, e.owner, e.repo, prNumber, opts)
+		if err != nil {
+			return fmt.Errorf("error listing reviews for PR #%d: %w", prNumber, err)
+		}
+		checkRateLimit(resp)
+
+		for i := range reviews {
+			if reviews[i].User == nil || reviews[i].HTMLURL == nil {
+				continue
+			}
+			n := prNumber
+			extra := &eventExtra{
+				Number:    &n,
+				CreatedAt: timestampStr(reviews[i].SubmittedAt),
+			}
+			if err := e.add(EventTypePRReview, *reviews[i].HTMLURL, reviews[i].User,
+				timestampToTime(reviews[i].SubmittedAt), nil, nil, extra); err != nil {
+				return fmt.Errorf("error adding PR review event: %w", err)
+			}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 
 	return nil

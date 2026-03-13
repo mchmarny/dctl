@@ -320,10 +320,19 @@ func TestGetReviewLatency_WithData(t *testing.T) {
 
 	series, err := GetReviewLatency(db, nil, nil, nil, 24)
 	require.NoError(t, err)
-	require.Len(t, series.Months, 1)
-	assert.Equal(t, "2025-01", series.Months[0])
-	assert.Equal(t, 1, series.Count[0])
-	assert.InDelta(t, 6.0, series.AvgHours[0], 0.1) // 6 hours
+	require.NotEmpty(t, series.Months)
+
+	// Find January in results
+	found := false
+	for i, m := range series.Months {
+		if m == "2025-01" {
+			found = true
+			assert.Equal(t, 1, series.Count[i])
+			assert.InDelta(t, 6.0, series.AvgHours[i], 0.1) // 6 hours
+			break
+		}
+	}
+	assert.True(t, found, "expected 2025-01 in results")
 }
 
 func TestGetPRSizeDistribution_NilDB(t *testing.T) {
