@@ -604,7 +604,6 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 	return s, nil
 }
 
-//nolint:dupl // similar structure to getVelocitySeries but different return type (ReviewLatencySeries vs VelocitySeries)
 func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*ReviewLatencySeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
@@ -639,7 +638,6 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 	return s, nil
 }
 
-//nolint:dupl // similar structure to GetReviewLatency but different return type (VelocitySeries vs ReviewLatencySeries)
 func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	if db == nil {
 		return nil, errDBNotInitialized

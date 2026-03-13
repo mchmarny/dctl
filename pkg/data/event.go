@@ -634,7 +634,6 @@ func getStrPtr(s string) *string {
 	return &s
 }
 
-//nolint:dupl // similar loop structure but different GitHub API types (IssueComment vs PullRequestComment)
 func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	slog.Debug("starting issue comment event import", "page", e.state[EventTypeIssueComment].Page, "since", e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
 
@@ -679,7 +678,6 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 	return nil
 }
 
-//nolint:dupl // similar loop structure but different GitHub API types (PullRequestComment vs IssueComment)
 func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 	slog.Debug("starting pr review event import", "page", e.state[EventTypePRReview].Page, "since", e.state[EventTypePRReview].Since.Format("2006-01-02"))
 
