@@ -285,6 +285,47 @@ func TestGetChangeFailureRate_WithData(t *testing.T) {
 	assert.InDelta(t, 200.0, series.Rate[0], 0.1) // 2 failures / 1 deployment * 100
 }
 
+func TestGetReviewLatency_NilDB(t *testing.T) {
+	_, err := GetReviewLatency(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetReviewLatency_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetReviewLatency(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetReviewLatency_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// PR created by alice
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, number, created_at)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://a', '', '', 'open', 42, '2025-01-10T10:00:00Z')`)
+	require.NoError(t, err)
+
+	// First review by bob, 6 hours later
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, number, created_at)
+		VALUES ('org1', 'repo1', 'bob', 'pr_review', '2025-01-10', 'http://b', '', '', 42, '2025-01-10T16:00:00Z')`)
+	require.NoError(t, err)
+
+	// Second review by bob, 12 hours later (should NOT affect — we take MIN)
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, number, created_at)
+		VALUES ('org1', 'repo1', 'bob', 'pr_review', '2025-01-11', 'http://c', '', '', 42, '2025-01-10T22:00:00Z')`)
+	require.NoError(t, err)
+
+	series, err := GetReviewLatency(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 1)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 1, series.Count[0])
+	assert.InDelta(t, 6.0, series.AvgHours[0], 0.1) // 6 hours
+}
+
 func padDay(i int) string {
 	return fmt.Sprintf("%02d", (i%28)+1)
 }

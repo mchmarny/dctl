@@ -127,6 +127,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /data/insights/time-to-merge", insightsTimeToMergeAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/time-to-close", insightsTimeToCloseAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/time-to-restore", insightsTimeToRestoreAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/review-latency", insightsReviewLatencyAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/forks-and-activity", insightsForksAndActivityAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/repo-meta", insightsRepoMetaAPIHandler(db))
 	mux.HandleFunc("GET /data/insights/repo-metric-history", insightsRepoMetricHistoryAPIHandler(db))

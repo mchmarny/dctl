@@ -226,6 +226,35 @@ const (
 	ORDER BY month
 	`
 
+	// Review latency: avg hours from PR creation to first review, per month.
+	selectReviewLatencySQL = `SELECT
+		month,
+		COUNT(*) AS cnt,
+		AVG(hours) AS avg_hours
+	FROM (
+	    SELECT
+	        substr(pr.created_at, 1, 7) AS month,
+	        (julianday(MIN(rev.created_at)) - julianday(pr.created_at)) * 24 AS hours
+	    FROM event pr
+	    JOIN event rev ON pr.org = rev.org AND pr.repo = rev.repo AND pr.number = rev.number
+	        AND rev.type = 'pr_review'
+	    JOIN developer d ON pr.username = d.username
+	    WHERE pr.type = 'pr'
+	      AND pr.number IS NOT NULL
+	      AND pr.created_at IS NOT NULL
+	      AND rev.created_at IS NOT NULL
+	      AND pr.org = COALESCE(?, pr.org)
+	      AND pr.repo = COALESCE(?, pr.repo)
+	      AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+	      AND pr.created_at >= ?
+	      AND pr.username NOT LIKE '%[bot]'
+	      AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	    GROUP BY pr.org, pr.repo, pr.number, month
+	)
+	GROUP BY month
+	ORDER BY month
+	`
+
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
 		JOIN developer d ON e.username = d.username
@@ -274,6 +303,12 @@ type ChangeFailureRateSeries struct {
 	Failures    []int     `json:"failures" yaml:"failures"`
 	Deployments []int     `json:"deployments" yaml:"deployments"`
 	Rate        []float64 `json:"rate" yaml:"rate"`
+}
+
+type ReviewLatencySeries struct {
+	Months   []string  `json:"months" yaml:"months"`
+	Count    []int     `json:"count" yaml:"count"`
+	AvgHours []float64 `json:"avg_hours" yaml:"avgHours"`
 }
 
 func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*InsightsSummary, error) {
@@ -475,6 +510,40 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 		s.Failures = append(s.Failures, f)
 		s.Deployments = append(s.Deployments, d)
 		s.Rate = append(s.Rate, rate)
+	}
+
+	return s, nil
+}
+
+func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*ReviewLatencySeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	rows, err := db.Query(selectReviewLatencySQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query review latency: %w", err)
+	}
+	defer rows.Close()
+
+	s := &ReviewLatencySeries{
+		Months:   make([]string, 0),
+		Count:    make([]int, 0),
+		AvgHours: make([]float64, 0),
+	}
+
+	for rows.Next() {
+		var month string
+		var cnt int
+		var avgHours float64
+		if err := rows.Scan(&month, &cnt, &avgHours); err != nil {
+			return nil, fmt.Errorf("failed to scan review latency row: %w", err)
+		}
+		s.Months = append(s.Months, month)
+		s.Count = append(s.Count, cnt)
+		s.AvgHours = append(s.AvgHours, avgHours)
 	}
 
 	return s, nil
