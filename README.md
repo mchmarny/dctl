@@ -11,16 +11,35 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 
 ## Features
 
-- **Activity trends** -- monthly event volume (PRs, reviews, issues, comments, forks) with total and 3-month moving average
+**Project Health**
 - **Bus factor / pony factor** -- minimum developers or organizations producing 50% of contributions
-- **Contributor retention** -- new vs returning contributors per month
-- **PR review ratio** -- PRs to reviews per month with ratio trend line
-- **Time to close / merge** -- average days to close issues and merge PRs
-- **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers (GitHub profile + CNCF gitdm)
-- **Contributor reputation** -- two-tier scoring (shallow local, deep GitHub API) with known bot filtering
 - **Repository metadata** -- stars, forks, open issues, language, license with 30-day sparkline
 - **Stars & forks trends** -- daily star and fork counts over the last 30 days with historical backfill
-- **Release cadence** -- monthly release counts (total vs stable)
+
+**Activity & Code**
+- **Activity trends** -- monthly event volume (PRs, reviews, issues, comments, forks) with total and 3-month moving average
+- **PR size distribution** -- pull requests bucketed by lines changed (S/M/L/XL) per month
+- **Forks & activity** -- monthly fork count vs total event activity
+
+**Velocity**
+- **Lead time (PR to merge)** -- average days from PR creation to merge
+- **Change failure rate** -- percentage of deployments causing failures (bug issues near releases + revert PRs)
+- **Release cadence** -- monthly release counts (total, stable, deployments) with merge-to-main fallback
+- **Release downloads** -- monthly download trends and top releases by download count
+
+**Quality**
+- **PR review ratio** -- PRs to reviews per month with ratio trend line
+- **Review latency** -- average hours from PR creation to first review
+- **Time to close** -- average days to close all issues vs bug issues near releases
+- **Contributor reputation** -- two-tier scoring (shallow local, deep GitHub API) with known bot filtering
+
+**Community**
+- **Contributor retention** -- new vs returning contributors per month
+- **Contributor momentum** -- rolling 3-month active contributor count with month-over-month delta
+- **First-time contributor funnel** -- new contributor milestones per month (first comment, first PR, first merge)
+- **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers (GitHub profile + CNCF gitdm)
+
+**Dashboard**
 - **Event search filters** -- filter by type, date range, username, or entity directly from the dashboard
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
 - **Unified search** -- `org:name`, `repo:name`, or `entity:name` prefix syntax; all panels respect entity filter
