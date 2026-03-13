@@ -37,9 +37,9 @@ const (
 
 	insertEventSQL = `INSERT INTO event (
 			org, repo, username, type, date, url, mentions, labels,
-			state, number, created_at, closed_at, merged_at, additions, deletions
+			state, number, created_at, closed_at, merged_at, additions, deletions, title
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(org, repo, username, type, date) DO UPDATE SET
 			url = ?, mentions = ?, labels = ?,
 			state = COALESCE(?, event.state),
@@ -48,7 +48,8 @@ const (
 			closed_at = COALESCE(?, event.closed_at),
 			merged_at = COALESCE(?, event.merged_at),
 			additions = COALESCE(?, event.additions),
-			deletions = COALESCE(?, event.deletions)
+			deletions = COALESCE(?, event.deletions),
+			title = ?
 	`
 )
 
@@ -78,6 +79,7 @@ type Event struct {
 	MergedAt  *string `json:"merged_at,omitempty" yaml:"mergedAt,omitempty"`
 	Additions *int    `json:"additions,omitempty" yaml:"additions,omitempty"`
 	Deletions *int    `json:"deletions,omitempty" yaml:"deletions,omitempty"`
+	Title     string  `json:"title,omitempty" yaml:"title,omitempty"`
 }
 
 type importer func(ctx context.Context) error
@@ -248,6 +250,7 @@ type eventExtra struct {
 	MergedAt  *string
 	Additions *int
 	Deletions *int
+	Title     string
 }
 
 func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.Time, mentions []string, labels []string, extra *eventExtra) error {
@@ -270,6 +273,7 @@ func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.T
 		item.MergedAt = extra.MergedAt
 		item.Additions = extra.Additions
 		item.Deletions = extra.Deletions
+		item.Title = extra.Title
 	}
 
 	e.mu.Lock()
@@ -369,9 +373,9 @@ func (e *EventImporter) flush() error {
 		_, err = tx.Stmt(eventStmt).Exec(
 			e.Org, e.Repo, e.Username, e.Type, e.Date,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
 		)
 		if err != nil {
 			rollbackTransaction(tx)
@@ -489,6 +493,7 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 				MergedAt:  timestampStr(items[i].MergedAt),
 				Additions: intPtr(items[i].GetAdditions()),
 				Deletions: intPtr(items[i].GetDeletions()),
+				Title:     items[i].GetTitle(),
 			}
 			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), mentions,
 				getLabels(items[i].Labels), extra); err != nil {
@@ -544,6 +549,7 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 				Number:    items[i].Number,
 				CreatedAt: timestampStr(items[i].CreatedAt),
 				ClosedAt:  timestampStr(items[i].ClosedAt),
+				Title:     items[i].GetTitle(),
 			}
 			if err := e.add(EventTypeIssue, *items[i].HTMLURL, items[i].User,
 				timestampToTime(items[i].UpdatedAt), mentions, getLabels(items[i].Labels), extra); err != nil {
