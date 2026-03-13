@@ -197,6 +197,48 @@ func TestGetTimeToClose_WithData(t *testing.T) {
 	assert.InDelta(t, 5.5, series.AvgDays[0], 0.01) // (5+6)/2
 }
 
+func TestGetChangeFailureRate_NilDB(t *testing.T) {
+	_, err := GetChangeFailureRate(nil, nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetChangeFailureRate_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	series, err := GetChangeFailureRate(db, nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetChangeFailureRate_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	// Insert a release (deployment)
+	_, err = db.Exec(`INSERT INTO release (org, repo, tag, name, published_at, prerelease)
+		VALUES ('org1', 'repo1', 'v1.0', 'v1.0', '2025-01-15T00:00:00Z', 0)`)
+	require.NoError(t, err)
+
+	// Insert a bug issue within 7 days of release
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, title)
+		VALUES ('org1', 'repo1', 'alice', 'issue', '2025-01-17', 'http://a', '', 'bug', 'open', '2025-01-17T10:00:00Z', 'Bug in feature')`)
+	require.NoError(t, err)
+
+	// Insert a revert PR in same month
+	_, err = db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, title)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2025-01-16', 'http://b', '', '', 'merged', '2025-01-16T10:00:00Z', 'Revert "Add feature"')`)
+	require.NoError(t, err)
+
+	series, err := GetChangeFailureRate(db, nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.NotEmpty(t, series.Months)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 2, series.Failures[0])
+	assert.Equal(t, 1, series.Deployments[0])
+	assert.InDelta(t, 200.0, series.Rate[0], 0.1) // 2 failures / 1 deployment * 100
+}
+
 func padDay(i int) string {
 	return fmt.Sprintf("%02d", (i%28)+1)
 }

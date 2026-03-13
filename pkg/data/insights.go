@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -162,6 +163,42 @@ const (
 		ORDER BY month
 	`
 
+	selectChangeFailuresSQL = `SELECT
+		substr(e.created_at, 1, 7) AS month,
+		COUNT(*) AS failures
+	FROM event e
+	JOIN developer d ON e.username = d.username
+	WHERE (
+	    (e.type = 'issue' AND LOWER(e.labels) LIKE '%bug%'
+	     AND EXISTS (
+	        SELECT 1 FROM release r
+	        WHERE r.org = e.org AND r.repo = e.repo
+	          AND julianday(e.created_at) - julianday(r.published_at) BETWEEN 0 AND 7
+	     ))
+	    OR
+	    (e.type = 'pr' AND LOWER(e.title) LIKE '%revert%')
+	)
+	  AND e.org = COALESCE(?, e.org)
+	  AND e.repo = COALESCE(?, e.repo)
+	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+	  AND e.created_at >= ?
+	  AND e.username NOT LIKE '%[bot]'
+	  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	GROUP BY month
+	ORDER BY month
+	`
+
+	selectDeploymentCountSQL = `SELECT
+		substr(published_at, 1, 7) AS month,
+		COUNT(*) AS cnt
+	FROM release
+	WHERE org = COALESCE(?, org)
+	  AND repo = COALESCE(?, repo)
+	  AND published_at >= ?
+	GROUP BY month
+	ORDER BY month
+	`
+
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
 		JOIN developer d ON e.username = d.username
@@ -203,6 +240,13 @@ type PRReviewRatioSeries struct {
 	PRs     []int     `json:"prs" yaml:"prs"`
 	Reviews []int     `json:"reviews" yaml:"reviews"`
 	Ratio   []float64 `json:"ratio" yaml:"ratio"`
+}
+
+type ChangeFailureRateSeries struct {
+	Months      []string  `json:"months" yaml:"months"`
+	Failures    []int     `json:"failures" yaml:"failures"`
+	Deployments []int     `json:"deployments" yaml:"deployments"`
+	Rate        []float64 `json:"rate" yaml:"rate"`
 }
 
 func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*InsightsSummary, error) {
@@ -322,6 +366,88 @@ func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRRev
 			ratio = float64(reviews) / float64(prs)
 		}
 		s.Ratio = append(s.Ratio, ratio)
+	}
+
+	return s, nil
+}
+
+func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*ChangeFailureRateSeries, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+
+	// Get failures by month
+	failureMap := make(map[string]int)
+
+	rows, err := db.Query(selectChangeFailuresSQL, org, repo, entity, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query change failures: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var month string
+		var failures int
+		if err := rows.Scan(&month, &failures); err != nil {
+			return nil, fmt.Errorf("failed to scan change failure row: %w", err)
+		}
+		failureMap[month] = failures
+	}
+
+	// Get deployments by month
+	deployMap := make(map[string]int)
+
+	dRows, err := db.Query(selectDeploymentCountSQL, org, repo, since)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query deployment count: %w", err)
+	}
+	defer dRows.Close()
+
+	for dRows.Next() {
+		var month string
+		var cnt int
+		if err := dRows.Scan(&month, &cnt); err != nil {
+			return nil, fmt.Errorf("failed to scan deployment count row: %w", err)
+		}
+		deployMap[month] = cnt
+	}
+
+	// Merge all months from both maps
+	monthSet := make(map[string]bool)
+	for m := range failureMap {
+		monthSet[m] = true
+	}
+	for m := range deployMap {
+		monthSet[m] = true
+	}
+
+	// Sort months
+	sortedMonths := make([]string, 0, len(monthSet))
+	for m := range monthSet {
+		sortedMonths = append(sortedMonths, m)
+	}
+	sort.Strings(sortedMonths)
+
+	s := &ChangeFailureRateSeries{
+		Months:      make([]string, 0, len(sortedMonths)),
+		Failures:    make([]int, 0, len(sortedMonths)),
+		Deployments: make([]int, 0, len(sortedMonths)),
+		Rate:        make([]float64, 0, len(sortedMonths)),
+	}
+
+	for _, m := range sortedMonths {
+		f := failureMap[m]
+		d := deployMap[m]
+		var rate float64
+		if d > 0 {
+			rate = float64(f) / float64(d) * 100
+		}
+		s.Months = append(s.Months, m)
+		s.Failures = append(s.Failures, f)
+		s.Deployments = append(s.Deployments, d)
+		s.Rate = append(s.Rate, rate)
 	}
 
 	return s, nil
