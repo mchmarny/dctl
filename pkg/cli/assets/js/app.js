@@ -115,7 +115,6 @@ let reputationChartURL;
 let forksAndActivityChart;
 let starsTrendChart;
 let forksTrendChart;
-let timeToRestoreChart;
 let changeFailureRateChart;
 let reviewLatencyChart;
 let prSizeChart;
@@ -207,8 +206,8 @@ function loadAllCharts(months, org, repo, entity) {
     loadRetentionChart(`/data/insights/retention?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
-    loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-close-chart', 'timeToClose');
-    loadVelocityChart(`/data/insights/time-to-restore?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-restore-chart', 'timeToRestore');
+    loadTimeToCloseChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`,
+        `/data/insights/time-to-restore?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadStarsTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
@@ -423,9 +422,6 @@ function resetCharts() {
     }
     if (forksAndActivityChart) {
         forksAndActivityChart.destroy();
-    }
-    if (timeToRestoreChart) {
-        timeToRestoreChart.destroy();
     }
     if (changeFailureRateChart) {
         changeFailureRateChart.destroy();
@@ -870,6 +866,42 @@ function loadPRRatioChart(url) {
     });
 }
 
+function loadTimeToCloseChart(closeURL, restoreURL) {
+    $.when($.get(closeURL), $.get(restoreURL)).done(function (closeRes, restoreRes) {
+        const close = closeRes[0];
+        const restore = restoreRes[0];
+        timeToCloseChart = new Chart($("#time-to-close-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: close.months,
+                datasets: [{
+                    label: 'All Issues',
+                    data: close.avg_days,
+                    backgroundColor: colors[2],
+                    borderWidth: 1,
+                    order: 2
+                }, {
+                    label: 'Bug (near release)',
+                    data: restore.avg_days,
+                    backgroundColor: colors[3],
+                    borderWidth: 1,
+                    order: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, ticks: { font: { size: 14 } },
+                        title: { display: true, text: 'Avg Days' } }
+                }
+            }
+        });
+    });
+}
+
 function loadVelocityChart(url, canvasId, key) {
     $.get(url, function (data) {
         const chart = new Chart($(`#${canvasId}`)[0].getContext("2d"), {
@@ -913,7 +945,6 @@ function loadVelocityChart(url, canvasId, key) {
         });
         if (key === 'timeToMerge') { timeToMergeChart = chart; }
         if (key === 'timeToClose') { timeToCloseChart = chart; }
-        if (key === 'timeToRestore') { timeToRestoreChart = chart; }
     });
 }
 
