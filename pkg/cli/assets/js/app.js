@@ -115,6 +115,7 @@ let reputationChartURL;
 let forksAndActivityChart;
 let starsTrendChart;
 let forksTrendChart;
+let timeToRestoreChart;
 let searchItem;
 
 const searchPrefixes = ['org', 'repo', 'entity'];
@@ -202,11 +203,12 @@ function loadAllCharts(months, org, repo, entity) {
     loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
     loadVelocityChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-close-chart', 'timeToClose');
+    loadVelocityChart(`/data/insights/time-to-restore?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-restore-chart', 'timeToRestore');
     loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
     loadStarsTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
     loadForksTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
-    loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}`);
+    loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}&e=${entity}`);
     loadReleaseDownloadsChart(`/data/insights/release-downloads?m=${months}&o=${org}&r=${repo}`);
     loadReleaseDownloadsByTagChart(`/data/insights/release-downloads-by-tag?m=${months}&o=${org}&r=${repo}`);
     loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}&e=${entity}`);
@@ -411,6 +413,9 @@ function resetCharts() {
     }
     if (forksAndActivityChart) {
         forksAndActivityChart.destroy();
+    }
+    if (timeToRestoreChart) {
+        timeToRestoreChart.destroy();
     }
 }
 
@@ -883,6 +888,7 @@ function loadVelocityChart(url, canvasId, key) {
         });
         if (key === 'timeToMerge') { timeToMergeChart = chart; }
         if (key === 'timeToClose') { timeToCloseChart = chart; }
+        if (key === 'timeToRestore') { timeToRestoreChart = chart; }
     });
 }
 
@@ -1105,6 +1111,16 @@ function loadReleaseCadenceChart(url) {
                     data: data.stable,
                     backgroundColor: colors[1],
                     borderWidth: 1
+                }, {
+                    label: 'Deployments',
+                    type: 'line',
+                    data: data.deployments,
+                    borderColor: colors[3],
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    order: 0
                 }]
             },
             options: {
