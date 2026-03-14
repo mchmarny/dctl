@@ -120,6 +120,7 @@ let reviewLatencyChart;
 let prSizeChart;
 let contributorFunnelChart;
 let contributorMomentumChart;
+let containerActivityChart;
 let searchItem;
 
 // Tab state
@@ -264,6 +265,7 @@ function loadTabCharts(tab, months, org, repo, entity) {
             loadReleaseCadenceChart('/data/insights/release-cadence?' + q);
             loadReleaseDownloadsChart('/data/insights/release-downloads?m=' + months + '&o=' + org + '&r=' + repo);
             loadReleaseDownloadsByTagChart('/data/insights/release-downloads-by-tag?m=' + months + '&o=' + org + '&r=' + repo);
+            loadContainerActivityChart('/data/insights/container-activity?' + q);
             break;
         case 'quality':
             loadPRRatioChart('/data/insights/pr-ratio?' + q);
@@ -499,6 +501,9 @@ function resetCharts() {
     }
     if (releaseDownloadsByTagChart) {
         releaseDownloadsByTagChart.destroy();
+    }
+    if (containerActivityChart) {
+        containerActivityChart.destroy();
     }
     if (reputationChart) {
         reputationChart.destroy();
@@ -1337,6 +1342,43 @@ function loadReleaseDownloadsByTagChart(url) {
                         title: { display: true, text: 'Downloads' }
                     },
                     y: { ticks: { font: { size: 14 } } }
+                }
+            }
+        });
+    });
+}
+
+function loadContainerActivityChart(url) {
+    $.get(url, function (data) {
+        if (!data.months || data.months.length === 0) {
+            $("#container-activity-chart").closest(".tbl").find(".insight-desc")
+                .text("No container packages found for this repository.");
+            return;
+        }
+        containerActivityChart = new Chart($("#container-activity-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Versions Published',
+                    data: data.versions,
+                    backgroundColor: colors[4] + '80',
+                    borderColor: colors[4],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        title: { display: true, text: 'Versions' }
+                    }
                 }
             }
         });

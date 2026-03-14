@@ -380,6 +380,19 @@ func insightsReleaseDownloadsByTagAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsContainerActivityAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := data.GetContainerActivity(db, p.org, p.repo, p.months)
+		if err != nil {
+			slog.Error("failed to get container activity", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying container activity")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsTimeToMergeAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)

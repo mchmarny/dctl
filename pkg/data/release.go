@@ -285,7 +285,7 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 	return s, nil
 }
 
-func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDownloadsSeries, error) {
+func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDownloadsSeries, error) { //nolint:dupl,nolintlint // different types and SQL than GetContainerActivity
 	if db == nil {
 		return nil, errDBNotInitialized
 	}

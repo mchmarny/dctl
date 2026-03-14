@@ -231,7 +231,18 @@
                     <div class="tbl-chart tbl-home">
                         <canvas class="chart" id="release-downloads-by-tag-chart"></canvas>
                     </div>
-                    <span class="insight-desc">Download counts per release tag. Last 9 releases plus the all-time most downloaded.</span>
+                    <span class="insight-desc">Download counts per release tag. Last 9 releases plus the all-time most downloaded. Tracks binary assets attached to GitHub Releases only (not container image pulls).</span>
+                </div>
+            </article>
+            <article class="grid-full-width">
+                <div class="tbl">
+                    <div class="content-header">
+                        Container Releases
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="container-activity-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Container image versions published per month via GitHub Packages (ghcr.io). Repos without container packages show no data. Pull counts are not available via the GitHub API.</span>
                 </div>
             </article>
         </section>

@@ -215,6 +215,11 @@ func cmdUpdate(cfg *appConfig, token string, start time.Time) error {
 		slog.Error("failed to import metric history", "error", histErr)
 	}
 
+	slog.Info("processing container versions")
+	if cvErr := data.ImportAllContainerVersions(cfg.DBPath, token); cvErr != nil {
+		slog.Error("failed to import container versions", "error", cvErr)
+	}
+
 	slog.Info("processing reputation")
 	repResult, repErr := data.ImportReputation(cfg.DB, nil, nil)
 	if repErr != nil {
@@ -253,6 +258,12 @@ func importRepoExtras(dbPath, token, org string, repos []string) {
 		slog.Info("metric history", "org", org, "repo", r)
 		if err := data.ImportRepoMetricHistory(dbPath, token, org, r); err != nil {
 			slog.Error("failed to import metric history", "org", org, "repo", r, "error", err)
+		}
+	}
+	for _, r := range repos {
+		slog.Info("container versions", "org", org, "repo", r)
+		if err := data.ImportContainerVersions(dbPath, token, org, r); err != nil {
+			slog.Error("failed to import container versions", "org", org, "repo", r, "error", err)
 		}
 	}
 }
