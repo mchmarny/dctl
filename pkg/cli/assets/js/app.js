@@ -122,10 +122,14 @@ let contributorFunnelChart;
 let contributorMomentumChart;
 let searchItem;
 
-const searchPrefixes = ['org', 'repo', 'entity'];
+// Tab state
+var activeTab = 'health';
+var tabLoaded = {};
+
+const searchPrefixes = ['org', 'repo'];
 
 function parseSearchInput(raw) {
-    const match = raw.match(/^(org|repo|entity):(.*)$/i);
+    const match = raw.match(/^(org|repo):(.*)$/i);
     if (match) {
         return { scope: match[1].toLowerCase(), query: match[2].trimStart() };
     }
@@ -180,47 +184,123 @@ $(function () {
         initUnifiedSearch();
         initSearchFilters();
         initPeriodSelector();
+        initTabs();
         updatePeriodOptions("", "", function () {
-            loadAllCharts($("#period_months").val(), "", "", "");
+            var months = $("#period_months").val();
+            loadSummaryBanner(months, "", "", "");
+            activateTab(activeTab);
         });
     }
 });
 
-function loadAllCharts(months, org, repo, entity) {
-    const onLeftExclude = function () {
-        leftChart.destroy();
-        const x = leftChartExcludes.join("|");
-        loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}&x=${x}`, onLeftChartSelect, onLeftExclude);
-    };
-    const onRightExclude = function () {
-        rightChart.destroy();
-        const x = rightChartExcludes.join("|");
-        loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}&x=${x}`, onRightChartSelect, onRightExclude);
-    };
+function initTabs() {
+    var hash = window.location.hash.replace('#', '');
+    var validTabs = ['health', 'activity', 'velocity', 'quality', 'community', 'events'];
+    if (validTabs.indexOf(hash) !== -1) {
+        activeTab = hash;
+    }
 
-    loadTimeSeriesChart(`/data/type?m=${months}&o=${org}&r=${repo}&e=${entity}`, onTimeSeriesChartSelect);
-    loadLeftChart(`/data/entity?m=${months}&o=${org}&r=${repo}&e=${entity}`, onLeftChartSelect, onLeftExclude);
-    loadRightChart(`/data/developer?m=${months}&o=${org}&r=${repo}&e=${entity}`, onRightChartSelect, onRightExclude);
-    loadInsightsSummary(`/data/insights/summary?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadHealthActivitySparkline(`/data/insights/daily-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadRetentionChart(`/data/insights/retention?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadPRRatioChart(`/data/insights/pr-ratio?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadVelocityChart(`/data/insights/time-to-merge?m=${months}&o=${org}&r=${repo}&e=${entity}`, 'time-to-merge-chart', 'timeToMerge');
-    loadTimeToCloseChart(`/data/insights/time-to-close?m=${months}&o=${org}&r=${repo}&e=${entity}`,
-        `/data/insights/time-to-restore?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadForksAndActivityChart(`/data/insights/forks-and-activity?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadRepoMeta(`/data/insights/repo-meta?o=${org}&r=${repo}`);
-    loadStarsTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
-    loadForksTrendChart(`/data/insights/repo-metric-history?o=${org}&r=${repo}`);
-    loadReleaseCadenceChart(`/data/insights/release-cadence?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadReleaseDownloadsChart(`/data/insights/release-downloads?m=${months}&o=${org}&r=${repo}`);
-    loadReleaseDownloadsByTagChart(`/data/insights/release-downloads-by-tag?m=${months}&o=${org}&r=${repo}`);
-    loadReputationChart(`/data/insights/reputation?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadReviewLatencyChart(`/data/insights/review-latency?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadChangeFailureRateChart(`/data/insights/change-failure-rate?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadPRSizeChart(`/data/insights/pr-size?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadContributorFunnelChart(`/data/insights/contributor-funnel?m=${months}&o=${org}&r=${repo}&e=${entity}`);
-    loadContributorMomentumChart(`/data/insights/contributor-momentum?m=${months}&o=${org}&r=${repo}&e=${entity}`);
+    $(".tab-btn").on("click", function () {
+        var tab = $(this).data("tab");
+        activateTab(tab);
+        window.location.hash = tab;
+    });
+
+    $(window).on("hashchange", function () {
+        var hash = window.location.hash.replace('#', '');
+        if (hash && hash !== activeTab) {
+            activateTab(hash);
+        }
+    });
+}
+
+function activateTab(tab) {
+    activeTab = tab;
+
+    $(".tab-btn").removeClass("active");
+    $('.tab-btn[data-tab="' + tab + '"]').addClass("active");
+
+    $(".tab-content").removeClass("active");
+    $('.tab-content[data-tab="' + tab + '"]').addClass("active");
+
+    if (!tabLoaded[tab]) {
+        var months = $("#period_months").val();
+        var org = searchCriteria.org || "";
+        var repo = searchCriteria.repo || "";
+        var entity = searchCriteria.entity || "";
+        loadTabCharts(tab, months, org, repo, entity);
+        tabLoaded[tab] = true;
+    }
+}
+
+function loadSummaryBanner(months, org, repo, entity) {
+    $.get('/data/insights/summary?m=' + months + '&o=' + org + '&r=' + repo + '&e=' + entity, function (data) {
+        $("#banner-orgs").text(data.orgs.toLocaleString());
+        $("#banner-repos").text(data.repos.toLocaleString());
+        $("#banner-events").text(data.events.toLocaleString());
+        $("#banner-contributors").text(data.contributors.toLocaleString());
+        $("#banner-last-import").text(data.last_import || '—');
+    });
+}
+
+function loadTabCharts(tab, months, org, repo, entity) {
+    var q = 'm=' + months + '&o=' + org + '&r=' + repo + '&e=' + entity;
+    switch (tab) {
+        case 'health':
+            loadInsightsSummary('/data/insights/summary?' + q);
+            loadHealthActivitySparkline('/data/insights/daily-activity?' + q);
+            loadRepoMeta('/data/insights/repo-meta?o=' + org + '&r=' + repo);
+            loadStarsTrendChart('/data/insights/repo-metric-history?o=' + org + '&r=' + repo);
+            loadForksTrendChart('/data/insights/repo-metric-history?o=' + org + '&r=' + repo);
+            break;
+        case 'activity':
+            loadTimeSeriesChart('/data/type?' + q, onTimeSeriesChartSelect);
+            loadPRSizeChart('/data/insights/pr-size?' + q);
+            loadForksAndActivityChart('/data/insights/forks-and-activity?' + q);
+            break;
+        case 'velocity':
+            loadVelocityChart('/data/insights/time-to-merge?' + q, 'time-to-merge-chart', 'timeToMerge');
+            loadChangeFailureRateChart('/data/insights/change-failure-rate?' + q);
+            loadReleaseCadenceChart('/data/insights/release-cadence?' + q);
+            loadReleaseDownloadsChart('/data/insights/release-downloads?m=' + months + '&o=' + org + '&r=' + repo);
+            loadReleaseDownloadsByTagChart('/data/insights/release-downloads-by-tag?m=' + months + '&o=' + org + '&r=' + repo);
+            break;
+        case 'quality':
+            loadPRRatioChart('/data/insights/pr-ratio?' + q);
+            loadReviewLatencyChart('/data/insights/review-latency?' + q);
+            loadTimeToCloseChart('/data/insights/time-to-close?' + q, '/data/insights/time-to-restore?' + q);
+            loadReputationChart('/data/insights/reputation?' + q);
+            break;
+        case 'community':
+            loadRetentionChart('/data/insights/retention?' + q);
+            loadContributorMomentumChart('/data/insights/contributor-momentum?' + q);
+            loadContributorFunnelChart('/data/insights/contributor-funnel?' + q);
+            (function() {
+                var onLeftExclude = function () {
+                    leftChart.destroy();
+                    var x = leftChartExcludes.join("|");
+                    loadLeftChart('/data/entity?' + q + '&x=' + x, onLeftChartSelect, onLeftExclude);
+                };
+                loadLeftChart('/data/entity?' + q, onLeftChartSelect, onLeftExclude);
+            })();
+            (function() {
+                var onRightExclude = function () {
+                    rightChart.destroy();
+                    var x = rightChartExcludes.join("|");
+                    loadRightChart('/data/developer?' + q + '&x=' + x, onRightChartSelect, onRightExclude);
+                };
+                loadRightChart('/data/developer?' + q, onRightChartSelect, onRightExclude);
+            })();
+            break;
+        case 'events':
+            break;
+    }
+}
+
+function loadAllCharts(months, org, repo, entity) {
+    tabLoaded = {};
+    loadSummaryBanner(months, org, repo, entity);
+    activateTab(activeTab);
 }
 
 function applySelection(scope, item) {
@@ -233,6 +313,7 @@ function applySelection(scope, item) {
     $(".header-term").html(item.value);
 
     resetCharts();
+    tabLoaded = {};
 
     const months = $("#period_months").val();
     let org = "", repo = "", entity = "";
@@ -253,7 +334,9 @@ function applySelection(scope, item) {
 
     submitSearch();
     updatePeriodOptions(org, repo, function () {
-        loadAllCharts($("#period_months").val(), org, repo, entity);
+        var m = $("#period_months").val();
+        loadSummaryBanner(m, org, repo, entity);
+        activateTab(activeTab);
     });
 }
 

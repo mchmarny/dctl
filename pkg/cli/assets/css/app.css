@@ -246,16 +246,31 @@ fieldset {
 .search-and-user {
   display: flex;
   align-items: center;
+  gap: 12px;
   background: var(--page-content-bgColor);
   margin-bottom: 15px;
   position: relative;
 }
 
+.period-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.period-label {
+  font-size: 0.8rem;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .search-meta {
-  font-size: 1.5rem;
+  font-size: 0.9rem;
   margin: 0 0 10px 0;
   padding: 0;
-  color: var(--dark-color);
+  color: var(--gray);
 }
 
 #period-select {
@@ -315,6 +330,87 @@ fieldset {
   top: 50%;
   right: 15px;
   transform: translateY(-50%);
+}
+
+/* Summary Banner */
+.summary-banner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.banner-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.banner-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.banner-label {
+  font-size: 0.7rem;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Tab Bar */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid transparent;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--gray);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 0;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.tab-btn:hover {
+  color: var(--page-content-txtColor);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--page-content-blockColor);
+  border-color: var(--border-color);
+  border-bottom-color: var(--page-content-blockColor);
+}
+
+/* Tab Content */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  background: var(--page-content-blockColor);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .page-content .grid {
@@ -518,7 +614,7 @@ fieldset {
 }
 
 .content-header {
-  background-color: var(--table-header);
+  background-color: var(--border-color);
   height: 35px;
   color: var(--dark-color);
   padding: 7px 15px;

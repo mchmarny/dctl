@@ -15,7 +15,7 @@
 
     <section class="search-and-user">
         <form id="home-search-form">
-            <input type="search" placeholder="org:name, repo:name, or entity:name" id="search-bar" autocomplete="off">
+            <input type="search" placeholder="org:name or repo:name" id="search-bar" autocomplete="off">
             <button type="submit" aria-label="submit form">
                 <svg aria-hidden="true">
                     <use xlink:href="#search"></use>
@@ -23,6 +23,12 @@
             </button>
             <div id="ac-dropdown" class="ac-dropdown"></div>
         </form>
+        <div class="period-wrap">
+            <label for="period-select" class="period-label">Period</label>
+            <select id="period-select">
+                <option value="{{ .period_months }}">{{ .period_months }} months</option>
+            </select>
+        </div>
         <button class="theme-toggle-btn" id="theme-toggle" aria-label="toggle theme">
             <svg class="icon-moon" aria-hidden="true">
                 <use xlink:href="#moon"></use>
@@ -32,344 +38,402 @@
             </svg>
         </button>
     </section>
+    <b class="header-term" style="display:none;">All imported events</b>
 
-    <div class="search-meta">
-        <b class="header-term">All imported events</b> over the last
-        <select id="period-select">
-            <option value="{{ .period_months }}">{{ .period_months }} months</option>
-        </select>
-    </div>
-    
-    <section class="grid">
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Project Health
-                </div>
-                <div class="tbl-chart tbl-home insights-summary">
-                    <div class="insight-card">
-                        <span class="insight-label">Bus Factor</span>
-                        <span class="insight-val" id="bus-factor-val">—</span>
-                        <span class="insight-desc">Developers who account for >=50% of all work (lower number means higher risk if they leave)</span>
-                    </div>
-                    <div class="insight-card">
-                        <span class="insight-label">Pony Factor</span>
-                        <span class="insight-val" id="pony-factor-val">—</span>
-                        <span class="insight-desc">Organizations behind >=50% of all work (lower means higher dependency on fewer companies)</span>
-                    </div>
-                </div>
-                <div style="height:80px;padding:0 1rem;">
-                    <canvas id="health-activity-sparkline"></canvas>
-                </div>
-                <span class="insight-desc">Daily contributor activity over the selected period.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Repository Metadata
-                </div>
-                <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
-                    <span class="insight-label">No metadata imported yet</span>
-                </div>
-                <div style="height:80px;padding:0 1rem;">
-                    <canvas id="repo-meta-sparkline"></canvas>
-                </div>
-                <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Monthly Activity
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="time-series-chart"></canvas>
-                </div>
-                <span class="insight-desc">GitHub events (PRs, issues, reviews, comments, forks) grouped by month. Trend line is linear regression.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Contributor Retention
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="retention-chart"></canvas>
-                </div>
-                <span class="insight-desc">New = first contribution that month. Returning = contributed in a prior month.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl" style="position:relative;">
-                <div class="content-header">
-                    Lowest Reputation Contributors
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="reputation-chart"></canvas>
-                </div>
-                <span class="insight-desc">Shallow score (local data only). Click a bar for full GitHub-enriched score.</span>
-                <div id="reputation-popover" class="entity-popover">
-                    <div class="entity-popover-header">
-                        <span id="reputation-popover-title"></span>
-                        <button id="reputation-popover-close" class="modal-close">&times;</button>
-                    </div>
-                    <ul id="reputation-popover-list"></ul>
-                </div>
-            </div>
-        </article>
-        <article>
-            <div class="tbl" style="position:relative;">
-                <div class="content-header">
-                    Top Entities (Company or Org)
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="left-chart"></canvas>
-                </div>
-                <span class="insight-desc">Based on GitHub profile company field and CNCF gitdm affiliations. Self-reported, not verified.</span>
-                <div id="entity-popover" class="entity-popover">
-                    <div class="entity-popover-header">
-                        <span id="entity-popover-title"></span>
-                        <button id="entity-popover-close" class="modal-close">&times;</button>
-                    </div>
-                    <ul id="entity-popover-list"></ul>
-                </div>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="tbl-header">
-                     <div class="content-header">
-                        Top Colaborators
-                    </div>
-                </div>
-                <div class="tbl-content tbl-home">
-                    <canvas class="chart" id="right-chart"></canvas>
-                </div>
-                <span class="insight-desc">Ranked by total event count (PRs, issues, reviews, comments) in the selected period.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    PR Review Ratio
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="pr-ratio-chart"></canvas>
-                </div>
-                <span class="insight-desc">Reviews per PR. Higher ratio suggests stronger code review culture.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Lead Time (PR to Merge)
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="time-to-merge-chart"></canvas>
-                </div>
-                <span class="insight-desc">Average days from PR creation to merge. Based on GitHub created/merged timestamps.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Time to Close (Issues)
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="time-to-close-chart"></canvas>
-                </div>
-                <span class="insight-desc">Average days to close. All issues vs bug issues filed within 7 days of a release.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Release Cadence
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="release-cadence-chart"></canvas>
-                </div>
-                <span class="insight-desc">GitHub releases per month. Stable excludes pre-releases and drafts.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Release Downloads
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="release-downloads-chart"></canvas>
-                </div>
-                <span class="insight-desc">Total binary asset downloads per month across all GitHub releases.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Downloads by Release
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="release-downloads-by-tag-chart"></canvas>
-                </div>
-                <span class="insight-desc">Download counts per release tag. Last 9 releases plus the all-time most downloaded.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Forks &amp; Activity
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="forks-activity-chart"></canvas>
-                </div>
-                <span class="insight-desc">Monthly fork count vs total events (PRs, issues, reviews, comments). Correlation may indicate interest-driven development.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Stars Trend
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="stars-trend-chart"></canvas>
-                </div>
-                <span class="insight-desc">Daily star count over the last 30 days.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Forks Trend
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="forks-trend-chart"></canvas>
-                </div>
-                <span class="insight-desc">Daily fork count over the last 30 days.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Review Latency
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="review-latency-chart"></canvas>
-                </div>
-                <span class="insight-desc">Average hours from PR creation to first review. Lower is better.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Change Failure Rate
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="change-failure-rate-chart"></canvas>
-                </div>
-                <span class="insight-desc">Percentage of deployments causing failures. Based on bug issues near releases and revert PRs.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    PR Size Distribution
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="pr-size-chart"></canvas>
-                </div>
-                <span class="insight-desc">Pull request size by lines changed. S (&lt;50), M (50-250), L (250-1000), XL (&gt;1000).</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    First-Time Contributors
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="contributor-funnel-chart"></canvas>
-                </div>
-                <span class="insight-desc">New contributor milestones per month: first comment, first PR, first merged PR.</span>
-            </div>
-        </article>
-        <article>
-            <div class="tbl">
-                <div class="content-header">
-                    Contributor Momentum
-                </div>
-                <div class="tbl-chart tbl-home">
-                    <canvas class="chart" id="contributor-momentum-chart"></canvas>
-                </div>
-                <span class="insight-desc">Rolling 3-month active contributor count with month-over-month change.</span>
-            </div>
-        </article>
-        <article class="grid-full-width">
-            <div class="tbl bordered">
-                <div class="tbl-header">
-                    <div class="content-header">
-                        Event Search
-                    </div>
-                </div>
-                <div class="tbl-content">
-                    <form id="search-filters" class="search-filters">
-                        <div class="filter-row">
-                            <label for="filter-type">Type</label>
-                            <select id="filter-type">
-                                <option value="">All</option>
-                                <option value="PR">PR</option>
-                                <option value="PR-Review">PR-Review</option>
-                                <option value="Issue">Issue</option>
-                                <option value="Issue-Comment">Issue-Comment</option>
-                                <option value="Fork">Fork</option>
-                            </select>
-                        </div>
-                        <div class="filter-row">
-                            <label for="filter-from">From</label>
-                            <input type="date" id="filter-from" />
-                        </div>
-                        <div class="filter-row">
-                            <label for="filter-to">To</label>
-                            <input type="date" id="filter-to" />
-                        </div>
-                        <div class="filter-row">
-                            <label for="filter-user">User</label>
-                            <input type="text" id="filter-user" placeholder="username" />
-                        </div>
-                        <div class="filter-row">
-                            <label for="filter-entity">Entity</label>
-                            <input type="text" id="filter-entity" placeholder="company" />
-                        </div>
-                        <div class="filter-actions">
-                            <button type="submit" class="modal-btn modal-btn-primary">Search</button>
-                            <button type="button" id="filter-clear" class="modal-btn">Clear</button>
-                        </div>
-                    </form>
-                    <div id="search-results-wrap" style="display:none;">
-                        <div id="tbl-criteria"></div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Repo</th>
-                                    <th>Event Type</th>
-                                    <th>Developer</th>
-                                    <th>Entity</th>
-                                </tr>
-                            </thead>
-                            <tbody id="result-table-content"></tbody>
-                        </table>
-                        <div class="result-pager">
-                            Page <b id="page-number">1</b>
-                            &nbsp;
-                            <a href="#" id="prev-page">Prev</a> |
-                            <a href="#" id="next-page">Next</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </article>
-
+    <section class="summary-banner" id="summary-banner">
+        <div class="banner-stat">
+            <span class="banner-val" id="banner-orgs">—</span>
+            <span class="banner-label">Organizations</span>
+        </div>
+        <div class="banner-stat">
+            <span class="banner-val" id="banner-repos">—</span>
+            <span class="banner-label">Repositories</span>
+        </div>
+        <div class="banner-stat">
+            <span class="banner-val" id="banner-events">—</span>
+            <span class="banner-label">Events</span>
+        </div>
+        <div class="banner-stat">
+            <span class="banner-val" id="banner-contributors">—</span>
+            <span class="banner-label">Contributors</span>
+        </div>
+        <div class="banner-stat">
+            <span class="banner-val" id="banner-last-import">—</span>
+            <span class="banner-label">Last Import</span>
+        </div>
     </section>
+
+    <nav class="tab-bar" id="tab-bar">
+        <button class="tab-btn active" data-tab="health">Health</button>
+        <button class="tab-btn" data-tab="activity">Activity</button>
+        <button class="tab-btn" data-tab="velocity">Velocity</button>
+        <button class="tab-btn" data-tab="quality">Quality</button>
+        <button class="tab-btn" data-tab="community">Community</button>
+        <button class="tab-btn" data-tab="events">Events</button>
+    </nav>
+
+    <!-- Health Tab -->
+    <div class="tab-content active" data-tab="health">
+        <section class="grid">
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Project Health
+                    </div>
+                    <div class="tbl-chart tbl-home insights-summary">
+                        <div class="insight-card">
+                            <span class="insight-label">Bus Factor</span>
+                            <span class="insight-val" id="bus-factor-val">—</span>
+                            <span class="insight-desc">Developers who account for >=50% of all work (lower number means higher risk if they leave)</span>
+                        </div>
+                        <div class="insight-card">
+                            <span class="insight-label">Pony Factor</span>
+                            <span class="insight-val" id="pony-factor-val">—</span>
+                            <span class="insight-desc">Organizations behind >=50% of all work (lower means higher dependency on fewer companies)</span>
+                        </div>
+                    </div>
+                    <div style="height:80px;padding:0 1rem;">
+                        <canvas id="health-activity-sparkline"></canvas>
+                    </div>
+                    <span class="insight-desc">Daily contributor activity over the selected period.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Repository Metadata
+                    </div>
+                    <div class="tbl-chart tbl-home insights-grid" id="repo-meta-container">
+                        <span class="insight-label">No metadata imported yet</span>
+                    </div>
+                    <div style="height:80px;padding:0 1rem;">
+                        <canvas id="repo-meta-sparkline"></canvas>
+                    </div>
+                    <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Stars Trend
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="stars-trend-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Daily star count over the last 30 days.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Forks Trend
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="forks-trend-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Daily fork count over the last 30 days.</span>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <!-- Activity Tab -->
+    <div class="tab-content" data-tab="activity">
+        <section class="grid">
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Monthly Activity
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="time-series-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">GitHub events (PRs, issues, reviews, comments, forks) grouped by month. Trend line is linear regression.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        PR Size Distribution
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="pr-size-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Pull request size by lines changed. S (&lt;50), M (50-250), L (250-1000), XL (&gt;1000).</span>
+                </div>
+            </article>
+            <article class="grid-full-width">
+                <div class="tbl">
+                    <div class="content-header">
+                        Forks &amp; Activity
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="forks-activity-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Monthly fork count vs total events (PRs, issues, reviews, comments). Correlation may indicate interest-driven development.</span>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <!-- Velocity Tab -->
+    <div class="tab-content" data-tab="velocity">
+        <section class="grid">
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Lead Time (PR to Merge)
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="time-to-merge-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Average days from PR creation to merge. Based on GitHub created/merged timestamps.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Change Failure Rate
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="change-failure-rate-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Percentage of deployments causing failures. Based on bug issues near releases and revert PRs.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Release Cadence
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="release-cadence-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">GitHub releases per month. Stable excludes pre-releases and drafts.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Release Downloads
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="release-downloads-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Total binary asset downloads per month across all GitHub releases.</span>
+                </div>
+            </article>
+            <article class="grid-full-width">
+                <div class="tbl">
+                    <div class="content-header">
+                        Downloads by Release
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="release-downloads-by-tag-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Download counts per release tag. Last 9 releases plus the all-time most downloaded.</span>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <!-- Quality Tab -->
+    <div class="tab-content" data-tab="quality">
+        <section class="grid">
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        PR Review Ratio
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="pr-ratio-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Reviews per PR. Higher ratio suggests stronger code review culture.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Review Latency
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="review-latency-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Average hours from PR creation to first review. Lower is better.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Time to Close (Issues)
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="time-to-close-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Average days to close. All issues vs bug issues filed within 7 days of a release.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl" style="position:relative;">
+                    <div class="content-header">
+                        Lowest Reputation Contributors
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="reputation-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Shallow score (local data only). Click a bar for full GitHub-enriched score.</span>
+                    <div id="reputation-popover" class="entity-popover">
+                        <div class="entity-popover-header">
+                            <span id="reputation-popover-title"></span>
+                            <button id="reputation-popover-close" class="modal-close">&times;</button>
+                        </div>
+                        <ul id="reputation-popover-list"></ul>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <!-- Community Tab -->
+    <div class="tab-content" data-tab="community">
+        <section class="grid">
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Contributor Retention
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="retention-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">New = first contribution that month. Returning = contributed in a prior month.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Contributor Momentum
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="contributor-momentum-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Rolling 3-month active contributor count with month-over-month change.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        First-Time Contributors
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="contributor-funnel-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">New contributor milestones per month: first comment, first PR, first merged PR.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl" style="position:relative;">
+                    <div class="content-header">
+                        Top Entities (Company or Org)
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="left-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Based on GitHub profile company field and CNCF gitdm affiliations. Self-reported, not verified.</span>
+                    <div id="entity-popover" class="entity-popover">
+                        <div class="entity-popover-header">
+                            <span id="entity-popover-title"></span>
+                            <button id="entity-popover-close" class="modal-close">&times;</button>
+                        </div>
+                        <ul id="entity-popover-list"></ul>
+                    </div>
+                </div>
+            </article>
+            <article class="grid-full-width">
+                <div class="tbl">
+                    <div class="tbl-header">
+                         <div class="content-header">
+                            Top Colaborators
+                        </div>
+                    </div>
+                    <div class="tbl-content tbl-home">
+                        <canvas class="chart" id="right-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Ranked by total event count (PRs, issues, reviews, comments) in the selected period.</span>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <!-- Events Tab -->
+    <div class="tab-content" data-tab="events">
+        <section class="grid">
+            <article class="grid-full-width">
+                <div class="tbl bordered">
+                    <div class="tbl-header">
+                        <div class="content-header">
+                            Event Search
+                        </div>
+                    </div>
+                    <div class="tbl-content">
+                        <form id="search-filters" class="search-filters">
+                            <div class="filter-row">
+                                <label for="filter-type">Type</label>
+                                <select id="filter-type">
+                                    <option value="">All</option>
+                                    <option value="PR">PR</option>
+                                    <option value="PR-Review">PR-Review</option>
+                                    <option value="Issue">Issue</option>
+                                    <option value="Issue-Comment">Issue-Comment</option>
+                                    <option value="Fork">Fork</option>
+                                </select>
+                            </div>
+                            <div class="filter-row">
+                                <label for="filter-from">From</label>
+                                <input type="date" id="filter-from" />
+                            </div>
+                            <div class="filter-row">
+                                <label for="filter-to">To</label>
+                                <input type="date" id="filter-to" />
+                            </div>
+                            <div class="filter-row">
+                                <label for="filter-user">User</label>
+                                <input type="text" id="filter-user" placeholder="username" />
+                            </div>
+                            <div class="filter-row">
+                                <label for="filter-entity">Entity</label>
+                                <input type="text" id="filter-entity" placeholder="company" />
+                            </div>
+                            <div class="filter-actions">
+                                <button type="submit" class="modal-btn modal-btn-primary">Search</button>
+                                <button type="button" id="filter-clear" class="modal-btn">Clear</button>
+                            </div>
+                        </form>
+                        <div id="search-results-wrap" style="display:none;">
+                            <div id="tbl-criteria"></div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Repo</th>
+                                        <th>Event Type</th>
+                                        <th>Developer</th>
+                                        <th>Entity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="result-table-content"></tbody>
+                            </table>
+                            <div class="result-pager">
+                                Page <b id="page-number">1</b>
+                                &nbsp;
+                                <a href="#" id="prev-page">Prev</a> |
+                                <a href="#" id="next-page">Next</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </div>
 
 <!-- End Middle  -->
 

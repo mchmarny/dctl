@@ -15,6 +15,9 @@ func TestGetInsightsSummary_EmptyDB(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, summary.BusFactor)
 	assert.Equal(t, 0, summary.PonyFactor)
+	assert.Equal(t, 0, summary.Orgs)
+	assert.Equal(t, 0, summary.Events)
+	assert.Empty(t, summary.LastImport)
 }
 
 func TestGetInsightsSummary_NilDB(t *testing.T) {
@@ -57,6 +60,11 @@ func TestGetInsightsSummary_WithData(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, summary.BusFactor, 1)
 	assert.GreaterOrEqual(t, summary.PonyFactor, 1)
+	assert.Greater(t, summary.Events, 0)
+	assert.Greater(t, summary.Contributors, 0)
+	assert.Greater(t, summary.Orgs, 0)
+	assert.Greater(t, summary.Repos, 0)
+	assert.NotEmpty(t, summary.LastImport)
 }
 
 func TestGetContributorRetention_EmptyDB(t *testing.T) {

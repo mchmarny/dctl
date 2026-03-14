@@ -336,6 +336,19 @@ const (
 	ORDER BY m.month
 	`
 
+	selectBannerStatsSQL = `SELECT
+		COUNT(DISTINCT e.org),
+		COUNT(DISTINCT e.org || '/' || e.repo),
+		COUNT(*),
+		COUNT(DISTINCT e.username),
+		COALESCE(MAX(e.date), '')
+	FROM event e
+	WHERE e.org = COALESCE(?, e.org)
+	  AND e.repo = COALESCE(?, e.repo)
+	  AND IFNULL((SELECT d.entity FROM developer d WHERE d.username = e.username), '') = COALESCE(?, IFNULL((SELECT d.entity FROM developer d WHERE d.username = e.username), ''))
+	  AND e.date >= ?
+	`
+
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
 		JOIN developer d ON e.username = d.username
@@ -362,8 +375,13 @@ type VelocitySeries struct {
 }
 
 type InsightsSummary struct {
-	BusFactor  int `json:"bus_factor" yaml:"busFactor"`
-	PonyFactor int `json:"pony_factor" yaml:"ponyFactor"`
+	BusFactor    int    `json:"bus_factor" yaml:"busFactor"`
+	PonyFactor   int    `json:"pony_factor" yaml:"ponyFactor"`
+	Orgs         int    `json:"orgs" yaml:"orgs"`
+	Repos        int    `json:"repos" yaml:"repos"`
+	Events       int    `json:"events" yaml:"events"`
+	Contributors int    `json:"contributors" yaml:"contributors"`
+	LastImport   string `json:"last_import" yaml:"lastImport"`
 }
 
 type RetentionSeries struct {
@@ -414,6 +432,12 @@ func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*Ins
 
 	if err := db.QueryRow(selectPonyFactorSQL, org, repo, entity, since).Scan(&summary.PonyFactor); err != nil {
 		return nil, fmt.Errorf("failed to query pony factor: %w", err)
+	}
+
+	if err := db.QueryRow(selectBannerStatsSQL, org, repo, entity, since).Scan(
+		&summary.Orgs, &summary.Repos, &summary.Events, &summary.Contributors, &summary.LastImport,
+	); err != nil {
+		return nil, fmt.Errorf("failed to query banner stats: %w", err)
 	}
 
 	return summary, nil
