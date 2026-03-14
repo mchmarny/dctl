@@ -204,12 +204,7 @@ devpulse substitute --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new 
 
 ## Architecture
 
-All data is stored locally in a [SQLite](https://www.sqlite.org/) database (`~/.devpulse/data.db`). No data leaves your machine. The dashboard is a local-only HTTP server with no external dependencies at runtime.
-
-```
-GitHub API --> devpulse import --> SQLite --> devpulse server --> localhost:8080
-                                         \--> devpulse query --> JSON (stdout)
-```
+All data is stored locally in a [SQLite](https://www.sqlite.org/) database (`~/.devpulse/data.db`). No data leaves your machine. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ## Verification
 
