@@ -40,9 +40,11 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers (GitHub profile + CNCF gitdm)
 
 **Dashboard**
-- **Event search filters** -- filter by type, date range, username, or entity directly from the dashboard
+- **Global summary banner** -- organizations, repositories, events, contributors, and last import at a glance
+- **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, and Events tabs with lazy-loaded charts
+- **Event search filters** -- filter by type, date range, username, or entity from the Events tab
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
-- **Unified search** -- `org:name`, `repo:name`, or `entity:name` prefix syntax; all panels respect entity filter
+- **Unified search** -- `org:name` or `repo:name` prefix syntax; all panels respect scope
 
 ## Install
 
@@ -138,13 +140,14 @@ devpulse server
 
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
+The dashboard shows a global summary banner (orgs, repos, events, contributors, last import) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
+
 Use the search bar with prefix syntax to scope the dashboard:
 
 | Prefix | Example | Scope |
 |--------|---------|-------|
 | `org:` | `org:nvidia` | All repos in an organization |
 | `repo:` | `repo:skyhook` | Single repository |
-| `entity:` | `entity:google` | Company/org affiliation |
 
 No prefix defaults to org search.
 

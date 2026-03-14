@@ -15,6 +15,14 @@ This starts a local HTTP server and opens your browser to `http://127.0.0.1:8080
 | `--port` | Change the listen port (default: 8080) |
 | `--no-browser` | Don't auto-open the browser |
 
+## Layout
+
+The dashboard has three sections:
+
+1. **Top bar** — search input, period selector, and theme toggle on a single line
+2. **Summary banner** — global counts (organizations, repositories, events, contributors, last import) that update with the active search scope
+3. **Tabbed panels** — six tabs with lazy-loaded charts: Health, Activity, Velocity, Quality, Community, Events
+
 ## Search
 
 The search bar uses prefix syntax to scope the dashboard:
@@ -23,59 +31,59 @@ The search bar uses prefix syntax to scope the dashboard:
 |--------|---------|-------|
 | `org:` | `org:nvidia` | All repos in an organization |
 | `repo:` | `repo:skyhook` | Single repository |
-| `entity:` | `entity:google` | Company/org affiliation |
 
 Typing without a prefix defaults to org search. Clearing the search bar resets to the all-data view.
 
-All panels respect the active search scope. For example, `entity:google` filters not just the entity chart but also retention, PR ratio, velocity, reputation, and all other contributor-based panels.
+All tabs and the summary banner respect the active search scope.
 
 ## Time period
 
-The period dropdown (next to the search heading) adjusts the time window for all charts. Available options are computed from the earliest event matching the current search scope. Changing the period reloads all panels.
+The period dropdown (in the top bar) adjusts the time window for all charts. Available options are computed from the earliest event matching the current search scope. Changing the period reloads the summary banner and the active tab.
 
-## Charts
+## Tabs
 
-All charts are interactive. Click on data points to filter the event search results. Each panel includes a brief description of its data source and methodology.
+Charts load lazily — only the active tab's data is fetched. Switching tabs loads their charts on demand. URL hash fragments (`#health`, `#activity`, etc.) track the active tab, so browser back/forward and bookmarks work.
 
-### Monthly Activity
-GitHub events (PRs, reviews, issues, comments, forks) grouped by month with a total line and linear regression trend.
+### Health
 
-### Top Entities / Top Collaborators
-Entity and developer contribution distribution. Entity affiliations come from GitHub profile company fields and CNCF gitdm data (self-reported, not verified). Click an entity to see its affiliated developers in a popover. Legend items can be clicked to exclude them.
+- **Project Health** — bus factor and pony factor with daily activity sparkline
+- **Repository Metadata** — stars, forks, open issues, language, license, repo count with sparkline
+- **Stars Trend** — daily star count over the last 30 days
+- **Forks Trend** — daily fork count over the last 30 days
 
-### Project Health
-Bus factor and pony factor: the minimum number of developers (or organizations) producing 50% of all contributions. Includes a daily activity sparkline showing event volume over the selected period.
+### Activity
 
-### Contributor Retention
-New (first contribution that month) vs returning (contributed in a prior month) contributors per month.
+- **Monthly Activity** — GitHub events grouped by month with total line and linear regression trend
+- **PR Size Distribution** — pull requests bucketed by lines changed (S/M/L/XL) per month
+- **Forks & Activity** — monthly fork count vs total event activity
 
-### Lowest Reputation Contributors
-Two-tier scoring: shallow scores use local data only; click a bar for a full GitHub API-enriched deep score. The chart refreshes automatically after a deep score is computed. Known bot accounts (GitHub Apps, Copilot, Claude) are excluded.
+### Velocity
 
-### PR Review Ratio
-Monthly PR and review counts with the ratio on a secondary axis. Higher ratio suggests stronger code review culture.
+- **Lead Time (PR to Merge)** — average days from PR creation to merge
+- **Change Failure Rate** — percentage of deployments causing failures
+- **Release Cadence** — monthly release counts (total, stable, deployments)
+- **Release Downloads** — monthly download trends
+- **Downloads by Release** — top releases by download count
 
-### Repository Metadata
-Snapshot from GitHub API at last import. Aggregated stars, forks, open issues, primary language, license, and repo count. Includes a sparkline showing stars and forks trends over the last 30 days.
+### Quality
 
-### Stars Trend
-Daily star count over the last 30 days. Backfilled from GitHub's ListStargazers API on first import, then updated with each subsequent import.
+- **PR Review Ratio** — PRs to reviews per month with ratio trend line
+- **Review Latency** — average hours from PR creation to first review
+- **Time to Close** — average days to close all issues vs bug issues near releases
+- **Contributor Reputation** — two-tier scoring with known bot filtering; click a bar for deep score
 
-### Forks Trend
-Daily fork count over the last 30 days. Backfilled from GitHub's ListForks API on first import, then updated with each subsequent import.
+### Community
 
-### Release Cadence
-GitHub releases per month. Stable excludes pre-releases and drafts.
+- **Contributor Retention** — new vs returning contributors per month
+- **Contributor Momentum** — rolling 3-month active contributor count with delta
+- **First-Time Contributors** — new contributor milestones per month
+- **Top Entities** — contributing companies/orgs with drill-down to developers
+- **Top Collaborators** — ranked by total event count
 
-### Time to Close / Time to Merge
-Average days from open to close/merge based on GitHub created/closed/merged timestamps, with volume overlay.
+### Events
 
-## Event search
-
-The Event Search panel is always visible at the bottom of the dashboard. It provides:
-
-- **Filter form** -- event type dropdown, from/to date inputs, username, and entity text fields
-- **Chart integration** -- clicking chart data points populates the filter inputs and triggers a search
-- **Pagination** -- prev/next controls for paging through results
+- **Event Search** — filter by type, date range, username, or entity
+- **Chart integration** — clicking chart data points populates filters and navigates to the Events tab
+- **Pagination** — prev/next controls for paging through results
 
 Each result row links directly to the PR, issue, or developer profile on GitHub.

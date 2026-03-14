@@ -111,7 +111,7 @@ CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `serve
 
 Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite → HTTP API → Chart.js dashboard
 
-Dashboard is full-width (no sidebar). Theme toggle is in the top bar next to search. All insight panels support entity filtering via `?e=` query param.
+Dashboard is full-width with a summary banner and six lazy-loaded tabs (Health, Activity, Velocity, Quality, Community, Events). Top bar has search, period selector, and theme toggle on one line. Search supports `org:` and `repo:` prefix syntax.
 
 ## CI/CD
 
