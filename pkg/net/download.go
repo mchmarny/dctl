@@ -38,7 +38,7 @@ func getResp(url string) (resp *http.Response, err error) {
 
 	req.Header.Set("User-Agent", clientAgent)
 
-	return c.Do(req)
+	return c.Do(req) //nolint:gosec,nolintlint // G704: URL from internal callers
 }
 
 var ErrorURLNotFound = errors.New("URL not found")
