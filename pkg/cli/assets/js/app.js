@@ -1352,7 +1352,7 @@ function loadContainerActivityChart(url) {
     $.get(url, function (data) {
         if (!data.months || data.months.length === 0) {
             $("#container-activity-chart").closest(".tbl").find(".insight-desc")
-                .text("No container packages found for this repository.");
+                .text("No container images published via GitHub Packages (ghcr.io) for this scope.");
             return;
         }
         containerActivityChart = new Chart($("#container-activity-chart")[0].getContext("2d"), {
