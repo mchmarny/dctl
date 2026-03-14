@@ -89,10 +89,15 @@ func listRepoContainerPackages(ctx context.Context, client *github.Client, org, 
 
 	var matched []*github.Package
 	for _, pkg := range packages {
+		// Match by repository field if available, or by package name (often lowercase repo name)
 		if pkg.Repository != nil && strings.EqualFold(pkg.Repository.GetName(), repo) {
+			matched = append(matched, pkg)
+		} else if pkg.Repository == nil && strings.EqualFold(pkg.GetName(), repo) {
 			matched = append(matched, pkg)
 		}
 	}
+
+	slog.Debug("container packages", "org", org, "repo", repo, "total", len(packages), "matched", len(matched))
 	return matched, nil
 }
 
