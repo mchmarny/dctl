@@ -173,7 +173,7 @@ func extractAffiliations(path string, devs map[string]*CNCFDeveloper) error {
 		return fmt.Errorf("path not set")
 	}
 
-	f, err := os.Open(path) //nolint:gosec // G703: path from os.CreateTemp, not user input
+	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("error opening file: %s: %w", path, err)
 	}
