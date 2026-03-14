@@ -44,7 +44,12 @@ kos:
     bare: true
 
 archives:
-  - formats:
+  - id: tar
+    formats:
+      - tar.gz
+    name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
+  - id: bin
+    formats:
       - binary
     name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
 
@@ -92,7 +97,9 @@ changelog:
       - readme
 
 brews:
-  - repository:
+  - ids:
+      - tar
+    repository:
       owner: mchmarny
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
