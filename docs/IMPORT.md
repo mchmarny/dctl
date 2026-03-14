@@ -6,15 +6,10 @@ All data is stored locally in an embedded [SQLite](https://www.sqlite.org/) data
 
 ## Import an org (recommended)
 
-Import events, affiliations, metadata, releases, and reputation in one command:
+Import events, affiliations, metadata, releases, and reputation:
 
 ```shell
-devpulse import --org <org>
-```
-
-Target specific repos:
-
-```shell
+devpulse import --org <org> --repo <repo>
 devpulse import --org <org> --repo <repo1> --repo <repo2>
 ```
 
@@ -57,7 +52,7 @@ This re-imports events, affiliations, substitutions, metadata, releases, metric 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--org` | GitHub organization or user | (required for first import) |
-| `--repo` | Repository name (repeatable) | all repos in org |
+| `--repo` | Repository name (repeatable, required with --org) | — |
 | `--months` | Months of event history to import | 6 |
 | `--fresh` | Clear pagination state and re-import from scratch | false |
 | `--format` | Output format: `json` or `yaml` | json |

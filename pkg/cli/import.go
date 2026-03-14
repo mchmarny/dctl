@@ -46,8 +46,7 @@ var (
 Examples:
   devpulse import --org <ORG> --repo <REPO1> --repo <REPO2>    # import specific repos
   devpulse import --org <ORG> --repo <REPO1> --months 24       # import last 24 months for specific repo
-  devpulse import --org <ORG>                                  # import all org repos
-  devpulse import --org <ORG> --fresh                          # re-import from scratch
+  devpulse import --org <ORG> --repo <REPO1> --fresh           # re-import from scratch
   devpulse import                                              # update all previously imported data`,
 		Action: cmdImport,
 		Flags: []cli.Flag{
@@ -81,11 +80,11 @@ func cmdImport(c *cli.Context) error {
 
 	token, err := getGitHubToken()
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
+		return fmt.Errorf("no GitHub token found, run 'devpulse auth' first: %w", err)
 	}
 
 	if token == "" {
-		return cli.ShowSubcommandHelp(c)
+		return fmt.Errorf("no GitHub token found, run 'devpulse auth' or set GITHUB_TOKEN")
 	}
 
 	cfg := getConfig(c)
@@ -95,18 +94,12 @@ func cmdImport(c *cli.Context) error {
 		return cmdUpdate(cfg, token, start)
 	}
 
-	// Resolve repos
-	var repos []string
+	// At least one repo is required when org is specified
 	if len(repoSlice) == 0 {
-		ctx := context.Background()
-		client := net.GetOAuthClient(ctx, token)
-		repos, err = data.GetOrgRepoNames(ctx, client, org)
-		if err != nil {
-			return fmt.Errorf("failed to get org %s repos: %w", org, err)
-		}
-	} else {
-		repos = repoSlice
+		return fmt.Errorf("--repo is required when --org is specified (e.g. --org %s --repo <REPO>)", org)
 	}
+
+	repos := repoSlice
 
 	res := &ImportResult{
 		Org:    org,
