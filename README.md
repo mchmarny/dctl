@@ -67,7 +67,7 @@ brew install devpulse
 
 ### Binary releases
 
-Pre-built binaries for macOS, Linux, and Windows (amd64/arm64) are available on the [releases](https://github.com/mchmarny/devpulse/releases/latest) page.
+Visit [latest releases](https://github.com/mchmarny/devpulse/releases/latest) page.
 
 ### Build from source
 
@@ -83,7 +83,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ## Quick start
 
-### 1. Authenticate
+### 1. Authentication
 
 `devpulse` uses GitHub's device flow for OAuth. By default the token requests the `repo` scope for private repository access. Use `--public` to skip the `repo` scope when you only work with public repos. The token is stored in your OS keychain.
 
@@ -98,7 +98,7 @@ Alternatively, set `GITHUB_TOKEN` to skip the auth command entirely:
 export GITHUB_TOKEN=ghp_...
 ```
 
-### 2. Import data
+### 2. Data import
 
 Import events, affiliations, metadata, releases, and reputation for an org:
 
@@ -126,7 +126,7 @@ devpulse import
 
 See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
 
-### 3. Deep-score reputation
+### 3. Reputation score
 
 Import computes basic reputation scores automatically. For deeper scoring using GitHub API signals (profile age, org membership, PR history, etc.):
 
@@ -138,7 +138,7 @@ devpulse score --org <org> --count 20           # deep-score 20 lowest
 
 Run incrementally — each invocation scores the next batch of lowest-reputation contributors. See [docs/SCORE.md](docs/SCORE.md) for details.
 
-### 4. View dashboard
+### 4. Dashboard view
 
 ```shell
 devpulse server
@@ -157,7 +157,7 @@ Use the search bar with prefix syntax to scope the dashboard:
 
 No prefix defaults to org search.
 
-### 5. Query via CLI
+### 5. Programmatic query
 
 `devpulse` also exposes data as JSON for scripting:
 
@@ -169,7 +169,7 @@ devpulse query entity detail --name GOOGLE
 
 See [docs/QUERY.md](docs/QUERY.md) for all query options.
 
-### 6. Delete data
+### 6. Data deletion
 
 Remove imported data for a specific org or repo:
 
@@ -179,7 +179,7 @@ devpulse delete --org <org> --repo <repo>            # delete data for specific 
 devpulse delete --org <org> --repo <repo> --force    # skip confirmation prompt
 ```
 
-### 7. Reset
+### 7. Full reset
 
 Delete all imported data and start fresh:
 
