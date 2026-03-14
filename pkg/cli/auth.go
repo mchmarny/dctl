@@ -16,7 +16,7 @@ const (
 	tokenFileName  = "github_token"
 	keyringService = "devpulse"
 	keyringUser    = "github_token"
-	scopeRepo      = "repo" // OAuth scope for private repository access
+	scopeRepo      = "repo read:packages" // OAuth scopes for repo access and GitHub Packages
 )
 
 var (
