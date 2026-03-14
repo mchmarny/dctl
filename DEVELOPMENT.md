@@ -102,7 +102,7 @@ devpulse/
 #### CLI
 - **Location**: `pkg/cli/`
 - **Framework**: [urfave/cli v2](https://github.com/urfave/cli)
-- **Commands**: `auth`, `import`, `query`, `server`, `substitute`, `delete`, `reset`
+- **Commands**: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `reset`
 
 #### Data Layer
 - **Location**: `pkg/data/`

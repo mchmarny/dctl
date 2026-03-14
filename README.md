@@ -90,7 +90,7 @@ export GITHUB_TOKEN=ghp_...
 
 ### 2. Import data
 
-Import everything for an org (events, affiliations, metadata, releases, reputation):
+Import events, affiliations, metadata, releases, and reputation for an org:
 
 ```shell
 devpulse import --org <org>
@@ -116,7 +116,19 @@ devpulse import
 
 See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
 
-### 3. View dashboard
+### 3. Deep-score reputation
+
+Import computes basic reputation scores automatically. For deeper scoring using GitHub API signals (profile age, org membership, PR history, etc.):
+
+```shell
+devpulse score --org <org>                      # deep-score 5 lowest in org (default)
+devpulse score --org <org> --repo <repo>        # scope to a specific repo
+devpulse score --org <org> --count 20           # deep-score 20 lowest
+```
+
+Run incrementally — each invocation scores the next batch of lowest-reputation contributors. See [docs/SCORE.md](docs/SCORE.md) for details.
+
+### 4. View dashboard
 
 ```shell
 devpulse server
@@ -136,7 +148,7 @@ Use the search bar with prefix syntax to scope the dashboard:
 
 No prefix defaults to org search.
 
-### 4. Query via CLI
+### 5. Query via CLI
 
 `devpulse` also exposes data as JSON for scripting:
 
@@ -148,7 +160,7 @@ devpulse query entity detail --name GOOGLE
 
 See [docs/QUERY.md](docs/QUERY.md) for all query options.
 
-### 5. Delete data
+### 6. Delete data
 
 Remove imported data for a specific org or repo:
 
@@ -158,7 +170,7 @@ devpulse delete --org <org> --repo <repo>            # delete data for specific 
 devpulse delete --org <org> --repo <repo> --force    # skip confirmation prompt
 ```
 
-### 6. Reset
+### 7. Reset
 
 Delete all imported data and start fresh:
 

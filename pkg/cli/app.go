@@ -92,6 +92,7 @@ func newApp() *urfave.App {
 			authCmd,
 			importCmd,
 			deleteCmd,
+			scoreCmd,
 			substituteCmd,
 			queryCmd,
 			serverCmd,

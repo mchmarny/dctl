@@ -55,7 +55,7 @@ func TestGetStaleReputationUsernames_NullReputation(t *testing.T) {
 		VALUES ('org1', 'repo1', 'staleuser', 'pr', '2025-01-10', 'http://example.com', '', '')`)
 	require.NoError(t, err)
 
-	usernames, err := getStaleReputationUsernames(db, "2025-01-15T00:00:00Z")
+	usernames, err := getStaleReputationUsernames(db, nil, nil, "2025-01-15T00:00:00Z")
 	require.NoError(t, err)
 	assert.Contains(t, usernames, "staleuser")
 }
@@ -75,7 +75,7 @@ func TestGetStaleReputationUsernames_FreshReputation(t *testing.T) {
 	require.NoError(t, updateReputation(db, "freshuser", 0.9, "2025-02-01T00:00:00Z", false, nil))
 
 	// Threshold before the update — user should NOT appear
-	usernames, err := getStaleReputationUsernames(db, "2025-01-15T00:00:00Z")
+	usernames, err := getStaleReputationUsernames(db, nil, nil, "2025-01-15T00:00:00Z")
 	require.NoError(t, err)
 	assert.NotContains(t, usernames, "freshuser")
 }
@@ -95,14 +95,14 @@ func TestGetStaleReputationUsernames_SkipsBots(t *testing.T) {
 		('org1', 'repo1', 'dependabot[bot]', 'pr', '2025-01-10', 'http://example.com', '', '')`)
 	require.NoError(t, err)
 
-	usernames, err := getStaleReputationUsernames(db, "2025-01-15T00:00:00Z")
+	usernames, err := getStaleReputationUsernames(db, nil, nil, "2025-01-15T00:00:00Z")
 	require.NoError(t, err)
 	assert.Contains(t, usernames, "realuser")
 	assert.NotContains(t, usernames, "dependabot[bot]")
 }
 
 func TestGetStaleReputationUsernames_NilDB(t *testing.T) {
-	_, err := getStaleReputationUsernames(nil, "2025-01-01T00:00:00Z")
+	_, err := getStaleReputationUsernames(nil, nil, nil, "2025-01-01T00:00:00Z")
 	assert.Error(t, err)
 }
 
@@ -156,13 +156,13 @@ func TestGetReputationDistribution_WithData(t *testing.T) {
 }
 
 func TestImportReputation_NilDB(t *testing.T) {
-	_, err := ImportReputation(nil)
+	_, err := ImportReputation(nil, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportReputation_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
-	res, err := ImportReputation(db)
+	res, err := ImportReputation(db, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Updated)
 }
@@ -179,7 +179,7 @@ func TestImportReputation_ComputesShallowScores(t *testing.T) {
 		VALUES ('org1', 'repo1', 'alice', 'pr', ?, 'http://example.com', '', '')`, today)
 	require.NoError(t, err)
 
-	res, err := ImportReputation(db)
+	res, err := ImportReputation(db, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, res.Updated)
 
@@ -191,13 +191,13 @@ func TestImportReputation_ComputesShallowScores(t *testing.T) {
 }
 
 func TestGetLowestReputationUsernames_NilDB(t *testing.T) {
-	_, err := getLowestReputationUsernames(nil, "2025-01-01T00:00:00Z", 5)
+	_, err := getLowestReputationUsernames(nil, nil, nil, "2025-01-01T00:00:00Z", 5)
 	assert.Error(t, err)
 }
 
 func TestGetLowestReputationUsernames_EmptyDB(t *testing.T) {
 	db := setupTestDB(t)
-	usernames, err := getLowestReputationUsernames(db, "2025-01-01T00:00:00Z", 5)
+	usernames, err := getLowestReputationUsernames(db, nil, nil, "2025-01-01T00:00:00Z", 5)
 	require.NoError(t, err)
 	assert.Empty(t, usernames)
 }
@@ -229,7 +229,7 @@ func TestGetLowestReputationUsernames_ReturnsBottomN(t *testing.T) {
 
 	// Threshold in the future so none are "fresh deep"
 	threshold := time.Now().UTC().Add(time.Hour).Format("2006-01-02T15:04:05Z")
-	usernames, err := getLowestReputationUsernames(db, threshold, 2)
+	usernames, err := getLowestReputationUsernames(db, nil, nil, threshold, 2)
 	require.NoError(t, err)
 	require.Len(t, usernames, 2)
 	assert.Equal(t, "low1", usernames[0])
@@ -257,7 +257,7 @@ func TestGetLowestReputationUsernames_SkipsFreshDeep(t *testing.T) {
 
 	// Threshold before now — deepuser's fresh deep score should be excluded
 	threshold := time.Now().UTC().Add(-time.Hour).Format("2006-01-02T15:04:05Z")
-	usernames, err := getLowestReputationUsernames(db, threshold, 10)
+	usernames, err := getLowestReputationUsernames(db, nil, nil, threshold, 10)
 	require.NoError(t, err)
 	assert.Contains(t, usernames, "shallowuser")
 	assert.NotContains(t, usernames, "deepuser")
@@ -283,35 +283,80 @@ func TestGetLowestReputationUsernames_SkipsBots(t *testing.T) {
 	}
 
 	threshold := time.Now().UTC().Add(time.Hour).Format("2006-01-02T15:04:05Z")
-	usernames, err := getLowestReputationUsernames(db, threshold, 10)
+	usernames, err := getLowestReputationUsernames(db, nil, nil, threshold, 10)
 	require.NoError(t, err)
 	assert.Contains(t, usernames, "realuser")
 	assert.NotContains(t, usernames, "mybot[bot]")
 }
 
 func TestImportDeepReputation_NilDB(t *testing.T) {
-	_, err := ImportDeepReputation(nil, "token", 5)
+	_, err := ImportDeepReputation(nil, "token", 5, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportDeepReputation_EmptyToken(t *testing.T) {
 	db := setupTestDB(t)
-	_, err := ImportDeepReputation(db, "", 5)
+	_, err := ImportDeepReputation(db, "", 5, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportDeepReputation_ZeroLimit(t *testing.T) {
 	db := setupTestDB(t)
-	res, err := ImportDeepReputation(db, "token", 0)
+	res, err := ImportDeepReputation(db, "token", 0, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Scored)
 }
 
 func TestImportDeepReputation_NoCandidates(t *testing.T) {
 	db := setupTestDB(t)
-	res, err := ImportDeepReputation(db, "token", 5)
+	res, err := ImportDeepReputation(db, "token", 5, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Scored)
+}
+
+func TestGetStaleReputationUsernames_FilterByOrg(t *testing.T) {
+	db := setupTestDB(t)
+
+	devs := []*Developer{
+		{Username: "orguser", FullName: "Org User"},
+		{Username: "otheruser", FullName: "Other User"},
+	}
+	require.NoError(t, SaveDevelopers(db, devs))
+
+	_, err := db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES
+		('nvidia', 'repo1', 'orguser', 'pr', '2025-01-10', 'http://example.com', '', ''),
+		('other', 'repo2', 'otheruser', 'pr', '2025-01-10', 'http://example.com', '', '')`)
+	require.NoError(t, err)
+
+	org := "nvidia"
+	usernames, err := getStaleReputationUsernames(db, &org, nil, "2025-01-15T00:00:00Z")
+	require.NoError(t, err)
+	assert.Contains(t, usernames, "orguser")
+	assert.NotContains(t, usernames, "otheruser")
+}
+
+func TestGetStaleReputationUsernames_FilterByOrgAndRepo(t *testing.T) {
+	db := setupTestDB(t)
+
+	devs := []*Developer{
+		{Username: "repouser", FullName: "Repo User"},
+		{Username: "otherrepo", FullName: "Other Repo"},
+	}
+	require.NoError(t, SaveDevelopers(db, devs))
+
+	_, err := db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES
+		('nvidia', 'skyhook', 'repouser', 'pr', '2025-01-10', 'http://example.com', '', ''),
+		('nvidia', 'other', 'otherrepo', 'pr', '2025-01-10', 'http://example.com', '', '')`)
+	require.NoError(t, err)
+
+	org := "nvidia"
+	repo := "skyhook"
+	usernames, err := getStaleReputationUsernames(db, &org, &repo, "2025-01-15T00:00:00Z")
+	require.NoError(t, err)
+	assert.Contains(t, usernames, "repouser")
+	assert.NotContains(t, usernames, "otherrepo")
 }
 
 func TestGatherLocalSignals(t *testing.T) {

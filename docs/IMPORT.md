@@ -30,12 +30,6 @@ By default, `devpulse` downloads the last 6 months of events. Use `--months` to 
 devpulse import --org <org> --months 12
 ```
 
-Deep-score the N lowest-reputation contributors via the GitHub API (runs after the main import):
-
-```shell
-devpulse import --org <org> --deep 10
-```
-
 ## Update all previously imported data
 
 Run `import` with no flags to refresh all previously imported orgs/repos:
@@ -56,7 +50,7 @@ This re-imports events, affiliations, substitutions, metadata, releases, metric 
 | Metadata | Stars, forks, open issues, language, license | GitHub API |
 | Metric history | Daily star/fork counts (30-day backfill) | GitHub API (ListStargazers, ListForks) |
 | Releases | Tags, publish dates, asset downloads | GitHub API |
-| Reputation | Contributor reputation scores | Local DB + optional GitHub API (with `--deep`) |
+| Reputation | Shallow contributor reputation scores (no API calls) | Local DB |
 
 ## Flags
 
@@ -66,7 +60,6 @@ This re-imports events, affiliations, substitutions, metadata, releases, metric 
 | `--repo` | Repository name (repeatable) | all repos in org |
 | `--months` | Months of event history to import | 6 |
 | `--fresh` | Clear pagination state and re-import from scratch | false |
-| `--deep` | Deep-score N lowest-reputation contributors via GitHub API | 0 (disabled) |
 | `--format` | Output format: `json` or `yaml` | json |
 | `--debug` | Enable verbose logging | false |
 

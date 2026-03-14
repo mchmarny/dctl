@@ -107,7 +107,7 @@ pkg/net/          HTTP client utilities
 tools/            Dev scripts (version bump, shared helpers)
 ```
 
-CLI commands: `auth`, `import`, `substitute`, `query`, `server`, `reset`
+CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `reset`
 
 Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite → HTTP API → Chart.js dashboard
 

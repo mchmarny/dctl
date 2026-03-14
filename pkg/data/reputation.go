@@ -22,7 +22,9 @@ const (
 		FROM developer d
 		JOIN event e ON d.username = e.username
 		WHERE d.username NOT LIKE '%[bot]'
-		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
 		  AND (d.reputation IS NULL
 		   OR d.reputation_updated_at IS NULL
 		   OR d.reputation_updated_at < ?)
@@ -52,7 +54,7 @@ const (
 		  AND e.date >= ?
 		  AND d.reputation IS NOT NULL
 		  AND d.username NOT LIKE '%[bot]'
-		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')
 		GROUP BY d.username
 		ORDER BY d.reputation ASC
 		LIMIT 20
@@ -65,7 +67,9 @@ const (
 		JOIN event e ON d.username = e.username
 		WHERE d.reputation IS NOT NULL
 		  AND d.username NOT LIKE '%[bot]'
-		  AND d.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
 		  AND (d.reputation_deep IS NULL OR d.reputation_deep = 0
 		   OR d.reputation_updated_at IS NULL
 		   OR d.reputation_updated_at < ?)
@@ -151,14 +155,14 @@ type globalStats struct {
 
 // ImportReputation computes shallow (local-only) reputation scores for all
 // contributors with stale or missing scores. No GitHub API calls.
-func ImportReputation(db *sql.DB) (*ReputationResult, error) {
+func ImportReputation(db *sql.DB, org, repo *string) (*ReputationResult, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
 	threshold := time.Now().UTC().Add(-reputationStaleHours * time.Hour).Format("2006-01-02T15:04:05Z")
 
-	usernames, err := getStaleReputationUsernames(db, threshold)
+	usernames, err := getStaleReputationUsernames(db, org, repo, threshold)
 	if err != nil {
 		return nil, fmt.Errorf("error getting stale usernames: %w", err)
 	}
@@ -224,7 +228,7 @@ func ImportReputation(db *sql.DB) (*ReputationResult, error) {
 // ImportDeepReputation deep-scores the N lowest-reputation contributors
 // using GitHub API signals. Runs after shallow scoring; errors are
 // per-user and never fatal to the overall import.
-func ImportDeepReputation(db *sql.DB, token string, limit int) (*DeepReputationResult, error) {
+func ImportDeepReputation(db *sql.DB, token string, limit int, org, repo *string) (*DeepReputationResult, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
@@ -239,7 +243,7 @@ func ImportDeepReputation(db *sql.DB, token string, limit int) (*DeepReputationR
 
 	threshold := time.Now().UTC().Add(-reputationStaleHours * time.Hour).Format("2006-01-02T15:04:05Z")
 
-	usernames, err := getLowestReputationUsernames(db, threshold, limit)
+	usernames, err := getLowestReputationUsernames(db, org, repo, threshold, limit)
 	if err != nil {
 		return nil, fmt.Errorf("error getting lowest reputation usernames: %w", err)
 	}
@@ -254,7 +258,7 @@ func ImportDeepReputation(db *sql.DB, token string, limit int) (*DeepReputationR
 	res := &DeepReputationResult{}
 
 	for i, username := range usernames {
-		slog.Info("deep scoring", "user", username, "progress", fmt.Sprintf("%d/%d", i+1, len(usernames)))
+		slog.Info("reputation", "user", username, "progress", fmt.Sprintf("%d/%d", i+1, len(usernames)))
 
 		if _, deepErr := ComputeDeepReputation(db, token, username); deepErr != nil {
 			slog.Error("deep reputation failed", "username", username, "error", deepErr)
@@ -564,12 +568,12 @@ func computeGlobalStats(db *sql.DB, since string) (*globalStats, error) {
 	return &s, nil
 }
 
-func getStaleReputationUsernames(db *sql.DB, threshold string) ([]string, error) {
+func getStaleReputationUsernames(db *sql.DB, org, repo *string, threshold string) ([]string, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
-	rows, err := db.Query(selectStaleReputationUsernamesSQL, threshold)
+	rows, err := db.Query(selectStaleReputationUsernamesSQL, org, repo, threshold)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query stale reputation usernames: %w", err)
 	}
@@ -587,12 +591,12 @@ func getStaleReputationUsernames(db *sql.DB, threshold string) ([]string, error)
 	return list, nil
 }
 
-func getLowestReputationUsernames(db *sql.DB, threshold string, limit int) ([]string, error) {
+func getLowestReputationUsernames(db *sql.DB, org, repo *string, threshold string, limit int) ([]string, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
 
-	rows, err := db.Query(selectLowestReputationUsernamesSQL, threshold, limit)
+	rows, err := db.Query(selectLowestReputationUsernamesSQL, org, repo, threshold, limit)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to query lowest reputation usernames: %w", err)
 	}
