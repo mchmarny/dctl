@@ -65,20 +65,24 @@ func cmdInitAuthFlow(c *cli.Context) error {
 		return fmt.Errorf("saving token: %w", err)
 	}
 
-	fmt.Println("Token saved to OS keychain")
 	return nil
 }
 
 func saveGitHubToken(token string) error {
 	if err := keyring.Set(keyringService, keyringUser, token); err != nil {
-		slog.Warn("keychain unavailable, falling back to file", "error", err)
-		return saveGitHubTokenFile(token)
+		slog.Debug("OS keychain unavailable, using file storage", "error", err)
+		if fileErr := saveGitHubTokenFile(token); fileErr != nil {
+			return fileErr
+		}
+		fmt.Println("Token saved to ~/.devpulse/")
+		return nil
 	}
 
 	// Clean up legacy file if it exists
 	legacyPath := path.Join(getHomeDir(), tokenFileName)
 	os.Remove(legacyPath)
 
+	fmt.Println("Token saved to OS keychain")
 	return nil
 }
 
