@@ -7,8 +7,6 @@
 
 Community health analytics for GitHub organizations and repositories. `devpulse` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard.
 
-![](docs/img/dash1.png)
-
 ## Features
 
 **Project Health**
@@ -16,10 +14,14 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **Repository metadata** -- stars, forks, open issues, language, license with 30-day sparkline
 - **Stars & forks trends** -- daily star and fork counts over the last 30 days with historical backfill
 
+![](docs/img/health.png)
+
 **Activity & Code**
 - **Activity trends** -- monthly event volume (PRs, reviews, issues, comments, forks) with total and 3-month moving average
 - **PR size distribution** -- pull requests bucketed by lines changed (S/M/L/XL) per month
 - **Forks & activity** -- monthly fork count vs total event activity
+
+![](docs/img/activity.png)
 
 **Velocity**
 - **Lead time (PR to merge)** -- average days from PR creation to merge
@@ -27,11 +29,15 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **Release cadence** -- monthly release counts (total, stable, deployments) with merge-to-main fallback
 - **Release downloads** -- monthly download trends and top releases by download count
 
+![](docs/img/velocity.png)
+
 **Quality**
 - **PR review ratio** -- PRs to reviews per month with ratio trend line
 - **Review latency** -- average hours from PR creation to first review
 - **Time to close** -- average days to close all issues vs bug issues near releases
 - **Contributor reputation** -- two-tier scoring (shallow local, deep GitHub API) with known bot filtering
+
+![](docs/img/quality.png)
 
 **Community**
 - **Contributor retention** -- new vs returning contributors per month
@@ -39,12 +45,16 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **First-time contributor funnel** -- new contributor milestones per month (first comment, first PR, first merge)
 - **Entity affiliations** -- top contributing companies/orgs with drill-down to individual developers (GitHub profile + CNCF gitdm)
 
+![](docs/img/community.png)
+
 **Dashboard**
 - **Global summary banner** -- organizations, repositories, events, contributors, and last import at a glance
 - **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, and Events tabs with lazy-loaded charts
 - **Event search filters** -- filter by type, date range, username, or entity from the Events tab
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
 - **Unified search** -- `org:name` or `repo:name` prefix syntax; all panels respect scope
+
+![](docs/img/global.png)
 
 ## Install
 
@@ -72,8 +82,6 @@ make build
 See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ## Quick start
-
-![](docs/img/dash2.png)
 
 ### 1. Authenticate
 
@@ -136,8 +144,6 @@ Run incrementally — each invocation scores the next batch of lowest-reputation
 devpulse server
 ```
 
-![](docs/img/dash3.png)
-
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
 The dashboard shows a global summary banner (orgs, repos, events, contributors, last import) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
@@ -182,8 +188,6 @@ devpulse reset
 ```
 
 Prompts for confirmation before deleting the database.
-
-![](docs/img/dash4.png)
 
 ## Data sources
 
