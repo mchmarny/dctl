@@ -4,10 +4,11 @@ BRANCH             := $(shell git rev-parse --abbrev-ref HEAD)
 DATE               := $(shell date +%Y-%m-%dT%H:%M:%S%Z)
 GO_VERSION         := $(shell go env GOVERSION 2>/dev/null | sed 's/go//')
 GOLINT_VERSION      = $(shell golangci-lint --version 2>/dev/null | awk '{print $$4}' || echo "not installed")
-LINT_TIMEOUT       ?= 5m
-TEST_TIMEOUT       ?= 10m
+LINT_TIMEOUT       ?= $(shell yq -r '.quality.lint_timeout' .settings.yaml 2>/dev/null || echo "5m")
+TEST_TIMEOUT       ?= $(shell yq -r '.quality.test_timeout' .settings.yaml 2>/dev/null || echo "10m")
+BUILD_TIMEOUT      ?= $(shell yq -r '.quality.build_timeout' .settings.yaml 2>/dev/null || echo "10m0s")
 YAML_FILES         := $(shell find . ! -path "./vendor/*" -type f -regex ".*\.yaml")
-COVERAGE_THRESHOLD ?= $(shell awk '/^target:/{print $$2}' .codecov.yaml 2>/dev/null || echo 30)
+COVERAGE_THRESHOLD ?= $(shell yq -r '.quality.coverage_threshold' .settings.yaml 2>/dev/null || echo "30")
 
 all: help
 
@@ -96,12 +97,12 @@ qualify: test-coverage lint vulncheck e2e ## Qualifies the codebase (test, lint,
 .PHONY: build
 build: tidy ## Builds binaries for current OS and architecture
 	@set -e; \
-	GITHUB_TOKEN= GITLAB_TOKEN= goreleaser build --clean --single-target --snapshot --timeout 10m0s || exit 1; \
+	GITHUB_TOKEN= GITLAB_TOKEN= goreleaser build --clean --single-target --snapshot --timeout $(BUILD_TIMEOUT) || exit 1; \
 	echo "Build completed, binaries in ./dist"
 
 .PHONY: release
 release: ## Runs the full release process with goreleaser
-	goreleaser release --snapshot --clean --timeout 10m0s
+	goreleaser release --snapshot --clean --timeout $(BUILD_TIMEOUT)
 
 .PHONY: server
 server: ## Starts local development server with debug logging

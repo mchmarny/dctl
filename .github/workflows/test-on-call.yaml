@@ -43,10 +43,14 @@ jobs:
       - name: Setup Go Environment
         uses: ./.github/actions/setup-go-env
 
+      - name: Load Settings
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$(yq -r '.linting.golangci_lint' .settings.yaml)" >> "$GITHUB_ENV"
+
       - name: Lint Go
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
         with:
-          version: v2.10.1
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
 
       - name: Lint YAML
         uses: karancode/yamllint-github-action@4052d365f09b8d34eb552c363d1141fd60e2aeb2  # v3.0.0

@@ -1,8 +1,8 @@
 version: "2"
 
 run:
-  go: "1.26"
-  timeout: 5m
+  go: "1.26"      # keep in sync with .settings.yaml languages.go
+  timeout: 5m      # keep in sync with .settings.yaml quality.lint_timeout
   tests: true
   modules-download-mode: readonly
 

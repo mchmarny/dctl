@@ -1,0 +1,21 @@
+# Single source of truth for tool versions and quality thresholds.
+# Consumed by Makefile, CI workflows, and .golangci.yaml via yq.
+
+# Language Versions
+languages:
+  go: '1.26'
+
+# Build Tools
+build_tools:
+  goreleaser: '~> v2'
+
+# Linting
+linting:
+  golangci_lint: 'v2.10.1'
+
+# Quality Thresholds
+quality:
+  coverage_threshold: '30'
+  lint_timeout: '5m'
+  test_timeout: '10m'
+  build_timeout: '10m0s'
