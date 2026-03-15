@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```shell
 make test          # unit tests with race detector
 make lint          # go vet + golangci-lint
-make qualify       # test + lint + grype vulnerability scan
+make qualify       # test + lint + govulncheck vulnerability scan
 make build         # goreleaser single-target build
 make server        # run dev server with --debug
 ```
@@ -57,7 +57,7 @@ Tool versions and quality thresholds are centralized in `.settings.yaml` (single
 
 **Imports:**
 - GitHub API via `github.com/google/go-github/v83/github`
-- CLI via `github.com/urfave/cli/v2`
+- CLI via `github.com/urfave/cli/v3`
 - Testing via `github.com/stretchr/testify` (assert + require)
 - SQLite via `modernc.org/sqlite` (pure Go, no CGO)
 
