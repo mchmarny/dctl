@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/net"
@@ -61,8 +60,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.merged_at >= ?
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY month
 		ORDER BY month
 	`
@@ -115,8 +113,7 @@ type ReleaseDownloadsByTagSeries struct {
 	Downloads []int    `json:"downloads" yaml:"downloads"`
 }
 
-func ImportReleases(dbPath, token, owner, repo string) error {
-	ctx := context.Background()
+func ImportReleases(ctx context.Context, dbPath, token, owner, repo string) error {
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	db, err := GetDB(dbPath)
@@ -206,7 +203,7 @@ func ImportReleases(dbPath, token, owner, repo string) error {
 	return nil
 }
 
-func ImportAllReleases(dbPath, token string) error {
+func ImportAllReleases(ctx context.Context, dbPath, token string) error {
 	db, err := GetDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("error getting DB: %w", err)
@@ -219,7 +216,7 @@ func ImportAllReleases(dbPath, token string) error {
 	}
 
 	for _, r := range list {
-		if err := ImportReleases(dbPath, token, r.Org, r.Repo); err != nil {
+		if err := ImportReleases(ctx, dbPath, token, r.Org, r.Repo); err != nil {
 			slog.Error("releases failed", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 	}
@@ -232,7 +229,7 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectReleaseCadenceSQL, org, repo, since)
 	if err != nil {
@@ -297,7 +294,7 @@ func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDow
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectReleaseDownloadsSQL, org, repo, since)
 	if err != nil {
@@ -332,7 +329,7 @@ func GetReleaseDownloadsByTag(db *sql.DB, org, repo *string, months int) (*Relea
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectReleaseDownloadsByTagSQL, org, repo, since, org, repo, since)
 	if err != nil {

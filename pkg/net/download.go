@@ -1,6 +1,7 @@
 package net
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -25,13 +26,13 @@ var (
 	}
 )
 
-func getResp(url string) (*http.Response, error) {
+func getResp(ctx context.Context, url string) (*http.Response, error) {
 	c, err := GetHTTPClient()
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP client: %w", err)
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP Get request: %w", err)
 	}
@@ -43,7 +44,7 @@ func getResp(url string) (*http.Response, error) {
 
 var ErrURLNotFound = errors.New("URL not found")
 
-func Download(url string, filepath string) (retErr error) {
+func Download(ctx context.Context, url string, filepath string) (retErr error) {
 	out, err := os.Create(filepath)
 	if err != nil {
 		return err
@@ -54,7 +55,7 @@ func Download(url string, filepath string) (retErr error) {
 		}
 	}()
 
-	resp, err := getResp(url)
+	resp, err := getResp(ctx, url)
 	if err != nil {
 		return fmt.Errorf("error creating HTTP Get request: %w", err)
 	}

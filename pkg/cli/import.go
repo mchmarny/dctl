@@ -74,7 +74,7 @@ type ImportResult struct {
 	Reputation   *data.ReputationResult        `json:"reputation,omitempty" yaml:"reputation,omitempty"`
 }
 
-func cmdImport(_ context.Context, cmd *cli.Command) error {
+func cmdImport(ctx context.Context, cmd *cli.Command) error {
 	start := time.Now()
 	applyFlags(cmd)
 
@@ -95,7 +95,7 @@ func cmdImport(_ context.Context, cmd *cli.Command) error {
 
 	// If no org specified, update all previously imported data.
 	if org == "" {
-		return cmdUpdate(cfg, token, start)
+		return cmdUpdate(ctx, cfg, token, start)
 	}
 
 	// At least one repo is required when org is specified
@@ -122,7 +122,7 @@ func cmdImport(_ context.Context, cmd *cli.Command) error {
 	// 1. events
 	for _, r := range repos {
 		slog.Info("events", "org", org, "repo", r)
-		m, summary, importErr := data.ImportEvents(cfg.DBPath, token, org, r, months)
+		m, summary, importErr := data.ImportEvents(ctx, cfg.DBPath, token, org, r, months)
 		if importErr != nil {
 			slog.Error("failed to import events", "org", org, "repo", r, "error", importErr)
 			continue
@@ -137,7 +137,7 @@ func cmdImport(_ context.Context, cmd *cli.Command) error {
 
 	// 2. affiliations
 	slog.Info("processing affiliations", "org", org)
-	a, err := importAffiliations(cfg.DB)
+	a, err := importAffiliations(ctx, cfg.DB)
 	if err != nil {
 		slog.Error("failed to import affiliations", "error", err)
 	} else {
@@ -154,7 +154,7 @@ func cmdImport(_ context.Context, cmd *cli.Command) error {
 	}
 
 	// 4. metadata + releases
-	importRepoExtras(cfg.DBPath, token, org, repos)
+	importRepoExtras(ctx, cfg.DBPath, token, org, repos)
 
 	// 5. reputation (shallow — local DB only, no API calls)
 	orgPtr := &org
@@ -175,16 +175,16 @@ func cmdImport(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func cmdUpdate(cfg *appConfig, token string, start time.Time) error {
+func cmdUpdate(ctx context.Context, cfg *appConfig, token string, start time.Time) error {
 	slog.Info("updating all previously imported data")
 
-	m, err := data.UpdateEvents(cfg.DBPath, token)
+	m, err := data.UpdateEvents(ctx, cfg.DBPath, token)
 	if err != nil {
 		return fmt.Errorf("failed to import events: %w", err)
 	}
 
 	slog.Info("processing affiliations")
-	a, err := importAffiliations(cfg.DB)
+	a, err := importAffiliations(ctx, cfg.DB)
 	if err != nil {
 		slog.Error("failed to import affiliations", "error", err)
 	}
@@ -196,22 +196,22 @@ func cmdUpdate(cfg *appConfig, token string, start time.Time) error {
 	}
 
 	slog.Info("processing metadata")
-	if metaErr := data.ImportAllRepoMeta(cfg.DBPath, token); metaErr != nil {
+	if metaErr := data.ImportAllRepoMeta(ctx, cfg.DBPath, token); metaErr != nil {
 		slog.Error("failed to import repo metadata", "error", metaErr)
 	}
 
 	slog.Info("processing releases")
-	if relErr := data.ImportAllReleases(cfg.DBPath, token); relErr != nil {
+	if relErr := data.ImportAllReleases(ctx, cfg.DBPath, token); relErr != nil {
 		slog.Error("failed to import releases", "error", relErr)
 	}
 
 	slog.Info("processing metric history")
-	if histErr := data.ImportAllRepoMetricHistory(cfg.DBPath, token); histErr != nil {
+	if histErr := data.ImportAllRepoMetricHistory(ctx, cfg.DBPath, token); histErr != nil {
 		slog.Error("failed to import metric history", "error", histErr)
 	}
 
 	slog.Info("processing container versions")
-	if cvErr := data.ImportAllContainerVersions(cfg.DBPath, token); cvErr != nil {
+	if cvErr := data.ImportAllContainerVersions(ctx, cfg.DBPath, token); cvErr != nil {
 		slog.Error("failed to import container versions", "error", cvErr)
 	}
 
@@ -236,34 +236,34 @@ func cmdUpdate(cfg *appConfig, token string, start time.Time) error {
 	return nil
 }
 
-func importRepoExtras(dbPath, token, org string, repos []string) {
+func importRepoExtras(ctx context.Context, dbPath, token, org string, repos []string) {
 	for _, r := range repos {
 		slog.Info("metadata", "org", org, "repo", r)
-		if err := data.ImportRepoMeta(dbPath, token, org, r); err != nil {
+		if err := data.ImportRepoMeta(ctx, dbPath, token, org, r); err != nil {
 			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", err)
 		}
 	}
 	for _, r := range repos {
 		slog.Info("releases", "org", org, "repo", r)
-		if err := data.ImportReleases(dbPath, token, org, r); err != nil {
+		if err := data.ImportReleases(ctx, dbPath, token, org, r); err != nil {
 			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
 		}
 	}
 	for _, r := range repos {
 		slog.Info("metric history", "org", org, "repo", r)
-		if err := data.ImportRepoMetricHistory(dbPath, token, org, r); err != nil {
+		if err := data.ImportRepoMetricHistory(ctx, dbPath, token, org, r); err != nil {
 			slog.Error("failed to import metric history", "org", org, "repo", r, "error", err)
 		}
 	}
 	for _, r := range repos {
 		slog.Info("container versions", "org", org, "repo", r)
-		if err := data.ImportContainerVersions(dbPath, token, org, r); err != nil {
+		if err := data.ImportContainerVersions(ctx, dbPath, token, org, r); err != nil {
 			slog.Error("failed to import container versions", "org", org, "repo", r, "error", err)
 		}
 	}
 }
 
-func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
+func importAffiliations(ctx context.Context, db *sql.DB) (*data.AffiliationImportResult, error) {
 	token, err := getGitHubToken()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get GitHub token: %w", err)
@@ -273,7 +273,6 @@ func importAffiliations(db *sql.DB) (*data.AffiliationImportResult, error) {
 		return nil, errors.New("no GitHub token")
 	}
 
-	ctx := context.Background()
 	client := net.GetOAuthClient(ctx, token)
 
 	res, err := data.UpdateDevelopersWithCNCFEntityAffiliations(ctx, db, client)

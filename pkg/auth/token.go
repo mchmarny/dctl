@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,12 +43,12 @@ type AccessTokenResponse struct {
 	Scope       string `json:"scope,omitempty"`
 }
 
-func GetDeviceCode(clientID, scope string) (*DeviceCode, error) {
+func GetDeviceCode(ctx context.Context, clientID, scope string) (*DeviceCode, error) {
 	if clientID == "" {
 		return nil, errors.New("clientID is required")
 	}
 
-	req, err := http.NewRequest(http.MethodPost, deviceCodeURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, deviceCodeURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -93,7 +94,7 @@ func GetDeviceCode(clientID, scope string) (*DeviceCode, error) {
 // TODO: decode the possible error codes
 //       https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#error-codes-for-the-device-flow
 
-func GetToken(clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
+func GetToken(ctx context.Context, clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
 	if clientID == "" {
 		return nil, errors.New("clientID is required")
 	}
@@ -104,7 +105,7 @@ func GetToken(clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
 
 	expiresAt := time.Now().UTC().Add(time.Duration(code.ExpiresInSec) * time.Second)
 
-	req, err := http.NewRequest(http.MethodPost, accessCodeURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, accessCodeURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

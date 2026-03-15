@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite" // SQLite driver registration
 )
@@ -16,6 +17,18 @@ import (
 const (
 	DataFileName     string = "data.db"
 	nonAlphaNumRegex string = "[^a-zA-Z0-9 ]+"
+
+	// botExcludeSQL filters out bot accounts using the "e" table alias.
+	botExcludeSQL = `AND e.username NOT LIKE '%[bot]'
+		AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
+
+	// botExcludeDSQL filters out bot accounts using the "d" table alias (with LOWER).
+	botExcludeDSQL = `AND d.username NOT LIKE '%[bot]'
+		AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
+
+	// botExcludePrSQL filters out bot accounts using the "pr" table alias.
+	botExcludePrSQL = `AND pr.username NOT LIKE '%[bot]'
+		AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
 )
 
 var (
@@ -140,6 +153,10 @@ func GetDB(path string) (*sql.DB, error) {
 	}
 
 	return conn, nil
+}
+
+func sinceDate(months int) string {
+	return time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 }
 
 // Contains checks for val in list

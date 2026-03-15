@@ -21,8 +21,8 @@ const (
 	selectStaleReputationUsernamesSQL = `SELECT DISTINCT d.username
 		FROM developer d
 		JOIN event e ON d.username = e.username
-		WHERE d.username NOT LIKE '%[bot]'
-		  AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		WHERE 1=1
+		  ` + botExcludeDSQL + `
 		  AND e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND (d.reputation IS NULL
@@ -53,8 +53,7 @@ const (
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
 		  AND d.reputation IS NOT NULL
-		  AND d.username NOT LIKE '%[bot]'
-		  AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeDSQL + `
 		GROUP BY d.username
 		ORDER BY d.reputation ASC
 		LIMIT 20
@@ -66,8 +65,7 @@ const (
 		FROM developer d
 		JOIN event e ON d.username = e.username
 		WHERE d.reputation IS NOT NULL
-		  AND d.username NOT LIKE '%[bot]'
-		  AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeDSQL + `
 		  AND e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND (d.reputation_deep IS NULL OR d.reputation_deep = 0
@@ -174,7 +172,7 @@ func ImportReputation(db *sql.DB, org, repo *string) (*ReputationResult, error) 
 
 	slog.Info("scoring reputation", "users", len(usernames))
 
-	since := time.Now().UTC().AddDate(0, -EventAgeMonthsDefault, 0).Format("2006-01-02")
+	since := sinceDate(EventAgeMonthsDefault)
 
 	stats, err := computeGlobalStats(db, since)
 	if err != nil {
@@ -228,7 +226,7 @@ func ImportReputation(db *sql.DB, org, repo *string) (*ReputationResult, error) 
 // ImportDeepReputation deep-scores the N lowest-reputation contributors
 // using GitHub API signals. Runs after shallow scoring; errors are
 // per-user and never fatal to the overall import.
-func ImportDeepReputation(db *sql.DB, token string, limit int, org, repo *string) (*DeepReputationResult, error) {
+func ImportDeepReputation(ctx context.Context, db *sql.DB, token string, limit int, org, repo *string) (*DeepReputationResult, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
@@ -260,7 +258,7 @@ func ImportDeepReputation(db *sql.DB, token string, limit int, org, repo *string
 	for i, username := range usernames {
 		slog.Info("reputation", "user", username, "progress", fmt.Sprintf("%d/%d", i+1, len(usernames)))
 
-		if _, deepErr := ComputeDeepReputation(db, token, username); deepErr != nil {
+		if _, deepErr := ComputeDeepReputation(ctx, db, token, username); deepErr != nil {
 			slog.Error("deep reputation failed", "username", username, "error", deepErr)
 			res.Errors++
 			continue
@@ -276,7 +274,7 @@ func ImportDeepReputation(db *sql.DB, token string, limit int, org, repo *string
 
 // GetOrComputeDeepReputation returns a cached deep score if fresh (<24h),
 // otherwise computes a new one via GitHub API.
-func GetOrComputeDeepReputation(db *sql.DB, token, username string) (*UserReputation, error) {
+func GetOrComputeDeepReputation(ctx context.Context, db *sql.DB, token, username string) (*UserReputation, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
@@ -301,12 +299,12 @@ func GetOrComputeDeepReputation(db *sql.DB, token, username string) (*UserReputa
 		return result, nil
 	}
 
-	return ComputeDeepReputation(db, token, username)
+	return ComputeDeepReputation(ctx, db, token, username)
 }
 
 // ComputeDeepReputation scores a single user using GitHub API signals
 // and stores the result. Called on-demand from the UI.
-func ComputeDeepReputation(db *sql.DB, token, username string) (*UserReputation, error) {
+func ComputeDeepReputation(ctx context.Context, db *sql.DB, token, username string) (*UserReputation, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
 	}
@@ -315,7 +313,7 @@ func ComputeDeepReputation(db *sql.DB, token, username string) (*UserReputation,
 		return nil, errors.New("token and username are required")
 	}
 
-	since := time.Now().UTC().AddDate(0, -EventAgeMonthsDefault, 0).Format("2006-01-02")
+	since := sinceDate(EventAgeMonthsDefault)
 
 	stats, err := computeGlobalStats(db, since)
 	if err != nil {
@@ -332,7 +330,6 @@ func ComputeDeepReputation(db *sql.DB, token, username string) (*UserReputation,
 		orgSet[strings.ToLower(o)] = true
 	}
 
-	ctx := context.Background()
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	signals, err := gatherFullSignals(ctx, client, db, username, orgs, orgSet, since, stats)
@@ -383,7 +380,7 @@ func GetReputationDistribution(db *sql.DB, org, repo, entity *string, months int
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectReputationSQL, org, repo, entity, since)
 	if err != nil {

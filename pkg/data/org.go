@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"log/slog"
 
@@ -126,7 +125,7 @@ func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []s
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	params := make([]string, len(ex))
 	qArgs := []interface{}{since, entity, org, repo}

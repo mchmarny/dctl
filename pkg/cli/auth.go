@@ -36,7 +36,7 @@ var (
 	}
 )
 
-func cmdInitAuthFlow(_ context.Context, cmd *cli.Command) error {
+func cmdInitAuthFlow(ctx context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 
 	scope := scopeRepo
@@ -44,7 +44,7 @@ func cmdInitAuthFlow(_ context.Context, cmd *cli.Command) error {
 		scope = ""
 	}
 
-	code, err := auth.GetDeviceCode(clientID, scope)
+	code, err := auth.GetDeviceCode(ctx, clientID, scope)
 	if err != nil {
 		return fmt.Errorf("getting device code: %w", err)
 	}
@@ -58,7 +58,7 @@ func cmdInitAuthFlow(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("reading user input: %w", err)
 	}
 
-	token, err := auth.GetToken(clientID, code)
+	token, err := auth.GetToken(ctx, clientID, code)
 	if err != nil {
 		return fmt.Errorf("getting token: %w", err)
 	}

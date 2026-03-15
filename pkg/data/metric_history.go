@@ -65,8 +65,7 @@ func GetRepoMetricHistory(db *sql.DB, org, repo *string) ([]*RepoMetricHistory, 
 const backfillDays = 30
 
 // ImportRepoMetricHistory backfills daily star and fork counts for the last 30 days.
-func ImportRepoMetricHistory(dbPath, token, owner, repo string) error {
-	ctx := context.Background()
+func ImportRepoMetricHistory(ctx context.Context, dbPath, token, owner, repo string) error {
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	r, resp, err := client.Repositories.Get(ctx, owner, repo)
@@ -248,7 +247,7 @@ func upsertMetricHistory(db *sql.DB, owner, repo string, history []*RepoMetricHi
 }
 
 // ImportAllRepoMetricHistory backfills metric history for all known org/repo pairs.
-func ImportAllRepoMetricHistory(dbPath, token string) error {
+func ImportAllRepoMetricHistory(ctx context.Context, dbPath, token string) error {
 	db, err := GetDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("error getting DB: %w", err)
@@ -261,7 +260,7 @@ func ImportAllRepoMetricHistory(dbPath, token string) error {
 	}
 
 	for _, r := range list {
-		if err := ImportRepoMetricHistory(dbPath, token, r.Org, r.Repo); err != nil {
+		if err := ImportRepoMetricHistory(ctx, dbPath, token, r.Org, r.Repo); err != nil {
 			slog.Error("metric history failed", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 	}

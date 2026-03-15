@@ -304,7 +304,7 @@ func cmdQueryEntities(_ context.Context, cmd *cli.Command) error {
 	return cmdQueryList(cmd, entityLikeQueryFlag, data.QueryEntities)
 }
 
-func cmdQueryDeveloper(_ context.Context, cmd *cli.Command) error {
+func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	val := cmd.String(ghUserNameQueryFlag.Name)
 	token, err := getGitHubToken()
@@ -326,7 +326,6 @@ func cmdQueryDeveloper(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("developer not found: %s", val)
 	}
 
-	ctx := context.Background()
 	client := net.GetOAuthClient(ctx, token)
 	dev.Organizations, err = data.GetUserOrgs(ctx, client, val, 0)
 	if err != nil {
@@ -344,7 +343,7 @@ func cmdQueryDevelopers(_ context.Context, cmd *cli.Command) error {
 	return cmdQueryList(cmd, developerLikeQueryFlag, data.SearchDevelopers)
 }
 
-func cmdQueryOrgRepos(_ context.Context, cmd *cli.Command) error {
+func cmdQueryOrgRepos(ctx context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	org := cmd.String(orgNameFlag.Name)
 	token, err := getGitHubToken()
@@ -356,7 +355,6 @@ func cmdQueryOrgRepos(_ context.Context, cmd *cli.Command) error {
 		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	ctx := context.Background()
 	client := net.GetOAuthClient(ctx, token)
 	list, err := data.GetOrgRepos(ctx, client, org)
 	if err != nil {

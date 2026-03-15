@@ -120,7 +120,7 @@ func GetCNCFEntityAffiliations(ctx context.Context) (map[string]*CNCFDeveloper, 
 		}
 
 		url := fmt.Sprintf(affilFileURL, i)
-		ok, err := loadAffiliations(url, devs)
+		ok, err := loadAffiliations(ctx, url, devs)
 		if err != nil {
 			return devs, fmt.Errorf("loading affiliation file %d (%s): %w", i, url, err)
 		}
@@ -139,7 +139,7 @@ func GetCNCFEntityAffiliations(ctx context.Context) (map[string]*CNCFDeveloper, 
 	return devs, nil
 }
 
-func loadAffiliations(url string, devs map[string]*CNCFDeveloper) (bool, error) {
+func loadAffiliations(ctx context.Context, url string, devs map[string]*CNCFDeveloper) (bool, error) {
 	if url == "" {
 		return false, errors.New("url is empty")
 	}
@@ -151,7 +151,7 @@ func loadAffiliations(url string, devs map[string]*CNCFDeveloper) (bool, error) 
 
 	path := f.Name()
 	slog.Debug("downloading", "url", url, "path", path)
-	if err = net.Download(url, path); err != nil {
+	if err = net.Download(ctx, url, path); err != nil {
 		if errors.Is(err, net.ErrURLNotFound) {
 			slog.Debug("url not found", "url", url)
 			return false, nil // return raw error

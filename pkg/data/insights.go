@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
-	"time"
 )
 
 const (
@@ -17,8 +16,7 @@ const (
 			  AND e.repo = COALESCE(?, e.repo)
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
-			  AND e.username NOT LIKE '%[bot]'
-			  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+			  ` + botExcludeSQL + `
 			GROUP BY e.username
 			ORDER BY cnt DESC
 		),
@@ -62,8 +60,7 @@ const (
 			  AND e.repo = COALESCE(?, e.repo)
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
-			  AND e.username NOT LIKE '%[bot]'
-			  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+			  ` + botExcludeSQL + `
 			GROUP BY e.username
 		),
 		monthly AS (
@@ -74,8 +71,7 @@ const (
 			  AND e.repo = COALESCE(?, e.repo)
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
-			  AND e.username NOT LIKE '%[bot]'
-			  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+			  ` + botExcludeSQL + `
 		)
 		SELECT m.month,
 			SUM(CASE WHEN f.first_month = m.month THEN 1 ELSE 0 END) AS new_contributors,
@@ -100,8 +96,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.created_at >= ?
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY month
 		ORDER BY month
 	`
@@ -127,8 +122,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.created_at >= ?
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY month
 		ORDER BY month
 	`
@@ -148,8 +142,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.created_at >= ?
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY month
 		ORDER BY month
 	`
@@ -165,8 +158,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY month
 		ORDER BY month
 	`
@@ -183,8 +175,7 @@ const (
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
 		  AND e.type IN (?, ?)
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY month
 		ORDER BY month
 	`
@@ -208,8 +199,7 @@ const (
 	  AND e.repo = COALESCE(?, e.repo)
 	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 	  AND e.created_at >= ?
-	  AND e.username NOT LIKE '%[bot]'
-	  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	  ` + botExcludeSQL + `
 	GROUP BY month
 	ORDER BY month
 	`
@@ -247,8 +237,7 @@ const (
 		  AND pr.repo = COALESCE(?, pr.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND pr.created_at >= ?
-		  AND pr.username NOT LIKE '%[bot]'
-		  AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludePrSQL + `
 		GROUP BY pr.org, pr.repo, pr.number, month
 	)
 	SELECT
@@ -275,8 +264,7 @@ const (
 	  AND e.repo = COALESCE(?, e.repo)
 	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 	  AND e.created_at >= ?
-	  AND e.username NOT LIKE '%[bot]'
-	  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	  ` + botExcludeSQL + `
 	GROUP BY month
 	ORDER BY month
 	`
@@ -297,8 +285,7 @@ const (
 	WHERE e.org = COALESCE(?, e.org)
 	  AND e.repo = COALESCE(?, e.repo)
 	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
-	  AND e.username NOT LIKE '%[bot]'
-	  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+	  ` + botExcludeSQL + `
 	GROUP BY m.month
 	ORDER BY m.month
 	`
@@ -315,8 +302,7 @@ const (
 		WHERE e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY e.username
 	),
 	months AS (
@@ -355,8 +341,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
-		  AND e.username NOT LIKE '%[bot]'
-		  AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		  ` + botExcludeSQL + `
 		GROUP BY e.date
 		ORDER BY e.date
 	`
@@ -422,7 +407,7 @@ func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*Ins
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 	summary := &InsightsSummary{}
 
 	if err := db.QueryRow(selectBusFactorSQL, org, repo, entity, since).Scan(&summary.BusFactor); err != nil {
@@ -447,7 +432,7 @@ func GetDailyActivity(db *sql.DB, org, repo, entity *string, months int) (*Daily
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectDailyActivitySQL, org, repo, entity, since)
 	if err != nil {
@@ -478,7 +463,7 @@ func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) 
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectRetentionSQL, org, repo, entity, since, org, repo, entity, since)
 	if err != nil {
@@ -515,7 +500,7 @@ func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRRev
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectPRReviewRatioSQL,
 		EventTypePR, EventTypePRReview,
@@ -562,7 +547,7 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	// Get failures by month
 	failureMap := make(map[string]int)
@@ -652,7 +637,7 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectReviewLatencySQL, since, org, repo, entity, since)
 	if err != nil {
@@ -690,7 +675,7 @@ func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, mont
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(query, org, repo, entity, since)
 	if err != nil {
@@ -740,7 +725,7 @@ func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectPRSizeDistributionSQL, org, repo, entity, since)
 	if err != nil {
@@ -800,7 +785,7 @@ func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*Fo
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectForksAndActivitySQL, org, repo, entity, since)
 	if err != nil {
@@ -837,7 +822,7 @@ func GetContributorFunnel(db *sql.DB, org, repo, entity *string, months int) (*C
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectContributorFunnelSQL, org, repo, entity, since)
 	if err != nil {
@@ -876,7 +861,7 @@ func GetContributorMomentum(db *sql.DB, org, repo, entity *string, months int) (
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectContributorMomentumSQL, since, org, repo, entity)
 	if err != nil {

@@ -39,8 +39,7 @@ type RepoMeta struct {
 	UpdatedAt  string `json:"updated_at" yaml:"updatedAt"`
 }
 
-func ImportRepoMeta(dbPath, token, owner, repo string) error {
-	ctx := context.Background()
+func ImportRepoMeta(ctx context.Context, dbPath, token, owner, repo string) error {
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	r, resp, err := client.Repositories.Get(ctx, owner, repo)
@@ -90,7 +89,7 @@ func ImportRepoMeta(dbPath, token, owner, repo string) error {
 	return nil
 }
 
-func ImportAllRepoMeta(dbPath, token string) error {
+func ImportAllRepoMeta(ctx context.Context, dbPath, token string) error {
 	db, err := GetDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("error getting DB: %w", err)
@@ -103,7 +102,7 @@ func ImportAllRepoMeta(dbPath, token string) error {
 	}
 
 	for _, r := range list {
-		if err := ImportRepoMeta(dbPath, token, r.Org, r.Repo); err != nil {
+		if err := ImportRepoMeta(ctx, dbPath, token, r.Org, r.Repo); err != nil {
 			slog.Error("metadata failed", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 	}

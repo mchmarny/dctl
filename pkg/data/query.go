@@ -41,8 +41,7 @@ const (
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
 			AND d.entity = COALESCE(?, d.entity)
-			AND e.username NOT LIKE '%[bot]'
-			AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+			` + botExcludeSQL + `
 		) dt
 		GROUP BY date
 		ORDER BY 1
@@ -80,8 +79,7 @@ const (
 		AND e.mentions LIKE COALESCE(?, e.mentions)
 		AND e.labels LIKE COALESCE(?, e.labels)
 		AND d.entity = COALESCE(?, d.entity)
-		AND e.username NOT LIKE '%[bot]'
-		AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')
+		` + botExcludeSQL + `
 		ORDER BY 1 DESC, 2, 3
 		LIMIT ? OFFSET ?
 	`
@@ -201,7 +199,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 	}
 	defer stmt.Close()
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 	to := time.Now().UTC().Format("2006-01-02")
 
 	rows, err := stmt.Query(since, to,

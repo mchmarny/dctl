@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/net"
@@ -41,8 +40,7 @@ type ContainerActivitySeries struct {
 
 // ImportContainerVersions fetches container package versions from the GitHub API
 // and stores them. Repos without container packages are silently skipped.
-func ImportContainerVersions(dbPath, token, org, repo string) error {
-	ctx := context.Background()
+func ImportContainerVersions(ctx context.Context, dbPath, token, org, repo string) error {
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	matched, err := listRepoContainerPackages(ctx, client, org, repo)
@@ -167,7 +165,7 @@ func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql
 }
 
 // ImportAllContainerVersions imports container versions for all previously imported repos.
-func ImportAllContainerVersions(dbPath, token string) error {
+func ImportAllContainerVersions(ctx context.Context, dbPath, token string) error {
 	db, err := GetDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("getting DB: %w", err)
@@ -180,7 +178,7 @@ func ImportAllContainerVersions(dbPath, token string) error {
 	}
 
 	for _, r := range list {
-		if err := ImportContainerVersions(dbPath, token, r.Org, r.Repo); err != nil {
+		if err := ImportContainerVersions(ctx, dbPath, token, r.Org, r.Repo); err != nil {
 			slog.Error("container versions failed", "org", r.Org, "repo", r.Repo, "error", err)
 		}
 	}
@@ -194,7 +192,7 @@ func GetContainerActivity(db *sql.DB, org, repo *string, months int) (*Container
 		return nil, errDBNotInitialized
 	}
 
-	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
+	since := sinceDate(months)
 
 	rows, err := db.Query(selectContainerActivitySQL, org, repo, since)
 	if err != nil {

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -9,17 +10,17 @@ import (
 )
 
 func TestGetDeviceCode_EmptyClientID(t *testing.T) {
-	_, err := GetDeviceCode("", "repo")
+	_, err := GetDeviceCode(context.Background(), "", "repo")
 	assert.Error(t, err)
 }
 
 func TestGetToken_EmptyClientID(t *testing.T) {
-	_, err := GetToken("", &DeviceCode{})
+	_, err := GetToken(context.Background(), "", &DeviceCode{})
 	assert.Error(t, err)
 }
 
 func TestGetToken_NilCode(t *testing.T) {
-	_, err := GetToken("test-client", nil)
+	_, err := GetToken(context.Background(), "test-client", nil)
 	assert.Error(t, err)
 }
 

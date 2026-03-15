@@ -548,7 +548,7 @@ func reputationUserAPIHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		res, err := data.GetOrComputeDeepReputation(db, token, username)
+		res, err := data.GetOrComputeDeepReputation(r.Context(), db, token, username)
 		if err != nil {
 			slog.Error("failed to compute deep reputation", "username", username, "error", err)
 			writeError(w, http.StatusInternalServerError, "error computing reputation")

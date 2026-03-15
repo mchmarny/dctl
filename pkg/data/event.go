@@ -86,7 +86,7 @@ type Event struct {
 type importer func(ctx context.Context) error
 
 // UpdateEvents updates events from GitHub for a given org/repo combination.
-func UpdateEvents(dbPath, token string) (map[string]int, error) {
+func UpdateEvents(ctx context.Context, dbPath, token string) (map[string]int, error) {
 	if dbPath == "" || token == "" {
 		return nil, errors.New("dbPath and token are required")
 	}
@@ -105,7 +105,7 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 	results := make(map[string]int)
 
 	for _, r := range list {
-		m, _, importErr := ImportEvents(dbPath, token, r.Org, r.Repo, EventAgeMonthsDefault)
+		m, _, importErr := ImportEvents(ctx, dbPath, token, r.Org, r.Repo, EventAgeMonthsDefault)
 		if importErr != nil {
 			slog.Error("error importing events", "org", r.Org, "repo", r.Repo, "error", importErr)
 		}
@@ -118,7 +118,7 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 }
 
 // ImportEvents imports events from GitHub for a given org/repo combination.
-func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int, *ImportSummary, error) {
+func ImportEvents(ctx context.Context, dbPath, token, owner, repo string, months int) (map[string]int, *ImportSummary, error) {
 	if dbPath == "" || token == "" || owner == "" || repo == "" {
 		return nil, nil, errors.New("dbPath, token, owner, and repo are required")
 	}
@@ -127,7 +127,6 @@ func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int
 		months = EventAgeMonthsDefault
 	}
 
-	ctx := context.Background()
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	imp := &EventImporter{

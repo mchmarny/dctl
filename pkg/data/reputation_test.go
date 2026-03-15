@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -290,26 +291,26 @@ func TestGetLowestReputationUsernames_SkipsBots(t *testing.T) {
 }
 
 func TestImportDeepReputation_NilDB(t *testing.T) {
-	_, err := ImportDeepReputation(nil, "token", 5, nil, nil)
+	_, err := ImportDeepReputation(context.Background(), nil, "token", 5, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportDeepReputation_EmptyToken(t *testing.T) {
 	db := setupTestDB(t)
-	_, err := ImportDeepReputation(db, "", 5, nil, nil)
+	_, err := ImportDeepReputation(context.Background(), db, "", 5, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportDeepReputation_ZeroLimit(t *testing.T) {
 	db := setupTestDB(t)
-	res, err := ImportDeepReputation(db, "token", 0, nil, nil)
+	res, err := ImportDeepReputation(context.Background(), db, "token", 0, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Scored)
 }
 
 func TestImportDeepReputation_NoCandidates(t *testing.T) {
 	db := setupTestDB(t)
-	res, err := ImportDeepReputation(db, "token", 5, nil, nil)
+	res, err := ImportDeepReputation(context.Background(), db, "token", 5, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Scored)
 }

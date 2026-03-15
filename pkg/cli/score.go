@@ -48,7 +48,7 @@ type ScoreResult struct {
 	Duration string                     `json:"duration" yaml:"duration"`
 }
 
-func cmdScore(_ context.Context, cmd *cli.Command) error {
+func cmdScore(ctx context.Context, cmd *cli.Command) error {
 	start := time.Now()
 	applyFlags(cmd)
 
@@ -81,7 +81,7 @@ func cmdScore(_ context.Context, cmd *cli.Command) error {
 	count := cmd.Int(countFlag.Name)
 
 	slog.Info("deep scoring", "org", org, "repo", repo, "count", count)
-	result, err := data.ImportDeepReputation(cfg.DB, token, count, orgPtr, repoPtr)
+	result, err := data.ImportDeepReputation(ctx, cfg.DB, token, count, orgPtr, repoPtr)
 	if err != nil {
 		return fmt.Errorf("failed to compute deep reputation scores: %w", err)
 	}
