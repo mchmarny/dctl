@@ -29,11 +29,18 @@ func checkRateLimit(resp *github.Response) {
 	jitter := time.Duration(rand.IntN(2000)) * time.Millisecond //nolint:gosec // jitter for rate limit backoff, not security-sensitive
 	total := wait + jitter
 
-	slog.Info("rate limit approaching, waiting",
-		"remaining", resp.Rate.Remaining,
-		"reset_at", resetAt.Format(time.RFC3339),
-		"wait", total.String(),
-	)
+	if resp.Rate.Remaining == 0 {
+		slog.Warn("rate limit reached, pausing until reset",
+			"reset_at", resetAt.Format(time.RFC3339),
+			"wait", total.String(),
+		)
+	} else {
+		slog.Warn("rate limit approaching, pausing until reset",
+			"remaining", resp.Rate.Remaining,
+			"reset_at", resetAt.Format(time.RFC3339),
+			"wait", total.String(),
+		)
+	}
 
 	time.Sleep(total)
 }

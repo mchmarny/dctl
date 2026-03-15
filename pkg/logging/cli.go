@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	colorGreen = "\033[32m"
-	colorReset = "\033[0m"
-	colorRed   = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorRed    = "\033[31m"
+	colorReset  = "\033[0m"
 )
 
 // CLIHandler is a custom slog.Handler for CLI output.
@@ -54,9 +55,12 @@ func (h *CLIHandler) Handle(_ context.Context, r slog.Record) error {
 		}
 	}
 
-	if r.Level >= slog.LevelError {
+	switch {
+	case r.Level >= slog.LevelError:
 		msg = colorRed + msg + colorReset
-	} else {
+	case r.Level >= slog.LevelWarn:
+		msg = colorYellow + msg + colorReset
+	default:
 		msg = colorGreen + msg + colorReset
 	}
 

@@ -65,6 +65,11 @@ const (
 		ORDER BY month
 	`
 
+	selectLatestReleaseSQL = `SELECT COALESCE(MAX(published_at), '')
+		FROM release
+		WHERE org = ? AND repo = ?
+	`
+
 	selectReleaseDownloadsByTagSQL = `WITH recent AS (
 			SELECT r.org, r.repo, r.tag, r.published_at
 			FROM release r
@@ -122,6 +127,11 @@ func ImportReleases(ctx context.Context, dbPath, token, owner, repo string) erro
 	}
 	defer db.Close()
 
+	var latestPublishedAt string
+	if scanErr := db.QueryRow(selectLatestReleaseSQL, owner, repo).Scan(&latestPublishedAt); scanErr != nil {
+		return fmt.Errorf("querying latest release for %s/%s: %w", owner, repo, scanErr)
+	}
+
 	stmt, err := db.Prepare(insertReleaseSQL)
 	if err != nil {
 		return fmt.Errorf("error preparing release insert: %w", err)
@@ -135,9 +145,9 @@ func ImportReleases(ctx context.Context, dbPath, token, owner, repo string) erro
 	opt := &github.ListOptions{PerPage: pageSizeDefault, Page: 1}
 
 	for {
-		releases, resp, err := client.Repositories.ListReleases(ctx, owner, repo, opt)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("error listing releases %s/%s: %w", owner, repo, err)
+		releases, resp, listErr := client.Repositories.ListReleases(ctx, owner, repo, opt)
+		if listErr != nil || resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error listing releases %s/%s: %w", owner, repo, listErr)
 		}
 		checkRateLimit(resp)
 
@@ -145,62 +155,76 @@ func ImportReleases(ctx context.Context, dbPath, token, owner, repo string) erro
 			break
 		}
 
-		tx, err := db.Begin()
-		if err != nil {
-			return fmt.Errorf("error starting release tx: %w", err)
-		}
-
-		for _, r := range releases {
-			tag := r.GetTagName()
-			name := r.GetName()
-			var publishedAt string
-			if r.PublishedAt != nil {
-				publishedAt = r.PublishedAt.Format("2006-01-02T15:04:05Z")
-			}
-			pre := 0
-			if r.GetPrerelease() {
-				pre = 1
-			}
-
-			if _, err := tx.Stmt(stmt).Exec(
-				owner, repo, tag, name, publishedAt, pre,
-				name, publishedAt, pre,
-			); err != nil {
-				rollbackTransaction(tx)
-				return fmt.Errorf("error inserting release %s: %w", tag, err)
-			}
-
-			for _, a := range r.Assets {
-				aName := a.GetName()
-				if aName == "" {
-					continue
-				}
-				ct := a.GetContentType()
-				sz := a.GetSize()
-				dc := a.GetDownloadCount()
-				if _, err := tx.Stmt(assetStmt).Exec(
-					owner, repo, tag, aName, ct, sz, dc,
-					ct, sz, dc,
-				); err != nil {
-					rollbackTransaction(tx)
-					return fmt.Errorf("error inserting release asset %s/%s: %w", tag, aName, err)
-				}
-			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("error committing release tx: %w", err)
+		seenOld, upsertErr := upsertReleasePage(db, stmt, assetStmt, owner, repo, releases, latestPublishedAt)
+		if upsertErr != nil {
+			return upsertErr
 		}
 
 		slog.Debug("releases done", "org", owner, "repo", repo, "count", len(releases))
 
-		if resp.NextPage == 0 {
+		if seenOld || resp.NextPage == 0 {
 			break
 		}
 		opt.Page = resp.NextPage
 	}
 
 	return nil
+}
+
+// upsertReleasePage inserts a page of releases and their assets. Returns true
+// when a release older than latestPublishedAt is encountered.
+func upsertReleasePage(db *sql.DB, stmt, assetStmt *sql.Stmt, owner, repo string, releases []*github.RepositoryRelease, latestPublishedAt string) (bool, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return false, fmt.Errorf("error starting release tx: %w", err)
+	}
+
+	seenOld := false
+	for _, r := range releases {
+		tag := r.GetTagName()
+		name := r.GetName()
+		var publishedAt string
+		if r.PublishedAt != nil {
+			publishedAt = r.PublishedAt.Format("2006-01-02T15:04:05Z")
+		}
+		pre := 0
+		if r.GetPrerelease() {
+			pre = 1
+		}
+
+		if latestPublishedAt != "" && publishedAt != "" && publishedAt < latestPublishedAt {
+			seenOld = true
+			break
+		}
+
+		if _, execErr := tx.Stmt(stmt).Exec(
+			owner, repo, tag, name, publishedAt, pre,
+			name, publishedAt, pre,
+		); execErr != nil {
+			rollbackTransaction(tx)
+			return false, fmt.Errorf("error inserting release %s: %w", tag, execErr)
+		}
+
+		for _, a := range r.Assets {
+			aName := a.GetName()
+			if aName == "" {
+				continue
+			}
+			if _, execErr := tx.Stmt(assetStmt).Exec(
+				owner, repo, tag, aName, a.GetContentType(), a.GetSize(), a.GetDownloadCount(),
+				a.GetContentType(), a.GetSize(), a.GetDownloadCount(),
+			); execErr != nil {
+				rollbackTransaction(tx)
+				return false, fmt.Errorf("error inserting release asset %s/%s: %w", tag, aName, execErr)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("error committing release tx: %w", err)
+	}
+
+	return seenOld, nil
 }
 
 func ImportAllReleases(ctx context.Context, dbPath, token string) error {

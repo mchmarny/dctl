@@ -165,36 +165,37 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 	return nil
 }
 
-func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, username string, cDev *CNCFDeveloper) error {
+// MergeDeveloper fetches the latest GitHub profile for username and merges it
+// with the CNCF affiliation data and the existing DB record. It returns the
+// updated Developer ready to be saved, without writing to the DB.
+func MergeDeveloper(ctx context.Context, db *sql.DB, client *http.Client, username string, cDev *CNCFDeveloper) (*Developer, error) {
 	if db == nil {
-		return errDBNotInitialized
+		return nil, errDBNotInitialized
 	}
 
 	dbDev, err := GetDeveloper(db, username)
 	if err != nil {
-		return fmt.Errorf("failed to get developer %s: %w", username, err)
+		return nil, fmt.Errorf("failed to get developer %s: %w", username, err)
 	}
 	if dbDev == nil {
-		return nil
+		return nil, nil
 	}
 
-	// make sure the DB dev == CNCF dev
 	if dbDev.Username != cDev.Username {
-		return fmt.Errorf("username mismatch (CNCF): %s != %s", dbDev.Username, cDev.Username)
+		return nil, fmt.Errorf("username mismatch (CNCF): %s != %s", dbDev.Username, cDev.Username)
 	}
 
 	ghDev, err := GetGitHubDeveloper(ctx, client, username)
 	if err != nil {
-		return fmt.Errorf("failed to get github developer %s: %w", username, err)
+		return nil, fmt.Errorf("failed to get github developer %s: %w", username, err)
 	}
 
 	if dbDev.Username != ghDev.Username {
-		return fmt.Errorf("username mismatch (GitHub): %s != %s", dbDev.Username, ghDev.Username)
+		return nil, fmt.Errorf("username mismatch (GitHub): %s != %s", dbDev.Username, ghDev.Username)
 	}
 
 	printDevDeltas(dbDev, ghDev, cDev)
 
-	// always update from GH first (in case they changed their name)
 	if ghDev.Email != "" {
 		dbDev.Email = ghDev.Email
 	}
@@ -207,26 +208,20 @@ func UpdateDeveloper(ctx context.Context, db *sql.DB, client *http.Client, usern
 		dbDev.AvatarURL = ghDev.AvatarURL
 	}
 
-	dbDev.Entity = cleanEntityName(ghDev.Entity)
-
-	// The CNCF entity affiliation is the best source.
-	// Update regardless if the GitHub profile has anything or not.
-	ca := cDev.GetLatestAffiliation()
-	if ca != "" {
+	// GitHub profile company is the primary source for entity.
+	// Fall back to CNCF affiliation only when GitHub has no company set.
+	ghEntity := cleanEntityName(ghDev.Entity)
+	if ghEntity != "" {
+		dbDev.Entity = ghEntity
+	} else if ca := cDev.GetLatestAffiliation(); ca != "" {
 		dbDev.Entity = ca
 	}
 
-	// GitHub validates emails so only update if the developer doesn't already have
 	if len(dbDev.Email) == 0 {
 		dbDev.Email = cleanEntityName(cDev.GetBestIdentity())
 	}
 
-	// update the DB
-	if err := SaveDevelopers(db, []*Developer{dbDev}); err != nil {
-		return fmt.Errorf("failed to save developer %s: %w", username, err)
-	}
-
-	return nil
+	return dbDev, nil
 }
 
 func printDevDeltas(dbDev *Developer, ghDev *Developer, cncfDev *CNCFDeveloper) {

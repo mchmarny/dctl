@@ -42,6 +42,21 @@ func TestCLIHandler_InfoMessage(t *testing.T) {
 	assert.NotContains(t, output, colorRed)
 }
 
+func TestCLIHandler_WarnMessage(t *testing.T) {
+	var buf bytes.Buffer
+	handler := NewCLIHandler(&buf, slog.LevelInfo)
+	logger := slog.New(handler)
+
+	logger.Warn("test warn message")
+
+	output := buf.String()
+	assert.Contains(t, output, "test warn message")
+	assert.Contains(t, output, colorYellow)
+	assert.Contains(t, output, colorReset)
+	assert.NotContains(t, output, colorRed)
+	assert.NotContains(t, output, colorGreen)
+}
+
 func TestCLIHandler_ErrorMessage(t *testing.T) {
 	var buf bytes.Buffer
 	handler := NewCLIHandler(&buf, slog.LevelInfo)

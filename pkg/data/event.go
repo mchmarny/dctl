@@ -106,9 +106,13 @@ type Event struct {
 type importer func(ctx context.Context) error
 
 // UpdateEvents updates events from GitHub for a given org/repo combination.
-func UpdateEvents(ctx context.Context, dbPath, token string) (map[string]int, error) {
+func UpdateEvents(ctx context.Context, dbPath, token string, concurrency int) (map[string]int, error) {
 	if dbPath == "" || token == "" {
 		return nil, errors.New("dbPath and token are required")
+	}
+
+	if concurrency < 1 {
+		concurrency = 1
 	}
 
 	db, err := GetDB(dbPath)
@@ -123,16 +127,31 @@ func UpdateEvents(ctx context.Context, dbPath, token string) (map[string]int, er
 	}
 
 	results := make(map[string]int)
+	var mu sync.Mutex
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
 
 	for _, r := range list {
-		m, _, importErr := ImportEvents(ctx, dbPath, token, r.Org, r.Repo, EventAgeMonthsDefault)
-		if importErr != nil {
-			slog.Error("error importing events", "org", r.Org, "repo", r.Repo, "error", importErr)
-		}
-		for k, v := range m {
-			results[k] += v
-		}
+		wg.Add(1)
+		go func(org, repo string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			m, _, importErr := ImportEvents(ctx, dbPath, token, org, repo, EventAgeMonthsDefault)
+			if importErr != nil {
+				slog.Error("error importing events", "org", org, "repo", repo, "error", importErr)
+			}
+
+			mu.Lock()
+			for k, v := range m {
+				results[k] += v
+			}
+			mu.Unlock()
+		}(r.Org, r.Repo)
 	}
+
+	wg.Wait()
 
 	return results, nil
 }
@@ -173,15 +192,22 @@ func ImportEvents(ctx context.Context, dbPath, token, owner, repo string, months
 		return nil, nil, fmt.Errorf("error loading last page state: %s/%s: %w", owner, repo, err)
 	}
 
-	// Log resume state so users understand what period is being imported.
+	// Log one summary line per repo; per-type detail goes to Debug.
+	var earliest time.Time
 	for _, t := range EventTypes {
 		s := imp.state[t]
-		slog.Info("state",
+		if earliest.IsZero() || s.Since.Before(earliest) {
+			earliest = s.Since
+		}
+		slog.Debug("resume state",
 			"repo", owner+"/"+repo,
 			"type", t,
 			"since", s.Since.Format("2006-01-02"),
 			"page", s.Page)
 	}
+	slog.Info("importing events",
+		"repo", owner+"/"+repo,
+		"since", earliest.Format("2006-01-02"))
 	var wg sync.WaitGroup
 	var importErrors []error
 	var errMu sync.Mutex
@@ -201,7 +227,7 @@ func ImportEvents(ctx context.Context, dbPath, token, owner, repo string, months
 	wg.Wait()
 
 	for _, err := range importErrors {
-		slog.Error("error", "error", err)
+		slog.Error("event import failed", "repo", owner+"/"+repo, "error", err)
 	}
 
 	if err := imp.flush(); err != nil {
@@ -216,19 +242,11 @@ func ImportEvents(ctx context.Context, dbPath, token, owner, repo string, months
 	for _, v := range imp.counts {
 		total += v
 	}
-	slog.Info("complete",
+	slog.Info("events imported",
 		"repo", owner+"/"+repo,
-		"total_events", total,
+		"events", total,
 		"developers", len(imp.users),
-		"window", imp.minEventTime.Format("2006-01-02")+" to now")
-
-	// Find the earliest "since" across all event types for the summary.
-	var earliest time.Time
-	for _, s := range imp.state {
-		if earliest.IsZero() || s.Since.Before(earliest) {
-			earliest = s.Since
-		}
-	}
+		"since", earliest.Format("2006-01-02"))
 
 	summary := &ImportSummary{
 		Repo:       owner + "/" + repo,
@@ -444,7 +462,7 @@ func (e *EventImporter) flush() error {
 	}
 
 	e.flushed += len(events)
-	slog.Info("done",
+	slog.Debug("flushed events",
 		"repo", e.owner+"/"+e.repo,
 		"batch", len(events),
 		"total", e.flushed,
@@ -614,14 +632,12 @@ func (e *EventImporter) backfillPRSize(ctx context.Context) error {
 		return nil
 	}
 
-	slog.Info("backfilling PR size data", "repo", e.owner+"/"+e.repo, "prs", len(prs))
-
 	updated := 0
 	for _, p := range prs {
 		pr, resp, err := e.client.PullRequests.Get(ctx, e.owner, e.repo, p.number)
 		if err != nil {
 			if wait := abuseRetryAfter(err); wait > 0 {
-				slog.Info("secondary rate limit hit, waiting", "number", p.number, "wait", wait.String())
+				slog.Warn("secondary rate limit hit, waiting", "number", p.number, "wait", wait.String())
 				time.Sleep(wait)
 				// Retry once after waiting.
 				pr, resp, err = e.client.PullRequests.Get(ctx, e.owner, e.repo, p.number)
@@ -657,7 +673,9 @@ func (e *EventImporter) backfillPRSize(ctx context.Context) error {
 		updated++
 	}
 
-	slog.Info("PR size backfill complete", "repo", e.owner+"/"+e.repo, "updated", updated, "total", len(prs))
+	if updated > 0 {
+		slog.Info("PR sizes backfilled", "repo", e.owner+"/"+e.repo, "updated", updated, "total", len(prs))
+	}
 	return nil
 }
 

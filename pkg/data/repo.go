@@ -108,15 +108,28 @@ func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*Repo,
 		return nil, errors.New("org is required")
 	}
 
-	opt := &github.RepositoryListByUserOptions{}
-	items, _, err := github.NewClient(client).Repositories.ListByUser(ctx, org, opt)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list repositories for: %s: %w", org, err)
+	ghClient := github.NewClient(client)
+	opt := &github.RepositoryListByUserOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
 	}
 
-	list := make([]*Repo, 0)
-	for _, r := range items {
-		list = append(list, mapRepo(r))
+	var list []*Repo
+
+	for {
+		items, resp, err := ghClient.Repositories.ListByUser(ctx, org, opt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list repositories for: %s: %w", org, err)
+		}
+		checkRateLimit(resp)
+
+		for _, r := range items {
+			list = append(list, mapRepo(r))
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
 	}
 
 	return list, nil

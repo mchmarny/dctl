@@ -166,7 +166,7 @@ func ImportReputation(db *sql.DB, org, repo *string) (*ReputationResult, error) 
 	}
 
 	if len(usernames) == 0 {
-		slog.Info("reputation up to date")
+		slog.Debug("reputation up to date")
 		return &ReputationResult{}, nil
 	}
 

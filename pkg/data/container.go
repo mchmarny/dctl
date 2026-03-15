@@ -20,6 +20,11 @@ const (
 			created_at = excluded.created_at
 	`
 
+	selectLatestContainerVersionSQL = `SELECT COALESCE(MAX(created_at), '')
+		FROM container_version
+		WHERE org = ? AND repo = ? AND package = ?
+	`
+
 	selectContainerActivitySQL = `SELECT
 		substr(cv.created_at, 1, 7) AS month,
 		COUNT(*) AS versions
@@ -111,7 +116,8 @@ func listRepoContainerPackages(ctx context.Context, client *github.Client, org, 
 	return matched, nil
 }
 
-// upsertContainerVersions fetches all versions for the matched packages and stores them.
+// upsertContainerVersions fetches new versions for the matched packages and stores them.
+// It queries the latest stored created_at per package to skip already-imported versions.
 func upsertContainerVersions(ctx context.Context, client *github.Client, db *sql.DB, org, repo string, packages []*github.Package) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -126,7 +132,15 @@ func upsertContainerVersions(ctx context.Context, client *github.Client, db *sql
 
 	var total int
 	for _, pkg := range packages {
-		n, fetchErr := fetchAndStoreVersions(ctx, client, stmt, org, repo, pkg.GetName())
+		pkgName := pkg.GetName()
+
+		var latestCreatedAt string
+		if err := db.QueryRow(selectLatestContainerVersionSQL, org, repo, pkgName).Scan(&latestCreatedAt); err != nil {
+			rollbackTransaction(tx)
+			return 0, fmt.Errorf("querying latest container version for %s/%s/%s: %w", org, repo, pkgName, err)
+		}
+
+		n, fetchErr := fetchAndStoreVersions(ctx, client, stmt, org, repo, pkgName, latestCreatedAt)
 		if fetchErr != nil {
 			rollbackTransaction(tx)
 			return 0, fetchErr
@@ -141,8 +155,10 @@ func upsertContainerVersions(ctx context.Context, client *github.Client, db *sql
 	return total, nil
 }
 
-// fetchAndStoreVersions pages through all versions of a single container package.
-func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql.Stmt, org, repo, pkgName string) (int, error) {
+// fetchAndStoreVersions pages through versions of a single container package.
+// When sinceCreatedAt is non-empty, it stops paging once all versions on a page
+// are at or before that timestamp (API returns newest-first).
+func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql.Stmt, org, repo, pkgName, sinceCreatedAt string) (int, error) {
 	var count int
 	opts := &github.PackageListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -155,11 +171,17 @@ func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql
 		}
 		checkRateLimit(resp)
 
+		seenOld := false
 		for _, v := range versions {
 			tag := extractContainerTag(v)
 			createdAt := ""
 			if v.CreatedAt != nil {
 				createdAt = v.CreatedAt.Format("2006-01-02T15:04:05Z")
+			}
+
+			if sinceCreatedAt != "" && createdAt <= sinceCreatedAt {
+				seenOld = true
+				break
 			}
 
 			if _, execErr := stmt.Exec(org, repo, pkgName, v.GetID(), tag, createdAt); execErr != nil {
@@ -168,7 +190,7 @@ func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql
 			count++
 		}
 
-		if resp.NextPage == 0 {
+		if seenOld || resp.NextPage == 0 {
 			break
 		}
 		opts.Page = resp.NextPage

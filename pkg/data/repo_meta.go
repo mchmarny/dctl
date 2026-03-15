@@ -19,6 +19,11 @@ const (
 			stars = ?, forks = ?, open_issues = ?, language = ?, license = ?, archived = ?, updated_at = ?
 	`
 
+	selectRepoMetaUpdatedAtSQL = `SELECT COALESCE(updated_at, '')
+		FROM repo_meta
+		WHERE org = ? AND repo = ?
+	`
+
 	selectRepoMetaSQL = `SELECT org, repo, stars, forks, open_issues, language, license, archived, updated_at
 		FROM repo_meta
 		WHERE org = COALESCE(?, org)
@@ -40,6 +45,25 @@ type RepoMeta struct {
 }
 
 func ImportRepoMeta(ctx context.Context, dbPath, token, owner, repo string) error {
+	db, err := GetDB(dbPath)
+	if err != nil {
+		return fmt.Errorf("error getting DB: %w", err)
+	}
+	defer db.Close()
+
+	var lastUpdated string
+	if scanErr := db.QueryRow(selectRepoMetaUpdatedAtSQL, owner, repo).Scan(&lastUpdated); scanErr != nil && scanErr != sql.ErrNoRows {
+		return fmt.Errorf("querying repo meta updated_at for %s/%s: %w", owner, repo, scanErr)
+	}
+	if lastUpdated != "" {
+		if t, parseErr := time.Parse("2006-01-02T15:04:05Z", lastUpdated); parseErr == nil {
+			if time.Since(t) < 24*time.Hour {
+				slog.Debug("metadata fresh, skipping", "org", owner, "repo", repo, "updated_at", lastUpdated)
+				return nil
+			}
+		}
+	}
+
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 
 	r, resp, err := client.Repositories.Get(ctx, owner, repo)
@@ -47,12 +71,6 @@ func ImportRepoMeta(ctx context.Context, dbPath, token, owner, repo string) erro
 		return fmt.Errorf("error getting repo %s/%s: %w", owner, repo, err)
 	}
 	checkRateLimit(resp)
-
-	db, err := GetDB(dbPath)
-	if err != nil {
-		return fmt.Errorf("error getting DB: %w", err)
-	}
-	defer db.Close()
 
 	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 	lang := r.GetLanguage()

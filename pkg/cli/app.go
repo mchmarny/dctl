@@ -169,9 +169,6 @@ func applyFlags(cmd *urfave.Command) {
 	if cmd.Bool(debugFlag.Name) {
 		initLogging(true)
 	}
-	if cmd.Name != "" {
-		slog.SetDefault(slog.Default().WithGroup(cmd.Name))
-	}
 	f := cmd.String(formatFlag.Name)
 	if f == formatYAML || f == "yml" {
 		outputFormat = formatYAML

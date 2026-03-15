@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"log/slog"
+	"sync"
 
 	"github.com/mchmarny/devpulse/pkg/net"
 )
@@ -87,15 +88,63 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB,
 		CNCFDevs: len(cncfDevs),
 	}
 
+	const maxConcurrent = 10
+
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		sem      = make(chan struct{}, maxConcurrent)
+		merged   []*Developer
+		firstErr error
+	)
+
 	for _, u := range dbDevs {
-		if dev, ok := cncfDevs[u]; ok {
-			if err := UpdateDeveloper(ctx, db, client, u, dev); err != nil {
-				return nil, fmt.Errorf("error updating developer %s: %w", u, err)
-			}
-			res.MappedDevs++
+		dev, ok := cncfDevs[u]
+		if !ok {
 			continue
 		}
+
+		wg.Add(1)
+		go func(username string, cDev *CNCFDeveloper) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			d, mergeErr := MergeDeveloper(ctx, db, client, username, cDev)
+			mu.Lock()
+			defer mu.Unlock()
+			if mergeErr != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("error updating developer %s: %w", username, mergeErr)
+				}
+				return
+			}
+			if d != nil {
+				merged = append(merged, d)
+			}
+		}(u, dev)
 	}
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	// Batch-save all merged developers in a single transaction.
+	if len(merged) > 0 {
+		if err := SaveDevelopers(db, merged); err != nil {
+			return nil, fmt.Errorf("saving merged developers: %w", err)
+		}
+	}
+
+	res.MappedDevs = len(merged)
 
 	// run this on the end to update the user entities that were not part of the above process
 	if err := CleanEntities(db); err != nil {

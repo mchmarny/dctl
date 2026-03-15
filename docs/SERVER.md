@@ -87,3 +87,34 @@ Charts load lazily — only the active tab's data is fetched. Switching tabs loa
 - **Pagination** — prev/next controls for paging through results
 
 Each result row links directly to the PR, issue, or developer profile on GitHub.
+
+## Continuous Import
+
+You can run the server and import in parallel. The server reads from SQLite in WAL mode, so an import running in a separate terminal (or cron job) will not block dashboard queries. The dashboard sees new data as soon as each import transaction commits — no server restart required.
+
+### Example: server + hourly import
+
+Terminal 1 — keep the dashboard running:
+
+```shell
+devpulse server
+```
+
+Terminal 2 — run a one-off update:
+
+```shell
+devpulse import
+```
+
+Or schedule it with cron (every hour):
+
+```shell
+# crontab -e
+0 * * * * /usr/local/bin/devpulse import >> /tmp/devpulse-import.log 2>&1
+```
+
+The `--concurrency` flag controls how many repos import in parallel (default: 3). Higher values speed up imports but consume more GitHub API quota:
+
+```shell
+devpulse import --concurrency 2
+```
