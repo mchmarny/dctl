@@ -124,6 +124,12 @@ Update all previously imported data (no flags needed):
 devpulse import
 ```
 
+Control how many repos import in parallel (default: 3):
+
+```shell
+devpulse import --concurrency 2
+```
+
 See [docs/IMPORT.md](docs/IMPORT.md) for all import options.
 
 ### 3. Reputation score
@@ -147,6 +153,8 @@ devpulse server
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
 The dashboard shows a global summary banner (orgs, repos, events, contributors, last import) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
+
+You can run `devpulse import` in a separate terminal or cron job while the server is running — the dashboard picks up new data immediately after each import transaction commits. See [docs/SERVER.md](docs/SERVER.md) for details.
 
 Use the search bar with prefix syntax to scope the dashboard:
 
@@ -204,7 +212,7 @@ devpulse substitute --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new 
 
 ## Architecture
 
-All data is stored locally in a [SQLite](https://www.sqlite.org/) database (`~/.devpulse/data.db`). No data leaves your machine. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+All data is stored locally in a [SQLite](https://www.sqlite.org/) database (default: `~/data.db`). No data leaves your machine. The database path can be changed with `--db` or `DEVPULSE_DB`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ## Verification
 

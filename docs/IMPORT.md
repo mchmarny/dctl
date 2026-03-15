@@ -33,7 +33,25 @@ Run `import` with no flags to refresh all previously imported orgs/repos:
 devpulse import
 ```
 
-This re-imports events, affiliations, substitutions, metadata, releases, metric history, and reputation for every org/repo already in the database.
+This re-imports events, affiliations, substitutions, metadata, releases, metric history, container versions, and reputation for every org/repo already in the database.
+
+Repos are imported in parallel. Use `--concurrency` to control how many repos run at once (default: 3):
+
+```shell
+devpulse import --concurrency 2
+```
+
+Higher values speed up imports but consume more GitHub API quota. Values above the default trigger a warning.
+
+## Incremental imports
+
+Subsequent imports are faster than the first run:
+
+- **Events** resume from the last imported page (pagination state is stored in the DB)
+- **Releases** stop fetching once they reach already-known releases
+- **Container versions** stop fetching once they reach already-known versions
+- **Repo metadata** skips the GitHub API call if updated within the last 24 hours
+- **PR size backfill** only fetches details for PRs missing size data
 
 ## What gets imported
 
@@ -55,6 +73,7 @@ This re-imports events, affiliations, substitutions, metadata, releases, metric 
 | `--repo` | Repository name (repeatable, required with --org) | — |
 | `--months` | Months of event history to import | 6 |
 | `--fresh` | Clear pagination state and re-import from scratch | false |
+| `--concurrency` | Number of repos to import in parallel | 3 |
 | `--format` | Output format: `json` or `yaml` | json |
 | `--debug` | Enable verbose logging | false |
 
