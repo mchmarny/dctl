@@ -135,7 +135,7 @@ function parseSearchInput(raw) {
     if (match) {
         return { scope: match[1].toLowerCase(), query: match[2].trimStart() };
     }
-    return { scope: 'org', query: raw };
+    return { scope: 'all', query: raw };
 }
 
 $(function () {
@@ -356,7 +356,8 @@ function initUnifiedSearch() {
             return;
         }
         $.each(items, function (i, item) {
-            $(`<div class="ac-item">${item.text}</div>`)
+            const label = item.type ? `<span class="ac-type">${item.type}</span> ` : '';
+            $(`<div class="ac-item">${label}${item.text}</div>`)
                 .data("item", item)
                 .on("mousedown", function (e) {
                     e.preventDefault();
@@ -374,9 +375,10 @@ function initUnifiedSearch() {
     }
 
     function selectItem(item) {
-        sel.val(`${currentScope}:${item.value}`);
+        const scope = item.type || currentScope;
+        sel.val(`${scope}:${item.value}`);
         hideDropdown();
-        applySelection(currentScope, item);
+        applySelection(scope, item);
     }
 
     function setActive(index) {

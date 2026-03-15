@@ -35,6 +35,7 @@ type Repo struct {
 type ListItem struct {
 	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 	Text  string `json:"text,omitempty" yaml:"text,omitempty"`
+	Type  string `json:"type,omitempty" yaml:"type,omitempty"`
 }
 
 func mapRepo(r *github.Repository) *Repo {

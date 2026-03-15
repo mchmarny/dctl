@@ -763,6 +763,19 @@ a.link {
   color: var(--accent);
 }
 
+.ac-type {
+  display: inline-block;
+  font-size: 0.7em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--white);
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
 /* ERROR MODAL */
 .modal-overlay {
   display: none;

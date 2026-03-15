@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"log/slog"
 	"math/rand/v2"
 	"time"
@@ -35,4 +36,18 @@ func checkRateLimit(resp *github.Response) {
 	)
 
 	time.Sleep(total)
+}
+
+// abuseRetryAfter returns the retry-after duration if the error is a secondary
+// (abuse) rate limit error. Returns 0 if the error is not an abuse rate limit.
+func abuseRetryAfter(err error) time.Duration {
+	var abuse *github.AbuseRateLimitError
+	if errors.As(err, &abuse) {
+		d := abuse.GetRetryAfter()
+		if d > 0 {
+			return d
+		}
+		return 60 * time.Second // default if no Retry-After header
+	}
+	return 0
 }

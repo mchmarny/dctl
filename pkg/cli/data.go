@@ -74,13 +74,38 @@ func queryAPIHandler(db *sql.DB) http.HandlerFunc {
 		var items []*data.ListItem
 		var err error
 
+		const (
+			scopeOrg  = "org"
+			scopeRepo = "repo"
+		)
+
 		switch v {
-		case "org":
+		case scopeOrg:
 			items, err = data.GetOrgLike(db, q, queryResultLimitDefault)
-		case "repo":
+		case scopeRepo:
 			items, err = data.GetRepoLike(db, q, queryResultLimitDefault)
 		case "entity":
 			items, err = data.GetEntityLike(db, q, queryResultLimitDefault)
+		case "all":
+			half := queryResultLimitDefault / 2
+			orgs, orgErr := data.GetOrgLike(db, q, half)
+			if orgErr != nil {
+				err = orgErr
+				break
+			}
+			for _, o := range orgs {
+				o.Type = scopeOrg
+			}
+			repos, repoErr := data.GetRepoLike(db, q, half)
+			if repoErr != nil {
+				err = repoErr
+				break
+			}
+			for _, r := range repos {
+				r.Type = scopeRepo
+			}
+			items = append(items, orgs...)
+			items = append(items, repos...)
 		default:
 			items = []*data.ListItem{}
 		}

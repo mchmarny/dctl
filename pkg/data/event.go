@@ -43,20 +43,20 @@ const (
 		  AND repo = ?
 		  AND number IS NOT NULL
 		  AND number > 0
-		  AND additions IS NULL
-		  AND deletions IS NULL
+		  AND (additions IS NULL OR changed_files IS NULL)
 	`
 
 	updatePRSizeSQL = `UPDATE event
-		SET additions = ?, deletions = ?
+		SET additions = ?, deletions = ?, changed_files = ?, commits = ?
 		WHERE type = 'pr' AND org = ? AND repo = ? AND number = ?
 	`
 
 	insertEventSQL = `INSERT INTO event (
 			org, repo, username, type, date, url, mentions, labels,
-			state, number, created_at, closed_at, merged_at, additions, deletions, title
+			state, number, created_at, closed_at, merged_at, additions, deletions,
+			changed_files, commits, title
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(org, repo, username, type, date) DO UPDATE SET
 			url = ?, mentions = ?, labels = ?,
 			state = COALESCE(?, event.state),
@@ -66,6 +66,8 @@ const (
 			merged_at = COALESCE(?, event.merged_at),
 			additions = COALESCE(?, event.additions),
 			deletions = COALESCE(?, event.deletions),
+			changed_files = COALESCE(?, event.changed_files),
+			commits = COALESCE(?, event.commits),
 			title = ?
 	`
 )
@@ -81,22 +83,24 @@ var (
 )
 
 type Event struct {
-	Org       string  `json:"org,omitempty" yaml:"org,omitempty"`
-	Repo      string  `json:"repo,omitempty" yaml:"repo,omitempty"`
-	Username  string  `json:"username,omitempty" yaml:"username,omitempty"`
-	Type      string  `json:"type,omitempty" yaml:"type,omitempty"`
-	Date      string  `json:"date,omitempty" yaml:"date,omitempty"`
-	URL       string  `json:"url,omitempty" yaml:"url,omitempty"`
-	Mentions  string  `json:"mentions,omitempty" yaml:"mentions,omitempty"`
-	Labels    string  `json:"labels,omitempty" yaml:"labels,omitempty"`
-	State     *string `json:"state,omitempty" yaml:"state,omitempty"`
-	Number    *int    `json:"number,omitempty" yaml:"number,omitempty"`
-	CreatedAt *string `json:"created_at,omitempty" yaml:"createdAt,omitempty"`
-	ClosedAt  *string `json:"closed_at,omitempty" yaml:"closedAt,omitempty"`
-	MergedAt  *string `json:"merged_at,omitempty" yaml:"mergedAt,omitempty"`
-	Additions *int    `json:"additions,omitempty" yaml:"additions,omitempty"`
-	Deletions *int    `json:"deletions,omitempty" yaml:"deletions,omitempty"`
-	Title     string  `json:"title,omitempty" yaml:"title,omitempty"`
+	Org          string  `json:"org,omitempty" yaml:"org,omitempty"`
+	Repo         string  `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Username     string  `json:"username,omitempty" yaml:"username,omitempty"`
+	Type         string  `json:"type,omitempty" yaml:"type,omitempty"`
+	Date         string  `json:"date,omitempty" yaml:"date,omitempty"`
+	URL          string  `json:"url,omitempty" yaml:"url,omitempty"`
+	Mentions     string  `json:"mentions,omitempty" yaml:"mentions,omitempty"`
+	Labels       string  `json:"labels,omitempty" yaml:"labels,omitempty"`
+	State        *string `json:"state,omitempty" yaml:"state,omitempty"`
+	Number       *int    `json:"number,omitempty" yaml:"number,omitempty"`
+	CreatedAt    *string `json:"created_at,omitempty" yaml:"createdAt,omitempty"`
+	ClosedAt     *string `json:"closed_at,omitempty" yaml:"closedAt,omitempty"`
+	MergedAt     *string `json:"merged_at,omitempty" yaml:"mergedAt,omitempty"`
+	Additions    *int    `json:"additions,omitempty" yaml:"additions,omitempty"`
+	Deletions    *int    `json:"deletions,omitempty" yaml:"deletions,omitempty"`
+	ChangedFiles *int    `json:"changed_files,omitempty" yaml:"changed_files,omitempty"`
+	Commits      *int    `json:"commits,omitempty" yaml:"commits,omitempty"`
+	Title        string  `json:"title,omitempty" yaml:"title,omitempty"`
 }
 
 type importer func(ctx context.Context) error
@@ -263,14 +267,16 @@ func (e *EventImporter) qualifyTypeKey(t string) string {
 }
 
 type eventExtra struct {
-	State     *string
-	Number    *int
-	CreatedAt *string
-	ClosedAt  *string
-	MergedAt  *string
-	Additions *int
-	Deletions *int
-	Title     string
+	State        *string
+	Number       *int
+	CreatedAt    *string
+	ClosedAt     *string
+	MergedAt     *string
+	Additions    *int
+	Deletions    *int
+	ChangedFiles *int
+	Commits      *int
+	Title        string
 }
 
 func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.Time, mentions []string, labels []string, extra *eventExtra) error {
@@ -293,6 +299,8 @@ func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.T
 		item.MergedAt = extra.MergedAt
 		item.Additions = extra.Additions
 		item.Deletions = extra.Deletions
+		item.ChangedFiles = extra.ChangedFiles
+		item.Commits = extra.Commits
 		item.Title = extra.Title
 	}
 
@@ -408,9 +416,11 @@ func (e *EventImporter) flush() error {
 		_, err = txEventStmt.Exec(
 			e.Org, e.Repo, e.Username, e.Type, e.Date,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.ChangedFiles, e.Commits, e.Title,
 			e.URL, e.Mentions, e.Labels,
-			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
+			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions,
+			e.ChangedFiles, e.Commits, e.Title,
 		)
 		if err != nil {
 			rollbackTransaction(tx)
@@ -610,8 +620,19 @@ func (e *EventImporter) backfillPRSize(ctx context.Context) error {
 	for _, p := range prs {
 		pr, resp, err := e.client.PullRequests.Get(ctx, e.owner, e.repo, p.number)
 		if err != nil {
-			slog.Warn("error fetching PR details", "number", p.number, "error", err)
-			continue
+			if wait := abuseRetryAfter(err); wait > 0 {
+				slog.Info("secondary rate limit hit, waiting", "number", p.number, "wait", wait.String())
+				time.Sleep(wait)
+				// Retry once after waiting.
+				pr, resp, err = e.client.PullRequests.Get(ctx, e.owner, e.repo, p.number)
+				if err != nil {
+					slog.Warn("error fetching PR details after retry", "number", p.number, "error", err)
+					continue
+				}
+			} else {
+				slog.Warn("error fetching PR details", "number", p.number, "error", err)
+				continue
+			}
 		}
 		if resp.StatusCode != http.StatusOK {
 			continue
@@ -620,11 +641,16 @@ func (e *EventImporter) backfillPRSize(ctx context.Context) error {
 
 		additions := pr.GetAdditions()
 		deletions := pr.GetDeletions()
-		if additions == 0 && deletions == 0 {
+		changedFiles := pr.GetChangedFiles()
+		commits := pr.GetCommits()
+
+		if additions == 0 && deletions == 0 && changedFiles == 0 && commits == 0 {
 			continue
 		}
 
-		if _, err := db.ExecContext(ctx, updatePRSizeSQL, additions, deletions, p.org, p.repo, p.number); err != nil {
+		if _, err := db.ExecContext(ctx, updatePRSizeSQL,
+			intPtr(additions), intPtr(deletions), intPtr(changedFiles), intPtr(commits),
+			p.org, p.repo, p.number); err != nil {
 			slog.Warn("error updating PR size", "number", p.number, "error", err)
 			continue
 		}

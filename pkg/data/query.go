@@ -62,6 +62,8 @@ const (
 			e.merged_at,
 			e.additions,
 			e.deletions,
+			e.changed_files,
+			e.commits,
 			d.username,
 			d.email,
 			d.full_name,
@@ -159,7 +161,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 		if err := rows.Scan(&e.Event.Org, &e.Event.Repo, &e.Event.Date, &e.Event.Type, &e.Event.URL,
 			&e.Event.Mentions, &e.Event.Labels,
 			&e.Event.State, &e.Event.Number, &e.Event.CreatedAt, &e.Event.ClosedAt, &e.Event.MergedAt,
-			&e.Event.Additions, &e.Event.Deletions,
+			&e.Event.Additions, &e.Event.Deletions, &e.Event.ChangedFiles, &e.Event.Commits,
 			&e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
 			&e.Developer.AvatarURL, &e.Developer.ProfileURL, &e.Developer.Entity); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
