@@ -42,6 +42,7 @@ var (
 	dbFilePathFlag = &urfave.StringFlag{
 		Name:    "db",
 		Usage:   "Path to the Sqlite database file",
+		Value:   filepath.Join(getHomeDir(), data.DataFileName),
 		Sources: urfave.EnvVars("DEVPULSE_DB"),
 	}
 
@@ -106,9 +107,6 @@ func newApp() *urfave.Command {
 			applyFlags(cmd)
 
 			dbPath := cmd.String(dbFilePathFlag.Name)
-			if dbPath == "" {
-				dbPath = filepath.Join(getHomeDir(), data.DataFileName)
-			}
 
 			if err := data.Init(dbPath); err != nil {
 				return ctx, fmt.Errorf("initializing database: %w", err)

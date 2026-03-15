@@ -71,30 +71,43 @@ func ImportContainerVersions(ctx context.Context, dbPath, token, org, repo strin
 
 // listRepoContainerPackages returns container packages that belong to the given repo.
 func listRepoContainerPackages(ctx context.Context, client *github.Client, org, repo string) ([]*github.Package, error) {
-	packages, resp, err := client.Organizations.ListPackages(ctx, org, &github.PackageListOptions{
+	opts := &github.PackageListOptions{
 		PackageType: github.Ptr("container"),
 		ListOptions: github.ListOptions{PerPage: 100},
-	})
-	if err != nil {
-		if resp != nil && (resp.StatusCode == 404 || resp.StatusCode == 403) {
-			slog.Debug("container packages not accessible", "org", org, "status", resp.StatusCode)
-			return nil, nil
-		}
-		return nil, fmt.Errorf("listing packages for %s: %w", org, err)
 	}
-	checkRateLimit(resp)
 
 	var matched []*github.Package
-	for _, pkg := range packages {
-		// Match by repository field if available, or by package name (often lowercase repo name)
-		if pkg.Repository != nil && strings.EqualFold(pkg.Repository.GetName(), repo) {
-			matched = append(matched, pkg)
-		} else if pkg.Repository == nil && strings.EqualFold(pkg.GetName(), repo) {
-			matched = append(matched, pkg)
+	var total int
+
+	for {
+		packages, resp, err := client.Organizations.ListPackages(ctx, org, opts)
+		if err != nil {
+			if resp != nil && (resp.StatusCode == 404 || resp.StatusCode == 403) {
+				slog.Debug("container packages not accessible", "org", org, "status", resp.StatusCode)
+				return nil, nil
+			}
+			return nil, fmt.Errorf("listing packages for %s: %w", org, err)
 		}
+		checkRateLimit(resp)
+
+		total += len(packages)
+
+		for _, pkg := range packages {
+			// Match by repository field if available, or by package name (often lowercase repo name)
+			if pkg.Repository != nil && strings.EqualFold(pkg.Repository.GetName(), repo) {
+				matched = append(matched, pkg)
+			} else if pkg.Repository == nil && strings.EqualFold(pkg.GetName(), repo) {
+				matched = append(matched, pkg)
+			}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 
-	slog.Debug("container packages", "org", org, "repo", repo, "total", len(packages), "matched", len(matched))
+	slog.Debug("container packages", "org", org, "repo", repo, "total", total, "matched", len(matched))
 	return matched, nil
 }
 
