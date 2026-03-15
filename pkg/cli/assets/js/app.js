@@ -111,7 +111,6 @@ let releaseCadenceChart;
 let releaseDownloadsChart;
 let releaseDownloadsByTagChart;
 let reputationChart;
-let reputationChartURL;
 let forksAndActivityChart;
 let starsTrendChart;
 let forksTrendChart;
@@ -162,9 +161,6 @@ $(function () {
         $("#entity-popover").removeClass("open");
     });
 
-    $("#reputation-popover-close").click(function () {
-        $("#reputation-popover").removeClass("open");
-    });
 
     // Pagination — bind once
     $("#prev-page").click(function (e) {
@@ -546,9 +542,7 @@ function onLeftChartSelect(label) {
 }
 
 function onRightChartSelect(label) {
-    searchCriteria.user = label;
-    syncFiltersToInputs();
-    submitSearch();
+    window.open('https://github.com/' + encodeURIComponent(label), '_blank');
 }
 
 function submitSearch() {
@@ -818,15 +812,16 @@ function loadRightChart(url, fn, cb) {
                         loop: false
                     }
                 },
+                onHover: (evt, item) => {
+                    evt.native.target.style.cursor = item.length ? 'pointer' : 'default';
+                },
                 onClick: (evt, item) => {
                     if (item.length) {
                         const label = rightChart.data.labels[item[0].index];
                         if (fn) {
                             fn(label);
                         }
-                        return false;
                     }
-                    return false;
                 }
             }
         });
@@ -1394,7 +1389,6 @@ function reputationBarColors(values) {
 }
 
 function loadReputationChart(url) {
-    reputationChartURL = url;
     $.get(url, function (data) {
         if (!data.labels || data.labels.length === 0) {
             return;
@@ -1430,10 +1424,13 @@ function loadReputationChart(url) {
                         afterFit: (axis) => { axis.paddingTop = 4; axis.paddingBottom = 4; }
                     }
                 },
+                onHover: (evt, item) => {
+                    evt.native.target.style.cursor = item.length ? 'pointer' : 'default';
+                },
                 onClick: (evt, item) => {
                     if (item.length) {
                         const username = reputationChart.data.labels[item[0].index];
-                        showDeepReputation(username);
+                        window.open('https://github.com/' + encodeURIComponent(username), '_blank');
                     }
                 }
             }
@@ -1441,47 +1438,6 @@ function loadReputationChart(url) {
     });
 }
 
-function showDeepReputation(username) {
-    const popover = $("#reputation-popover");
-    const list = $("#reputation-popover-list");
-    const title = $("#reputation-popover-title");
-
-    title.text(username);
-    list.empty().append('<li>Computing full score...</li>');
-    popover.addClass("open");
-
-    $.get(`/data/insights/reputation/user?u=${encodeURIComponent(username)}`, function (data) {
-        list.empty();
-        const color = data.reputation >= 0.7 ? '#2da44e' : (data.reputation >= 0.4 ? '#bf8700' : '#cf222e');
-        const label = data.reputation >= 0.7 ? 'High' : (data.reputation >= 0.4 ? 'Medium' : 'Low');
-        const cached = data.deep ? '' : ' (cached)';
-        list.append(`<li><b>Score:</b> <span style="color:${color};font-weight:bold;">${data.reputation.toFixed(2)} (${label})</span>${cached}</li>`);
-        if (data.signals) {
-            const s = data.signals;
-            const verified = s.commits > 0 ? Math.round(((s.commits - (s.unverified_commits || 0)) / s.commits) * 100) : 0;
-            list.append(`<li style="margin-top:6px;"><b>Code Provenance</b> <span style="opacity:0.5;">(15%)</span></li>`);
-            list.append(`<li style="padding-left:12px;">Verified commits: ${verified}% &middot; Account maturity: ${Math.round(s.age_days / 365)}y</li>`);
-            list.append(`<li style="margin-top:6px;"><b>Identity</b> <span style="opacity:0.5;">(25%)</span></li>`);
-            list.append(`<li style="padding-left:12px;">Age: ${s.age_days}d &middot; Association: ${s.author_association || 'n/a'} &middot; Profile: ${[s.has_bio, s.has_company, s.has_location, s.has_website].filter(Boolean).length}/4</li>`);
-            list.append(`<li style="margin-top:6px;"><b>Engagement</b> <span style="opacity:0.5;">(25%)</span></li>`);
-            list.append(`<li style="padding-left:12px;">Commits: ${s.commits}/${s.total_commits} &middot; Last active: ${s.last_commit_days}d ago &middot; PRs merged: ${s.prs_merged || 0}</li>`);
-            list.append(`<li style="margin-top:6px;"><b>Community</b> <span style="opacity:0.5;">(15%)</span></li>`);
-            list.append(`<li style="padding-left:12px;">Followers: ${s.followers}/${s.following} &middot; Repos: ${s.public_repos}</li>`);
-            list.append(`<li style="margin-top:6px;"><b>Behavioral</b> <span style="opacity:0.5;">(20%)</span></li>`);
-            list.append(`<li style="padding-left:12px;">Recent PR repos: ${s.recent_pr_repo_count || 0} &middot; Forked: ${s.forked_repos || 0}/${s.public_repos}</li>`);
-            if (s.suspended) { list.append(`<li style="margin-top:6px;color:#cf222e;"><b>Account suspended</b></li>`); }
-        }
-        list.append(`<li style="margin-top:6px;"><a href="https://github.com/${username}" target="_blank">View on GitHub</a></li>`);
-
-        // refresh the chart so updated scores are reflected
-        if (reputationChartURL) {
-            if (reputationChart) { reputationChart.destroy(); }
-            loadReputationChart(reputationChartURL);
-        }
-    }).fail(function () {
-        list.empty().append('<li>Failed to compute score</li>');
-    });
-}
 
 function syncFiltersToInputs() {
     $("#filter-type").val(searchCriteria.type || "");

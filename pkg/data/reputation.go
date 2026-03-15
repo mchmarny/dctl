@@ -56,7 +56,7 @@ const (
 		  ` + botExcludeDSQL + `
 		GROUP BY d.username
 		ORDER BY d.reputation ASC
-		LIMIT 20
+		LIMIT 10
 	`
 
 	selectDistinctOrgsSQL = `SELECT DISTINCT org FROM event`
