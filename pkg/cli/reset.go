@@ -1,14 +1,13 @@
 package cli
 
 import (
-	"bufio"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/mchmarny/devpulse/pkg/data"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var resetCmd = &cli.Command{
@@ -19,21 +18,17 @@ var resetCmd = &cli.Command{
 	Action:          cmdReset,
 }
 
-func cmdReset(c *cli.Context) error {
-	applyFlags(c)
-	cfg := getConfig(c)
+func cmdReset(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	cfg := getConfig(cmd)
 
-	if !c.Bool(forceFlag.Name) {
+	if !cmd.Bool(forceFlag.Name) {
 		fmt.Printf("This will permanently delete all data in %s\n", cfg.DBPath)
-		fmt.Print("Are you sure? [y/N]: ")
-
-		reader := bufio.NewReader(os.Stdin)
-		answer, err := reader.ReadString('\n')
+		confirmed, err := confirmAction("Are you sure? [y/N]: ")
 		if err != nil {
-			return fmt.Errorf("reading input: %w", err)
+			return err
 		}
-
-		if strings.ToLower(strings.TrimSpace(answer)) != "y" {
+		if !confirmed {
 			fmt.Println("Aborted.")
 			return nil
 		}

@@ -93,11 +93,12 @@ func getDBSlice(db *sql.DB, sqlQuery string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare sql statement: %w", err)
 	}
+	defer stmt.Close()
 
 	list := make([]string, 0)
 
 	rows, err := stmt.Query()
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute series select statement: %w", err)
 	}
 	defer rows.Close()
@@ -108,6 +109,10 @@ func getDBSlice(db *sql.DB, sqlQuery string) ([]string, error) {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil
@@ -126,14 +131,16 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare developer insert statement: %w", err)
 	}
+	defer userStmt.Close()
 
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
+	txStmt := tx.Stmt(userStmt)
 	for i, u := range devs {
-		if _, err = tx.Stmt(userStmt).Exec(u.Username,
+		if _, err = txStmt.Exec(u.Username,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Entity); err != nil {
 			slog.Error("failed to insert developer",
@@ -243,6 +250,7 @@ func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare developer select statement: %w", err)
 	}
+	defer stmt.Close()
 
 	row := stmt.QueryRow(username)
 
@@ -262,13 +270,15 @@ func mapDeveloperListItem(rows *sql.Rows) ([]*DeveloperListItem, error) {
 	for rows.Next() {
 		u := &DeveloperListItem{}
 		if err := rows.Scan(&u.Username, &u.Entity); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return list, nil
-			}
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, u)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return list, nil
 }
 
@@ -282,10 +292,11 @@ func SearchDevelopers(db *sql.DB, val string, limit int) ([]*DeveloperListItem, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare developer query statement: %w", err)
 	}
+	defer stmt.Close()
 
 	val = fmt.Sprintf("%%%s%%", val)
 	rows, err := stmt.Query(val, val, val, limit)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -302,14 +313,16 @@ func UpdateDeveloperNames(db *sql.DB, devs map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare entity update statement: %w", err)
 	}
+	defer updateStmt.Close()
 
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
+	txStmt2 := tx.Stmt(updateStmt)
 	for username, name := range devs {
-		if _, err = tx.Stmt(updateStmt).Exec(name, username); err != nil {
+		if _, err = txStmt2.Exec(name, username); err != nil {
 			rollbackTransaction(tx)
 			return fmt.Errorf("error updating full name for %s to %s: %w", username, name, err)
 		}

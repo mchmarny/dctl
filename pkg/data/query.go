@@ -3,7 +3,6 @@ package data
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 )
@@ -143,10 +142,11 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare event search statement: %w", err)
 	}
+	defer stmt.Close()
 
 	offset := (q.Page - 1) * q.PageSize
 	rows, err := stmt.Query(q.FromDate, q.ToDate, q.Type, q.Org, q.Repo, q.Username, optionalLike(q.Mention), optionalLike(q.Label), q.Entity, q.PageSize, offset)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute event search statement: %w", err)
 	}
 	defer rows.Close()
@@ -167,6 +167,10 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil
@@ -195,6 +199,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare repo events statement: %w", err)
 	}
+	defer stmt.Close()
 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 	to := time.Now().UTC().Format("2006-01-02")
@@ -202,7 +207,7 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 	rows, err := stmt.Query(since, to,
 		EventTypePR, EventTypePRReview, EventTypeIssue, EventTypeIssueComment, EventTypeFork,
 		org, repo, entity)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute series select statement: %w", err)
 	}
 	defer rows.Close()
@@ -231,6 +236,10 @@ func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*Eve
 		series.IssueComments = append(series.IssueComments, issueComments)
 		series.Forks = append(series.Forks, forks)
 		series.Total = append(series.Total, prs+prComments+issues+issueComments+forks)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	// 3-month moving average trend line

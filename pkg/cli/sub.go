@@ -1,29 +1,33 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/mchmarny/devpulse/pkg/data"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var (
 	subTypeFlag = &cli.StringFlag{
-		Name:  "type",
-		Usage: fmt.Sprintf("Substitution type [%s]", strings.Join(data.UpdatableProperties, ",")),
+		Name:    "type",
+		Usage:   fmt.Sprintf("Substitution type [%s]", strings.Join(data.UpdatableProperties, ",")),
+		Sources: cli.EnvVars("DEVPULSE_TYPE"),
 	}
 
 	oldValFlag = &cli.StringFlag{
 		Name:     "old",
 		Usage:    "Old value",
 		Required: true,
+		Sources:  cli.EnvVars("DEVPULSE_OLD"),
 	}
 
 	newValFlag = &cli.StringFlag{
 		Name:     "new",
 		Usage:    "New value",
 		Required: true,
+		Sources:  cli.EnvVars("DEVPULSE_NEW"),
 	}
 
 	substituteCmd = &cli.Command{
@@ -44,17 +48,17 @@ var (
 	}
 )
 
-func cmdSubstitutes(c *cli.Context) error {
-	applyFlags(c)
-	sub := c.String(subTypeFlag.Name)
-	old := c.String(oldValFlag.Name)
-	new := c.String(newValFlag.Name)
+func cmdSubstitutes(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	sub := cmd.String(subTypeFlag.Name)
+	old := cmd.String(oldValFlag.Name)
+	new := cmd.String(newValFlag.Name)
 
 	if sub == "" || old == "" || new == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	res, err := data.SaveAndApplyDeveloperSub(cfg.DB, sub, old, new)
 	if err != nil {

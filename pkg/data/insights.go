@@ -2,7 +2,6 @@ package data
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -451,7 +450,7 @@ func GetDailyActivity(db *sql.DB, org, repo, entity *string, months int) (*Daily
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectDailyActivitySQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query daily activity: %w", err)
 	}
 	defer rows.Close()
@@ -467,6 +466,10 @@ func GetDailyActivity(db *sql.DB, org, repo, entity *string, months int) (*Daily
 		series.Counts = append(series.Counts, count)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return series, nil
 }
 
@@ -478,7 +481,7 @@ func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) 
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectRetentionSQL, org, repo, entity, since, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query contributor retention: %w", err)
 	}
 	defer rows.Close()
@@ -500,6 +503,10 @@ func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) 
 		s.Returning = append(s.Returning, retC)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -514,7 +521,7 @@ func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRRev
 		EventTypePR, EventTypePRReview,
 		org, repo, entity, since,
 		EventTypePR, EventTypePRReview)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query PR review ratio: %w", err)
 	}
 	defer rows.Close()
@@ -543,6 +550,10 @@ func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRRev
 		s.Ratio = append(s.Ratio, ratio)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -557,7 +568,7 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 	failureMap := make(map[string]int)
 
 	rows, err := db.Query(selectChangeFailuresSQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query change failures: %w", err)
 	}
 	defer rows.Close()
@@ -571,11 +582,15 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 		failureMap[month] = failures
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	// Get deployments by month
 	deployMap := make(map[string]int)
 
 	dRows, err := db.Query(selectDeploymentCountSQL, org, repo, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query deployment count: %w", err)
 	}
 	defer dRows.Close()
@@ -587,6 +602,10 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 			return nil, fmt.Errorf("failed to scan deployment count row: %w", scanErr)
 		}
 		deployMap[month] = cnt
+	}
+
+	if err := dRows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	// Merge all months from both maps
@@ -636,7 +655,7 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectReviewLatencySQL, since, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query review latency: %w", err)
 	}
 	defer rows.Close()
@@ -659,6 +678,10 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 		s.AvgHours = append(s.AvgHours, avgHours)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -670,7 +693,7 @@ func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, mont
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(query, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query velocity series: %w", err)
 	}
 	defer rows.Close()
@@ -691,6 +714,10 @@ func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, mont
 		s.Months = append(s.Months, month)
 		s.Count = append(s.Count, cnt)
 		s.AvgDays = append(s.AvgDays, avgDays)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return s, nil
@@ -716,7 +743,7 @@ func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectPRSizeDistributionSQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query PR size distribution: %w", err)
 	}
 	defer rows.Close()
@@ -740,6 +767,10 @@ func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*
 		s.Medium = append(s.Medium, medium)
 		s.Large = append(s.Large, large)
 		s.XLarge = append(s.XLarge, xlarge)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return s, nil
@@ -772,7 +803,7 @@ func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*Fo
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectForksAndActivitySQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query forks and activity: %w", err)
 	}
 	defer rows.Close()
@@ -794,6 +825,10 @@ func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*Fo
 		s.Events = append(s.Events, events)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -805,7 +840,7 @@ func GetContributorFunnel(db *sql.DB, org, repo, entity *string, months int) (*C
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectContributorFunnelSQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query contributor funnel: %w", err)
 	}
 	defer rows.Close()
@@ -829,6 +864,10 @@ func GetContributorFunnel(db *sql.DB, org, repo, entity *string, months int) (*C
 		s.FirstMerge = append(s.FirstMerge, fm)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -840,7 +879,7 @@ func GetContributorMomentum(db *sql.DB, org, repo, entity *string, months int) (
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectContributorMomentumSQL, since, org, repo, entity)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query contributor momentum: %w", err)
 	}
 	defer rows.Close()
@@ -859,6 +898,10 @@ func GetContributorMomentum(db *sql.DB, org, repo, entity *string, months int) (
 		}
 		s.Months = append(s.Months, month)
 		s.Active = append(s.Active, active)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	// Compute month-over-month delta

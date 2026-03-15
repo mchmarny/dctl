@@ -22,11 +22,18 @@ func mapUserToDeveloper(u *github.User) *Developer {
 	return &Developer{
 		Username:   trim(u.Login),
 		FullName:   trim(u.Name),
-		Email:      trim(u.Email),
-		AvatarURL:  trim(u.AvatarURL),
-		ProfileURL: trim(u.HTMLURL),
+		Email:      deref(u.Email),
+		AvatarURL:  deref(u.AvatarURL),
+		ProfileURL: deref(u.HTMLURL),
 		Entity:     trim(u.Company),
 	}
+}
+
+func deref(s *string) string {
+	if s != nil {
+		return strings.TrimSpace(*s)
+	}
+	return ""
 }
 
 func mapGitHubUserToDeveloperListItem(u *github.User) *DeveloperListItem {

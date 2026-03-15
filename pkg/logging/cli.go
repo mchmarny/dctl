@@ -20,6 +20,7 @@ type CLIHandler struct {
 	writer io.Writer
 	level  slog.Level
 	prefix string
+	attrs  []slog.Attr
 }
 
 func NewCLIHandler(w io.Writer, level slog.Level) *CLIHandler {
@@ -39,8 +40,11 @@ func (h *CLIHandler) Handle(_ context.Context, r slog.Record) error {
 		msg = "[" + h.prefix + "] " + msg
 	}
 
-	if r.NumAttrs() > 0 {
+	if len(h.attrs) > 0 || r.NumAttrs() > 0 {
 		var attrs []string
+		for _, a := range h.attrs {
+			attrs = append(attrs, fmt.Sprintf("%s=%v", a.Key, a.Value))
+		}
 		r.Attrs(func(a slog.Attr) bool {
 			attrs = append(attrs, fmt.Sprintf("%s=%v", a.Key, a.Value))
 			return true
@@ -60,8 +64,13 @@ func (h *CLIHandler) Handle(_ context.Context, r slog.Record) error {
 	return err
 }
 
-func (h *CLIHandler) WithAttrs(_ []slog.Attr) slog.Handler {
-	return h
+func (h *CLIHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &CLIHandler{
+		writer: h.writer,
+		level:  h.level,
+		prefix: h.prefix,
+		attrs:  append(h.attrs, attrs...),
+	}
 }
 
 func (h *CLIHandler) WithGroup(name string) slog.Handler {

@@ -25,7 +25,7 @@ var (
 	}
 )
 
-func getResp(url string) (resp *http.Response, err error) {
+func getResp(url string) (*http.Response, error) {
 	c, err := GetHTTPClient()
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP client: %w", err)
@@ -41,7 +41,7 @@ func getResp(url string) (resp *http.Response, err error) {
 	return c.Do(req) //nolint:gosec,nolintlint // G704: URL from internal callers
 }
 
-var ErrorURLNotFound = errors.New("URL not found")
+var ErrURLNotFound = errors.New("URL not found")
 
 func Download(url string, filepath string) (retErr error) {
 	out, err := os.Create(filepath)
@@ -61,7 +61,7 @@ func Download(url string, filepath string) (retErr error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return ErrorURLNotFound
+		return ErrURLNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {

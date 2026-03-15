@@ -8,15 +8,17 @@ import (
 	"github.com/mchmarny/devpulse/pkg/data"
 )
 
-func faviconHandler(w http.ResponseWriter, r *http.Request) {
-	file, err := embedFS.ReadFile("assets/img/favicon.ico")
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	w.Header().Set("Content-Type", "image/x-icon")
-	if _, err = w.Write(file); err != nil {
-		slog.Error("failed to write favicon", "error", err)
+func faviconHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		file, err := embedFS.ReadFile("assets/img/favicon.ico")
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "image/x-icon")
+		if _, err = w.Write(file); err != nil {
+			slog.Error("failed to write favicon", "error", err)
+		}
 	}
 }
 

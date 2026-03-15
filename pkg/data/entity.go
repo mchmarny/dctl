@@ -62,10 +62,11 @@ func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare entity like statement: %w", err)
 	}
+	defer stmt.Close()
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -84,6 +85,10 @@ func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 		list = append(list, e)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return list, nil
 }
 
@@ -96,9 +101,10 @@ func GetEntity(db *sql.DB, val string) (*EntityResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare developer entity affiliation statement: %w", err)
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(val)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -106,6 +112,10 @@ func GetEntity(db *sql.DB, val string) (*EntityResult, error) {
 	list, err := mapDeveloperListItem(rows)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map developer list: %w", err)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	r := &EntityResult{
@@ -126,10 +136,11 @@ func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare developer entity statement: %w", err)
 	}
+	defer stmt.Close()
 
 	val = fmt.Sprintf("%%%s%%", val)
 	rows, err := stmt.Query(val, limit)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -147,6 +158,10 @@ func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 		})
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return list, nil
 }
 
@@ -159,10 +174,11 @@ func CleanEntities(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare developer query statement: %w", err)
 	}
+	defer stmt.Close()
 
 	m := make(map[string]string)
 	rows, err := stmt.Query()
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -175,18 +191,24 @@ func CleanEntities(db *sql.DB) error {
 		m[name] = cleanEntityName(name)
 	}
 
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	updateStmt, err := db.Prepare(updateEntityNamesSQL)
 	if err != nil {
 		return fmt.Errorf("failed to prepare entity update statement: %w", err)
 	}
+	defer updateStmt.Close()
 
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
+	txStmt := tx.Stmt(updateStmt)
 	for old, new := range m {
-		if _, err = tx.Stmt(updateStmt).Exec(new, old); err != nil {
+		if _, err = txStmt.Exec(new, old); err != nil {
 			rollbackTransaction(tx)
 			return fmt.Errorf("error updating entity %s to %s: %w", old, new, err)
 		}

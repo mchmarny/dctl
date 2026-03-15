@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -236,7 +235,7 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectReleaseCadenceSQL, org, repo, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query release cadence: %w", err)
 	}
 	defer rows.Close()
@@ -259,6 +258,10 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 		s.Stable = append(s.Stable, stable)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	// When releases exist, each release counts as a deployment.
 	if len(s.Months) > 0 {
 		s.Deployments = append(s.Deployments, s.Total...)
@@ -267,7 +270,7 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 
 	// Fallback: count merged PRs as deployments when no releases exist.
 	fallbackRows, err := db.Query(selectMergedPRDeploymentsSQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query merged PR deployments: %w", err)
 	}
 	defer fallbackRows.Close()
@@ -282,6 +285,10 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 		s.Deployments = append(s.Deployments, cnt)
 	}
 
+	if err := fallbackRows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -293,7 +300,7 @@ func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDow
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectReleaseDownloadsSQL, org, repo, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query release downloads: %w", err)
 	}
 	defer rows.Close()
@@ -313,6 +320,10 @@ func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDow
 		s.Downloads = append(s.Downloads, downloads)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -324,7 +335,7 @@ func GetReleaseDownloadsByTag(db *sql.DB, org, repo *string, months int) (*Relea
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectReleaseDownloadsByTagSQL, org, repo, since, org, repo, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query release downloads by tag: %w", err)
 	}
 	defer rows.Close()
@@ -342,6 +353,10 @@ func GetReleaseDownloadsByTag(db *sql.DB, org, repo *string, months int) (*Relea
 		}
 		s.Tags = append(s.Tags, tag)
 		s.Downloads = append(s.Downloads, downloads)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return s, nil

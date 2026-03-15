@@ -129,6 +129,10 @@ func GetToken(clientID string, code *DeviceCode) (*AccessTokenResponse, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("token request failed with status: %d", res.StatusCode)
+	}
+
 	var t AccessTokenResponse
 	if err := json.NewDecoder(res.Body).Decode(&t); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)

@@ -11,29 +11,33 @@ import (
 
 	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/mchmarny/devpulse/pkg/net"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var (
 	orgNameFlag = &cli.StringFlag{
-		Name:  "org",
-		Usage: "Name of the GitHub organization or user",
+		Name:    "org",
+		Usage:   "Name of the GitHub organization or user",
+		Sources: cli.EnvVars("DEVPULSE_ORG"),
 	}
 
 	repoNameFlag = &cli.StringSliceFlag{
-		Name:  "repo",
-		Usage: "Name of the GitHub repository (can be specified multiple times)",
+		Name:    "repo",
+		Usage:   "Name of the GitHub repository (can be specified multiple times)",
+		Sources: cli.EnvVars("DEVPULSE_REPO"),
 	}
 
 	monthsFlag = &cli.IntFlag{
-		Name:  "months",
-		Usage: "Number of months to import",
-		Value: data.EventAgeMonthsDefault,
+		Name:    "months",
+		Usage:   "Number of months to import",
+		Value:   data.EventAgeMonthsDefault,
+		Sources: cli.EnvVars("DEVPULSE_MONTHS"),
 	}
 
 	freshFlag = &cli.BoolFlag{
-		Name:  "fresh",
-		Usage: "Clear pagination state and re-import from scratch",
+		Name:    "fresh",
+		Usage:   "Clear pagination state and re-import from scratch",
+		Sources: cli.EnvVars("DEVPULSE_FRESH"),
 	}
 
 	importCmd = &cli.Command{
@@ -70,13 +74,13 @@ type ImportResult struct {
 	Reputation   *data.ReputationResult        `json:"reputation,omitempty" yaml:"reputation,omitempty"`
 }
 
-func cmdImport(c *cli.Context) error {
+func cmdImport(_ context.Context, cmd *cli.Command) error {
 	start := time.Now()
-	applyFlags(c)
+	applyFlags(cmd)
 
-	org := c.String(orgNameFlag.Name)
-	repoSlice := c.StringSlice(repoNameFlag.Name)
-	months := c.Int(monthsFlag.Name)
+	org := cmd.String(orgNameFlag.Name)
+	repos := cmd.StringSlice(repoNameFlag.Name)
+	months := cmd.Int(monthsFlag.Name)
 
 	token, err := getGitHubToken()
 	if err != nil {
@@ -87,7 +91,7 @@ func cmdImport(c *cli.Context) error {
 		return fmt.Errorf("no GitHub token found, run 'devpulse auth' or set GITHUB_TOKEN")
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	// If no org specified, update all previously imported data.
 	if org == "" {
@@ -95,11 +99,9 @@ func cmdImport(c *cli.Context) error {
 	}
 
 	// At least one repo is required when org is specified
-	if len(repoSlice) == 0 {
+	if len(repos) == 0 {
 		return fmt.Errorf("--repo is required when --org is specified (e.g. --org %s --repo <REPO>)", org)
 	}
-
-	repos := repoSlice
 
 	res := &ImportResult{
 		Org:    org,
@@ -108,7 +110,7 @@ func cmdImport(c *cli.Context) error {
 	}
 
 	// 0. clear state if fresh
-	if c.Bool(freshFlag.Name) {
+	if cmd.Bool(freshFlag.Name) {
 		for _, r := range repos {
 			if clearErr := data.ClearState(cfg.DB, org, r); clearErr != nil {
 				slog.Error("failed to clear state", "org", org, "repo", r, "error", clearErr)

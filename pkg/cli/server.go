@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -31,16 +31,17 @@ var (
 	embedFS embed.FS
 
 	portFlag = &cli.IntFlag{
-		Name:     "port",
-		Usage:    "Port on which the server will listen",
-		Value:    serverPortDefault,
-		Required: false,
+		Name:    "port",
+		Usage:   "Port on which the server will listen",
+		Value:   serverPortDefault,
+		Sources: cli.EnvVars("DEVPULSE_PORT"),
 	}
 
 	noBrowserFlag = &cli.BoolFlag{
 		Name:    "no-browser",
 		Aliases: []string{"nb"},
 		Usage:   "Do not open browser automatically",
+		Sources: cli.EnvVars("DEVPULSE_NO_BROWSER"),
 	}
 
 	serverCmd = &cli.Command{
@@ -56,10 +57,10 @@ var (
 	}
 )
 
-func cmdStartServer(c *cli.Context) error {
-	applyFlags(c)
-	cfg := getConfig(c)
-	port := c.Int(portFlag.Name)
+func cmdStartServer(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	cfg := getConfig(cmd)
+	port := cmd.Int(portFlag.Name)
 	address := fmt.Sprintf("127.0.0.1:%d", port)
 
 	mux := makeRouter(cfg.DB)
@@ -75,7 +76,7 @@ func cmdStartServer(c *cli.Context) error {
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("failed to start", "error", err)
 		}
 	}()
@@ -83,7 +84,7 @@ func cmdStartServer(c *cli.Context) error {
 	url := fmt.Sprintf("http://%s", address)
 	slog.Info("started", "address", url)
 
-	if !c.Bool(noBrowserFlag.Name) {
+	if !cmd.Bool(noBrowserFlag.Name) {
 		openBrowser(url)
 	}
 
@@ -105,7 +106,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 
 	// Static files
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(embedFS)))
-	mux.HandleFunc("GET /favicon.ico", faviconHandler)
+	mux.HandleFunc("GET /favicon.ico", faviconHandler())
 
 	// Views
 	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl))

@@ -1,13 +1,14 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/mchmarny/devpulse/pkg/auth"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"github.com/zalando/go-keyring"
 )
 
@@ -21,8 +22,9 @@ const (
 
 var (
 	publicFlag = &cli.BoolFlag{
-		Name:  "public",
-		Usage: "Authenticate for public repositories only (no private repo access)",
+		Name:    "public",
+		Usage:   "Authenticate for public repositories only (no private repo access)",
+		Sources: cli.EnvVars("DEVPULSE_PUBLIC"),
 	}
 
 	authCmd = &cli.Command{
@@ -34,11 +36,11 @@ var (
 	}
 )
 
-func cmdInitAuthFlow(c *cli.Context) error {
-	applyFlags(c)
+func cmdInitAuthFlow(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
 
 	scope := scopeRepo
-	if c.Bool(publicFlag.Name) {
+	if cmd.Bool(publicFlag.Name) {
 		scope = ""
 	}
 
@@ -79,7 +81,7 @@ func saveGitHubToken(token string) error {
 	}
 
 	// Clean up legacy file if it exists
-	legacyPath := path.Join(getHomeDir(), tokenFileName)
+	legacyPath := filepath.Join(getHomeDir(), tokenFileName)
 	os.Remove(legacyPath)
 
 	fmt.Println("Token saved to OS keychain")
@@ -107,7 +109,7 @@ func getGitHubToken() (string, error) {
 	// Migrate to keychain
 	if migrateErr := keyring.Set(keyringService, keyringUser, token); migrateErr == nil {
 		slog.Info("migrated token from file to OS keychain")
-		legacyPath := path.Join(getHomeDir(), tokenFileName)
+		legacyPath := filepath.Join(getHomeDir(), tokenFileName)
 		os.Remove(legacyPath)
 	}
 
@@ -115,12 +117,12 @@ func getGitHubToken() (string, error) {
 }
 
 func saveGitHubTokenFile(token string) error {
-	tokenPath := path.Join(getHomeDir(), tokenFileName)
+	tokenPath := filepath.Join(getHomeDir(), tokenFileName)
 	return os.WriteFile(tokenPath, []byte(token), 0600)
 }
 
 func getGitHubTokenFile() (string, error) {
-	tokenPath := path.Join(getHomeDir(), tokenFileName)
+	tokenPath := filepath.Join(getHomeDir(), tokenFileName)
 	b, err := os.ReadFile(tokenPath)
 	if err != nil {
 		return "", fmt.Errorf("reading token file %s: %w", tokenPath, err)

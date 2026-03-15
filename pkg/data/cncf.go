@@ -152,7 +152,7 @@ func loadAffiliations(url string, devs map[string]*CNCFDeveloper) (bool, error) 
 	path := f.Name()
 	slog.Debug("downloading", "url", url, "path", path)
 	if err = net.Download(url, path); err != nil {
-		if errors.Is(err, net.ErrorURLNotFound) {
+		if errors.Is(err, net.ErrURLNotFound) {
 			slog.Debug("url not found", "url", url)
 			return false, nil // return raw error
 		}

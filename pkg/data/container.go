@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -198,7 +197,7 @@ func GetContainerActivity(db *sql.DB, org, repo *string, months int) (*Container
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectContainerActivitySQL, org, repo, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("querying container activity: %w", err)
 	}
 	defer rows.Close()
@@ -216,6 +215,10 @@ func GetContainerActivity(db *sql.DB, org, repo *string, months int) (*Container
 		}
 		s.Months = append(s.Months, month)
 		s.Versions = append(s.Versions, count)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return s, nil

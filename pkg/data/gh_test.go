@@ -90,8 +90,7 @@ func TestMapUserToDeveloper(t *testing.T) {
 	dev := mapUserToDeveloper(u)
 	assert.Equal(t, "testuser", dev.Username)
 	assert.Equal(t, "Test User", dev.FullName)
-	// trim() strips @ signs, so email becomes "testexample.com"
-	assert.Equal(t, "testexample.com", dev.Email)
+	assert.Equal(t, "test@example.com", dev.Email)
 	assert.Equal(t, "TestCorp", dev.Entity)
 }
 

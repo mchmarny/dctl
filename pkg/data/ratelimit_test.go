@@ -5,11 +5,13 @@ import (
 	"time"
 
 	"github.com/google/go-github/v83/github"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCheckRateLimit_Nil(t *testing.T) {
-	// should not panic
+	start := time.Now()
 	checkRateLimit(nil)
+	assert.Less(t, time.Since(start), time.Second, "nil response should return immediately")
 }
 
 func TestCheckRateLimit_HighRemaining(t *testing.T) {
@@ -20,8 +22,9 @@ func TestCheckRateLimit_HighRemaining(t *testing.T) {
 			Reset:     github.Timestamp{Time: time.Now().Add(time.Hour)},
 		},
 	}
-	// should return immediately without sleeping
+	start := time.Now()
 	checkRateLimit(resp)
+	assert.Less(t, time.Since(start), time.Second, "high remaining should not sleep")
 }
 
 func TestCheckRateLimit_ResetInPast(t *testing.T) {
@@ -32,6 +35,7 @@ func TestCheckRateLimit_ResetInPast(t *testing.T) {
 			Reset:     github.Timestamp{Time: time.Now().Add(-time.Hour)},
 		},
 	}
-	// Reset is in the past, should return immediately
+	start := time.Now()
 	checkRateLimit(resp)
+	assert.Less(t, time.Since(start), time.Second, "past reset should not sleep")
 }

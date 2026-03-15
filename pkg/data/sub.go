@@ -2,7 +2,6 @@ package data
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 )
 
@@ -88,9 +87,10 @@ func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare sql statement: %w", err)
 	}
+	defer stmt.Close()
 
 	res, err := stmt.Exec(sub.New, sub.Old)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to execute developer property update statement: %w", err)
 	}
 
@@ -123,6 +123,7 @@ func SaveAndApplyDeveloperSub(db *sql.DB, prop, old, new string) (*Substitution,
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare state insert statement: %w", err)
 	}
+	defer subStmt.Close()
 
 	if _, err = subStmt.Exec(prop, old, new, new); err != nil {
 		return nil, fmt.Errorf("failed to insert state: %w", err)
@@ -140,9 +141,10 @@ func ApplySubstitutions(db *sql.DB) ([]*Substitution, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare sql statement: %w", err)
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query()
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute substitute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -154,6 +156,10 @@ func ApplySubstitutions(db *sql.DB) ([]*Substitution, error) {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	for _, s := range list {

@@ -101,8 +101,14 @@ func TestCLIHandler_WithAttrs(t *testing.T) {
 	handler := NewCLIHandler(&buf, slog.LevelInfo)
 
 	result := handler.WithAttrs([]slog.Attr{slog.String("key", "value")})
-	assert.Equal(t, handler, result)
+	assert.NotEqual(t, handler, result, "WithAttrs should return a new handler")
 
+	// Verify the new handler includes the stored attr in output
+	logger := slog.New(result)
+	logger.Info("test message")
+	assert.Contains(t, buf.String(), "key=value")
+
+	// nil attrs returns the same handler
 	result = handler.WithAttrs(nil)
 	assert.Equal(t, handler, result)
 }

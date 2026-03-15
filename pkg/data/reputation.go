@@ -386,7 +386,7 @@ func GetReputationDistribution(db *sql.DB, org, repo, entity *string, months int
 	since := time.Now().UTC().AddDate(0, -months, 0).Format("2006-01-02")
 
 	rows, err := db.Query(selectReputationSQL, org, repo, entity, since)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query reputation distribution: %w", err)
 	}
 	defer rows.Close()
@@ -404,6 +404,10 @@ func GetReputationDistribution(db *sql.DB, org, repo, entity *string, months int
 		}
 		d.Labels = append(d.Labels, username)
 		d.Data = append(d.Data, rep)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return d, nil
@@ -574,7 +578,7 @@ func getStaleReputationUsernames(db *sql.DB, org, repo *string, threshold string
 	}
 
 	rows, err := db.Query(selectStaleReputationUsernamesSQL, org, repo, threshold)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query stale reputation usernames: %w", err)
 	}
 	defer rows.Close()
@@ -588,6 +592,10 @@ func getStaleReputationUsernames(db *sql.DB, org, repo *string, threshold string
 		list = append(list, username)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return list, nil
 }
 
@@ -597,7 +605,7 @@ func getLowestReputationUsernames(db *sql.DB, org, repo *string, threshold strin
 	}
 
 	rows, err := db.Query(selectLowestReputationUsernamesSQL, org, repo, threshold, limit)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query lowest reputation usernames: %w", err)
 	}
 	defer rows.Close()
@@ -609,6 +617,10 @@ func getLowestReputationUsernames(db *sql.DB, org, repo *string, threshold strin
 			return nil, fmt.Errorf("failed to scan username: %w", err)
 		}
 		list = append(list, username)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil
@@ -648,7 +660,7 @@ func getDistinctOrgs(db *sql.DB) ([]string, error) {
 	}
 
 	rows, err := db.Query(selectDistinctOrgsSQL)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query distinct orgs: %w", err)
 	}
 	defer rows.Close()
@@ -660,6 +672,10 @@ func getDistinctOrgs(db *sql.DB) ([]string, error) {
 			return nil, fmt.Errorf("failed to scan org: %w", err)
 		}
 		list = append(list, org)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil

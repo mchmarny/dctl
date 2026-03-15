@@ -1,19 +1,20 @@
 package cli
 
 import (
+	"bufio"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
-	"time"
+	"strings"
 
 	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/mchmarny/devpulse/pkg/logging"
-	urfave "github.com/urfave/cli/v2"
+	urfave "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,24 +34,28 @@ var (
 	outputFormat = formatJSON
 
 	debugFlag = &urfave.BoolFlag{
-		Name:  "debug",
-		Usage: "Prints verbose logs (optional, default: false)",
+		Name:    "debug",
+		Usage:   "Prints verbose logs (optional, default: false)",
+		Sources: urfave.EnvVars("DEVPULSE_DEBUG"),
 	}
 
 	dbFilePathFlag = &urfave.StringFlag{
-		Name:  "db",
-		Usage: "Path to the Sqlite database file",
+		Name:    "db",
+		Usage:   "Path to the Sqlite database file",
+		Sources: urfave.EnvVars("DEVPULSE_DB"),
 	}
 
 	formatFlag = &urfave.StringFlag{
-		Name:  "format",
-		Usage: "Output format [json, yaml]",
-		Value: formatJSON,
+		Name:    "format",
+		Usage:   "Output format [json, yaml]",
+		Value:   formatJSON,
+		Sources: urfave.EnvVars("DEVPULSE_FORMAT"),
 	}
 
 	forceFlag = &urfave.BoolFlag{
-		Name:  "force",
-		Usage: "Skip confirmation prompt",
+		Name:    "force",
+		Usage:   "Skip confirmation prompt",
+		Sources: urfave.EnvVars("DEVPULSE_FORCE"),
 	}
 )
 
@@ -58,8 +63,8 @@ var (
 func Execute() {
 	initLogging(false)
 
-	app := newApp()
-	if err := app.Run(os.Args); err != nil {
+	cmd := newApp()
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		slog.Error("fatal error", "error", err)
 		os.Exit(1)
 	}
@@ -71,18 +76,17 @@ type appConfig struct {
 	DB     *sql.DB
 }
 
-func getConfig(c *urfave.Context) *appConfig {
-	return c.App.Metadata[appConfigKey].(*appConfig)
+func getConfig(cmd *urfave.Command) *appConfig {
+	return cmd.Root().Metadata[appConfigKey].(*appConfig)
 }
 
-func newApp() *urfave.App {
-	return &urfave.App{
-		Name:                 "devpulse",
-		Version:              fmt.Sprintf("%s (%s - %s)", version, commit, date),
-		Compiled:             time.Now(),
-		EnableBashCompletion: true,
-		HideHelpCommand:      true,
-		Usage:                "CLI for quick insight into the GitHub org/repo activity",
+func newApp() *urfave.Command {
+	return &urfave.Command{
+		Name:                  "devpulse",
+		Version:               fmt.Sprintf("%s (%s - %s)", version, commit, date),
+		EnableShellCompletion: true,
+		HideHelpCommand:       true,
+		Usage:                 "CLI for quick insight into the GitHub org/repo activity",
 		Flags: []urfave.Flag{
 			debugFlag,
 			dbFilePathFlag,
@@ -98,36 +102,39 @@ func newApp() *urfave.App {
 			serverCmd,
 			resetCmd,
 		},
-		Before: func(c *urfave.Context) error {
-			applyFlags(c)
+		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
+			applyFlags(cmd)
 
-			dbPath := c.String(dbFilePathFlag.Name)
+			dbPath := cmd.String(dbFilePathFlag.Name)
 			if dbPath == "" {
-				dbPath = path.Join(getHomeDir(), data.DataFileName)
+				dbPath = filepath.Join(getHomeDir(), data.DataFileName)
 			}
 
 			if err := data.Init(dbPath); err != nil {
-				return fmt.Errorf("initializing database: %w", err)
+				return ctx, fmt.Errorf("initializing database: %w", err)
 			}
 
 			db, err := data.GetDB(dbPath)
 			if err != nil {
-				return fmt.Errorf("opening database: %w", err)
+				return ctx, fmt.Errorf("opening database: %w", err)
 			}
 
-			c.App.Metadata[appConfigKey] = &appConfig{
+			cmd.Root().Metadata[appConfigKey] = &appConfig{
 				DBPath: dbPath,
-				Debug:  c.Bool(debugFlag.Name),
+				Debug:  cmd.Bool(debugFlag.Name),
 				DB:     db,
 			}
-			return nil
+			return ctx, nil
 		},
-		After: func(c *urfave.Context) error {
-			if cfg, ok := c.App.Metadata[appConfigKey].(*appConfig); ok && cfg.DB != nil {
-				cfg.DB.Close()
+		After: func(ctx context.Context, cmd *urfave.Command) error {
+			if cfg, ok := cmd.Root().Metadata[appConfigKey].(*appConfig); ok && cfg.DB != nil {
+				if err := cfg.DB.Close(); err != nil {
+					slog.Error("error closing database", "error", err)
+				}
 			}
 			return nil
 		},
+		Metadata: map[string]any{},
 	}
 }
 
@@ -160,17 +167,28 @@ func getHomeDir() string {
 	return dirPath
 }
 
-func applyFlags(c *urfave.Context) {
-	if c.Bool(debugFlag.Name) {
+func applyFlags(cmd *urfave.Command) {
+	if cmd.Bool(debugFlag.Name) {
 		initLogging(true)
 	}
-	if c.Command != nil && c.Command.Name != "" {
-		slog.SetDefault(slog.Default().WithGroup(c.Command.Name))
+	if cmd.Name != "" {
+		slog.SetDefault(slog.Default().WithGroup(cmd.Name))
 	}
-	f := c.String(formatFlag.Name)
+	f := cmd.String(formatFlag.Name)
 	if f == formatYAML || f == "yml" {
 		outputFormat = formatYAML
 	}
+}
+
+func confirmAction(prompt string) (bool, error) {
+	fmt.Print(prompt)
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false, fmt.Errorf("error reading input: %w", err)
+	}
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes", nil
 }
 
 func encode(v any) error {

@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -42,7 +41,7 @@ func GetRepoMetricHistory(db *sql.DB, org, repo *string) ([]*RepoMetricHistory, 
 	}
 
 	rows, err := db.Query(selectRepoMetricHistorySQL, org, repo)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query repo metric history: %w", err)
 	}
 	defer rows.Close()
@@ -54,6 +53,10 @@ func GetRepoMetricHistory(db *sql.DB, org, repo *string) ([]*RepoMetricHistory, 
 			return nil, fmt.Errorf("failed to scan repo metric history row: %w", err)
 		}
 		list = append(list, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil

@@ -1,15 +1,13 @@
 package cli
 
 import (
-	"bufio"
+	"context"
 	"fmt"
 	"log/slog"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/mchmarny/devpulse/pkg/data"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var deleteCmd = &cli.Command{
@@ -40,20 +38,19 @@ type DeleteCommandResult struct {
 	Duration string               `json:"duration" yaml:"duration"`
 }
 
-func cmdDelete(c *cli.Context) error {
+func cmdDelete(_ context.Context, cmd *cli.Command) error {
 	start := time.Now()
-	applyFlags(c)
+	applyFlags(cmd)
 
-	org := c.String(orgNameFlag.Name)
+	org := cmd.String(orgNameFlag.Name)
 	if org == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	// Resolve repos
-	repoSlice := c.StringSlice(repoNameFlag.Name)
-	repos := repoSlice
+	repos := cmd.StringSlice(repoNameFlag.Name)
 
 	if len(repos) == 0 {
 		// Find all repos for this org from existing data
@@ -73,19 +70,16 @@ func cmdDelete(c *cli.Context) error {
 	}
 
 	// Confirmation prompt
-	if !c.Bool(forceFlag.Name) {
+	if !cmd.Bool(forceFlag.Name) {
 		fmt.Println("Delete all data for:")
 		for _, r := range repos {
 			fmt.Printf("  - %s/%s\n", org, r)
 		}
-		fmt.Print("Continue? [y/N]: ")
-
-		reader := bufio.NewReader(os.Stdin)
-		answer, err := reader.ReadString('\n')
+		confirmed, err := confirmAction("Continue? [y/N]: ")
 		if err != nil {
-			return fmt.Errorf("reading input: %w", err)
+			return err
 		}
-		if strings.ToLower(strings.TrimSpace(answer)) != "y" {
+		if !confirmed {
 			fmt.Println("Aborted.")
 			return nil
 		}

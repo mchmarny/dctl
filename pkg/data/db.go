@@ -24,7 +24,7 @@ var (
 
 	errDBNotInitialized = errors.New("database not initialized")
 
-	entityRegEx *regexp.Regexp
+	entityRegEx = regexp.MustCompile(nonAlphaNumRegex)
 )
 
 // Init initializes the database for a given name.
@@ -42,8 +42,6 @@ func Init(dbFilePath string) error {
 	if migErr := runMigrations(db); migErr != nil {
 		return fmt.Errorf("running migrations: %w", migErr)
 	}
-
-	entityRegEx = regexp.MustCompile(nonAlphaNumRegex)
 
 	return nil
 }

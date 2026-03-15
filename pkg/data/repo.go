@@ -60,10 +60,11 @@ func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare repo like statement: %w", err)
 	}
+	defer stmt.Close()
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -80,6 +81,10 @@ func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 			Text:  fmt.Sprintf("%s/%s (%d events)", org, repo, count),
 		}
 		list = append(list, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil

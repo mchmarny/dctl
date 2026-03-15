@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -118,7 +117,7 @@ func GetRepoMetas(db *sql.DB, org, repo *string) ([]*RepoMeta, error) {
 	}
 
 	rows, err := db.Query(selectRepoMetaSQL, org, repo)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to query repo meta: %w", err)
 	}
 	defer rows.Close()
@@ -133,6 +132,10 @@ func GetRepoMetas(db *sql.DB, org, repo *string) ([]*RepoMeta, error) {
 		}
 		m.Archived = archived != 0
 		list = append(list, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil

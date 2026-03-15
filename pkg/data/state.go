@@ -37,6 +37,7 @@ func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare state select statement: %w", err)
 	}
+	defer stateStmt.Close()
 
 	row := stateStmt.QueryRow(query, org, repo)
 
@@ -75,9 +76,10 @@ func SaveState(db *sql.DB, query, org, repo string, state *State) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare state insert statement: %w", err)
 	}
+	defer stateStmt.Close()
 
 	since := state.Since.Unix()
-	if _, err = stateStmt.Exec(query, org, repo, state.Page, state.Page, since, since); err != nil {
+	if _, err = stateStmt.Exec(query, org, repo, state.Page, since, state.Page, since); err != nil {
 		return fmt.Errorf("failed to insert state: %w", err)
 	}
 
@@ -109,6 +111,7 @@ func GetDataState(db *sql.DB) (map[string]int64, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error preparing %s statement: %w", k, err)
 		}
+		defer stmt.Close()
 
 		count, err := getCount(db, stmt)
 		if err != nil {

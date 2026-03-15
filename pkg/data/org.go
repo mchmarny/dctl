@@ -63,7 +63,7 @@ const (
 		LIMIT ?
 	`
 
-	selectAllOrgRepos = `SELECT DISTINCT org, repo FROM event order by 1, 1`
+	selectAllOrgRepos = `SELECT DISTINCT org, repo FROM event ORDER BY 1, 2`
 )
 
 type Org struct {
@@ -97,9 +97,10 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare developer percentages statement: %w", err)
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query()
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -111,6 +112,10 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil
@@ -135,9 +140,10 @@ func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []s
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare percentages statement: %w", err)
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(qArgs...)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -149,6 +155,10 @@ func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []s
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		list = append(list, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil
@@ -178,10 +188,11 @@ func GetOrgLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare org like statement: %w", err)
 	}
+	defer stmt.Close()
 
 	query = fmt.Sprintf("%%%s%%", query)
 	rows, err := stmt.Query(query, limit)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to execute select statement: %w", err)
 	}
 	defer rows.Close()
@@ -195,6 +206,10 @@ func GetOrgLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 		}
 		e.Text = fmt.Sprintf("%s (%d repos, %d events)", e.Value, repoCount, eventCount)
 		list = append(list, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return list, nil

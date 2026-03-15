@@ -1,19 +1,21 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/mchmarny/devpulse/pkg/data"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var (
 	countFlag = &cli.IntFlag{
-		Name:  "count",
-		Usage: "Number of lowest-reputation contributors to deep-score via GitHub API",
-		Value: 5,
+		Name:    "count",
+		Usage:   "Number of lowest-reputation contributors to deep-score via GitHub API",
+		Value:   5,
+		Sources: cli.EnvVars("DEVPULSE_COUNT"),
 	}
 
 	scoreCmd = &cli.Command{
@@ -46,13 +48,13 @@ type ScoreResult struct {
 	Duration string                     `json:"duration" yaml:"duration"`
 }
 
-func cmdScore(c *cli.Context) error {
+func cmdScore(_ context.Context, cmd *cli.Command) error {
 	start := time.Now()
-	applyFlags(c)
+	applyFlags(cmd)
 
-	org := c.String(orgNameFlag.Name)
+	org := cmd.String(orgNameFlag.Name)
 	if org == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
 	token, err := getGitHubToken()
@@ -63,10 +65,10 @@ func cmdScore(c *cli.Context) error {
 		return fmt.Errorf("GitHub token required for deep scoring")
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	var repo string
-	if repos := c.StringSlice(repoNameFlag.Name); len(repos) > 0 {
+	if repos := cmd.StringSlice(repoNameFlag.Name); len(repos) > 0 {
 		repo = repos[0]
 	}
 
@@ -76,7 +78,7 @@ func cmdScore(c *cli.Context) error {
 		repoPtr = &repo
 	}
 
-	count := c.Int(countFlag.Name)
+	count := cmd.Int(countFlag.Name)
 
 	slog.Info("deep scoring", "org", org, "repo", repo, "count", count)
 	result, err := data.ImportDeepReputation(cfg.DB, token, count, orgPtr, repoPtr)

@@ -85,10 +85,10 @@ type Event struct {
 
 type importer func(ctx context.Context) error
 
-// ImportEvents imports events from GitHub for a given org/repo combination.
+// UpdateEvents updates events from GitHub for a given org/repo combination.
 func UpdateEvents(dbPath, token string) (map[string]int, error) {
 	if dbPath == "" || token == "" {
-		return nil, errors.New("stateDir and token are required")
+		return nil, errors.New("dbPath and token are required")
 	}
 
 	db, err := GetDB(dbPath)
@@ -120,7 +120,7 @@ func UpdateEvents(dbPath, token string) (map[string]int, error) {
 // ImportEvents imports events from GitHub for a given org/repo combination.
 func ImportEvents(dbPath, token, owner, repo string, months int) (map[string]int, *ImportSummary, error) {
 	if dbPath == "" || token == "" || owner == "" || repo == "" {
-		return nil, nil, errors.New("stateDir, token, owner, and repo are required")
+		return nil, nil, errors.New("dbPath, token, owner, and repo are required")
 	}
 
 	if months < 1 {
@@ -281,9 +281,10 @@ func (e *EventImporter) add(eType, url string, usr *github.User, updated *time.T
 	e.list = append(e.list, item)
 	e.counts[e.qualifyTypeKey(eType)]++
 	e.users[item.Username] = usr
+	shouldFlush := len(e.list) >= importBatchSize
 	e.mu.Unlock()
 
-	if len(e.list) >= importBatchSize {
+	if shouldFlush {
 		if err := e.flush(); err != nil {
 			return fmt.Errorf("error flushing events: %w", err)
 		}
@@ -322,9 +323,18 @@ func (e *EventImporter) flush() error {
 
 	e.mu.Lock()
 	events = e.list
-	users = e.users
-	state = e.state
 	e.list = make([]*Event, 0)
+
+	users = make(map[string]*github.User, len(e.users))
+	for k, v := range e.users {
+		users[k] = v
+	}
+
+	state = make(map[string]*State, len(e.state))
+	for k, v := range e.state {
+		cp := *v
+		state[k] = &cp
+	}
 	e.mu.Unlock()
 
 	// spool developers
@@ -345,24 +355,28 @@ func (e *EventImporter) flush() error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare event insert statement: %w", err)
 	}
+	defer eventStmt.Close()
 
 	devStmt, err := db.Prepare(insertDeveloperSQL)
 	if err != nil {
 		return fmt.Errorf("failed to prepare developer insert statement: %w", err)
 	}
+	defer devStmt.Close()
 
 	stateStmt, err := db.Prepare(insertState)
 	if err != nil {
 		return fmt.Errorf("failed to prepare state insert statement: %w", err)
 	}
+	defer stateStmt.Close()
 
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
+	txDevStmt := tx.Stmt(devStmt)
 	for i, u := range devs {
-		if _, err = tx.Stmt(devStmt).Exec(u.Username,
+		if _, err = txDevStmt.Exec(u.Username,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity,
 			u.FullName, u.Email, u.AvatarURL, u.ProfileURL, u.Entity, u.Entity); err != nil {
 			rollbackTransaction(tx)
@@ -370,8 +384,9 @@ func (e *EventImporter) flush() error {
 		}
 	}
 
+	txEventStmt := tx.Stmt(eventStmt)
 	for i, e := range events {
-		_, err = tx.Stmt(eventStmt).Exec(
+		_, err = txEventStmt.Exec(
 			e.Org, e.Repo, e.Username, e.Type, e.Date,
 			e.URL, e.Mentions, e.Labels,
 			e.State, e.Number, e.CreatedAt, e.ClosedAt, e.MergedAt, e.Additions, e.Deletions, e.Title,
@@ -384,9 +399,10 @@ func (e *EventImporter) flush() error {
 		}
 	}
 
+	txStateStmt := tx.Stmt(stateStmt)
 	for t, p := range state {
 		since := p.Since.Unix()
-		_, err = tx.Stmt(stateStmt).Exec(t, e.owner, e.repo, p.Page, since, p.Page, since)
+		_, err = txStateStmt.Exec(t, e.owner, e.repo, p.Page, since, p.Page, since)
 		if err != nil {
 			rollbackTransaction(tx)
 			return fmt.Errorf("error inserting state[%s]: %s/%s with page:%d and since:%s: %w",
@@ -478,9 +494,12 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 
 	for {
 		items, resp, err := e.client.PullRequests.List(ctx, e.owner, e.repo, opt)
-		if err != nil || resp.StatusCode != http.StatusOK {
+		if err != nil {
+			return fmt.Errorf("error listing prs: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return fmt.Errorf("error listing prs, rate: %s: %w", rateInfo(&resp.Rate), err)
+			return fmt.Errorf("error listing prs, rate: %s, status: %d", rateInfo(&resp.Rate), resp.StatusCode)
 		}
 		checkRateLimit(resp)
 		slog.Debug("pr events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
@@ -587,9 +606,12 @@ func (e *EventImporter) importIssueEvents(ctx context.Context) error {
 
 	for {
 		items, resp, err := e.client.Issues.ListByRepo(ctx, e.owner, e.repo, opt)
-		if err != nil || resp.StatusCode != http.StatusOK {
+		if err != nil {
+			return fmt.Errorf("error listing issues: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return fmt.Errorf("error listing issues, rate: %s: %w", rateInfo(&resp.Rate), err)
+			return fmt.Errorf("error listing issues, rate: %s, status: %d", rateInfo(&resp.Rate), resp.StatusCode)
 		}
 		checkRateLimit(resp)
 		slog.Debug("issue events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
@@ -649,9 +671,12 @@ func (e *EventImporter) importIssueCommentEvents(ctx context.Context) error {
 
 	for {
 		items, resp, err := e.client.Issues.ListComments(ctx, e.owner, e.repo, nilNumber, opt)
-		if err != nil || resp.StatusCode != http.StatusOK {
+		if err != nil {
+			return fmt.Errorf("error listing issue comments: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return fmt.Errorf("error listing issue comments, rate: %s: %w", rateInfo(&resp.Rate), err)
+			return fmt.Errorf("error listing issue comments, rate: %s, status: %d", rateInfo(&resp.Rate), resp.StatusCode)
 		}
 		checkRateLimit(resp)
 		slog.Debug("issue comment events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
@@ -693,9 +718,12 @@ func (e *EventImporter) importPRReviewEvents(ctx context.Context) error {
 
 	for {
 		items, resp, err := e.client.PullRequests.ListComments(ctx, e.owner, e.repo, nilNumber, opt)
-		if err != nil || resp.StatusCode != http.StatusOK {
+		if err != nil {
+			return fmt.Errorf("error listing pr comments: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return fmt.Errorf("error listing pr comments, rate: %s: %w", rateInfo(&resp.Rate), err)
+			return fmt.Errorf("error listing pr comments, rate: %s, status: %d", rateInfo(&resp.Rate), resp.StatusCode)
 		}
 		checkRateLimit(resp)
 		slog.Debug("pr review events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))
@@ -743,9 +771,12 @@ func (e *EventImporter) importForkEvents(ctx context.Context) error {
 
 	for {
 		items, resp, err := e.client.Repositories.ListForks(ctx, e.owner, e.repo, opt)
-		if err != nil || resp.StatusCode != http.StatusOK {
+		if err != nil {
+			return fmt.Errorf("error listing forks: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
 			net.PrintHTTPResponse(resp.Response)
-			return fmt.Errorf("error listing forks, rate: %s: %w", rateInfo(&resp.Rate), err)
+			return fmt.Errorf("error listing forks, rate: %s, status: %d", rateInfo(&resp.Rate), resp.StatusCode)
 		}
 		checkRateLimit(resp)
 		slog.Debug("fork events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", rateInfo(&resp.Rate))

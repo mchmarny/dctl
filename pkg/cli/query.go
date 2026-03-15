@@ -8,7 +8,7 @@ import (
 
 	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/mchmarny/devpulse/pkg/net"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -20,61 +20,71 @@ var (
 		Name:     "username",
 		Usage:    "GitHub username",
 		Required: true,
+		Sources:  cli.EnvVars("DEVPULSE_USERNAME"),
 	}
 
 	developerLikeQueryFlag = &cli.StringFlag{
 		Name:     "like",
 		Usage:    "GitHub user like query (e.g. username, email, company)",
 		Required: true,
+		Sources:  cli.EnvVars("DEVPULSE_LIKE"),
 	}
 
 	entityLikeQueryFlag = &cli.StringFlag{
 		Name:     "like",
 		Usage:    "Entity like query (e.g. company name)",
 		Required: true,
+		Sources:  cli.EnvVars("DEVPULSE_LIKE"),
 	}
 
 	entityNameQueryFlag = &cli.StringFlag{
 		Name:     "name",
 		Usage:    "Entity name",
 		Required: true,
+		Sources:  cli.EnvVars("DEVPULSE_NAME"),
 	}
 
 	eventAuthorFlag = &cli.StringFlag{
-		Name:  "author",
-		Usage: "Event author (GitHub username)",
+		Name:    "author",
+		Usage:   "Event author (GitHub username)",
+		Sources: cli.EnvVars("DEVPULSE_AUTHOR"),
 	}
 
 	eventEntityFlag = &cli.StringFlag{
-		Name:  "entity",
-		Usage: "Event entity (company name or affiliated organization)",
+		Name:    "entity",
+		Usage:   "Event entity (company name or affiliated organization)",
+		Sources: cli.EnvVars("DEVPULSE_ENTITY"),
 	}
 
 	eventTypeFlag = &cli.StringFlag{
-		Name:  "type",
-		Usage: "Event type (pr, issue, issue_comment, pr_review, fork)",
+		Name:    "type",
+		Usage:   "Event type (pr, issue, issue_comment, pr_review, fork)",
+		Sources: cli.EnvVars("DEVPULSE_EVENT_TYPE"),
 	}
 
 	eventSinceFlag = &cli.StringFlag{
-		Name:  "since",
-		Usage: "Event since date (YYYY-MM-DD)",
+		Name:    "since",
+		Usage:   "Event since date (YYYY-MM-DD)",
+		Sources: cli.EnvVars("DEVPULSE_SINCE"),
 	}
 
 	eventMentionFlag = &cli.StringFlag{
-		Name:  "mention",
-		Usage: "GitHub mention (like query on @username in body or assignments)",
+		Name:    "mention",
+		Usage:   "GitHub mention (like query on @username in body or assignments)",
+		Sources: cli.EnvVars("DEVPULSE_MENTION"),
 	}
 
 	eventLabelFlag = &cli.StringFlag{
-		Name:     "label",
-		Usage:    "GitHub label (like query on issues and PRs)",
-		Required: false,
+		Name:    "label",
+		Usage:   "GitHub label (like query on issues and PRs)",
+		Sources: cli.EnvVars("DEVPULSE_LABEL"),
 	}
 
 	queryLimitFlag = &cli.IntFlag{
-		Name:  "limit",
-		Usage: fmt.Sprintf("Limits number of result returned (default: %d)", queryResultLimitDefault),
-		Value: queryResultLimitDefault,
+		Name:    "limit",
+		Usage:   fmt.Sprintf("Limits number of result returned (default: %d)", queryResultLimitDefault),
+		Value:   queryResultLimitDefault,
+		Sources: cli.EnvVars("DEVPULSE_LIMIT"),
 	}
 
 	// commonFlags are shared across all query subcommands.
@@ -93,13 +103,13 @@ Examples:
   devpulse query developer list --org <ORG>                        # list developers
   devpulse query entity list --org <ORG>                           # list entities
   devpulse query org repos --org <ORG>                             # list org repos`,
-		Subcommands: []*cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:            "developers",
 				Aliases:         []string{"developer", "dev"},
 				HideHelpCommand: true,
 				Usage:           "List developer operations",
-				Subcommands: []*cli.Command{
+				Commands: []*cli.Command{
 					{
 						Name:   "list",
 						Usage:  "List developers",
@@ -124,7 +134,7 @@ Examples:
 				Name:    "entities",
 				Usage:   "List entity operations",
 				Aliases: []string{"entity"},
-				Subcommands: []*cli.Command{
+				Commands: []*cli.Command{
 					{
 						Name:   "list",
 						Usage:  "List entities (companies or organizations with which users are affiliated)",
@@ -148,7 +158,7 @@ Examples:
 			{
 				Name:  "org",
 				Usage: "List GitHub org/user operations",
-				Subcommands: []*cli.Command{
+				Commands: []*cli.Command{
 					{
 						Name:    "repos",
 						Aliases: []string{"repo"},
@@ -188,14 +198,14 @@ func optional(val string) *string {
 	return &val
 }
 
-func cmdQueryEntity(c *cli.Context) error {
-	applyFlags(c)
-	val := c.String(entityNameQueryFlag.Name)
+func cmdQueryEntity(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	val := cmd.String(entityNameQueryFlag.Name)
 	if val == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	ent, err := data.GetEntity(cfg.DB, val)
 	if err != nil {
@@ -209,22 +219,22 @@ func cmdQueryEntity(c *cli.Context) error {
 	return nil
 }
 
-func cmdQueryEvents(c *cli.Context) error {
-	applyFlags(c)
-	org := c.String(orgNameFlag.Name)
-	repoSlice := c.StringSlice(repoNameFlag.Name)
+func cmdQueryEvents(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	org := cmd.String(orgNameFlag.Name)
+	repoSlice := cmd.StringSlice(repoNameFlag.Name)
 	var repo string
 	if len(repoSlice) > 0 {
 		repo = repoSlice[0]
 	}
-	author := c.String(eventAuthorFlag.Name)
-	entity := c.String(eventEntityFlag.Name)
-	since := c.String(eventSinceFlag.Name)
-	etype := c.String(eventTypeFlag.Name)
-	mention := c.String(eventMentionFlag.Name)
-	label := c.String(eventLabelFlag.Name)
+	author := cmd.String(eventAuthorFlag.Name)
+	entity := cmd.String(eventEntityFlag.Name)
+	since := cmd.String(eventSinceFlag.Name)
+	etype := cmd.String(eventTypeFlag.Name)
+	mention := cmd.String(eventMentionFlag.Name)
+	label := cmd.String(eventLabelFlag.Name)
 
-	limit := c.Int(queryLimitFlag.Name)
+	limit := cmd.Int(queryLimitFlag.Name)
 	if limit == 0 || limit > queryResultLimitDefault {
 		limit = queryResultLimitDefault
 	}
@@ -254,7 +264,7 @@ func cmdQueryEvents(c *cli.Context) error {
 		PageSize: limit,
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	list, err := data.SearchEvents(cfg.DB, q)
 	if err != nil {
@@ -268,16 +278,16 @@ func cmdQueryEvents(c *cli.Context) error {
 	return nil
 }
 
-func cmdQueryList[T any](c *cli.Context, flag *cli.StringFlag, fn func(*sql.DB, string, int) ([]*T, error)) error {
-	applyFlags(c)
-	val := c.String(flag.Name)
+func cmdQueryList[T any](cmd *cli.Command, flag *cli.StringFlag, fn func(*sql.DB, string, int) ([]*T, error)) error {
+	applyFlags(cmd)
+	val := cmd.String(flag.Name)
 	if val == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
-	limit := c.Int(queryLimitFlag.Name)
+	limit := cmd.Int(queryLimitFlag.Name)
 	if limit == 0 || limit > queryResultLimitDefault {
 		limit = queryResultLimitDefault
 	}
@@ -290,23 +300,23 @@ func cmdQueryList[T any](c *cli.Context, flag *cli.StringFlag, fn func(*sql.DB, 
 	return encode(list)
 }
 
-func cmdQueryEntities(c *cli.Context) error {
-	return cmdQueryList(c, entityLikeQueryFlag, data.QueryEntities)
+func cmdQueryEntities(_ context.Context, cmd *cli.Command) error {
+	return cmdQueryList(cmd, entityLikeQueryFlag, data.QueryEntities)
 }
 
-func cmdQueryDeveloper(c *cli.Context) error {
-	applyFlags(c)
-	val := c.String(ghUserNameQueryFlag.Name)
+func cmdQueryDeveloper(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	val := cmd.String(ghUserNameQueryFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if val == "" || token == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cfg := getConfig(c)
+	cfg := getConfig(cmd)
 
 	dev, err := data.GetDeveloper(cfg.DB, val)
 	if err != nil {
@@ -330,20 +340,20 @@ func cmdQueryDeveloper(c *cli.Context) error {
 	return nil
 }
 
-func cmdQueryDevelopers(c *cli.Context) error {
-	return cmdQueryList(c, developerLikeQueryFlag, data.SearchDevelopers)
+func cmdQueryDevelopers(_ context.Context, cmd *cli.Command) error {
+	return cmdQueryList(cmd, developerLikeQueryFlag, data.SearchDevelopers)
 }
 
-func cmdQueryOrgRepos(c *cli.Context) error {
-	applyFlags(c)
-	org := c.String(orgNameFlag.Name)
+func cmdQueryOrgRepos(_ context.Context, cmd *cli.Command) error {
+	applyFlags(cmd)
+	org := cmd.String(orgNameFlag.Name)
 	token, err := getGitHubToken()
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub token: %w", err)
 	}
 
 	if org == "" || token == "" {
-		return cli.ShowSubcommandHelp(c)
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
 	ctx := context.Background()
