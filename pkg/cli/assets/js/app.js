@@ -120,6 +120,8 @@ let prSizeChart;
 let contributorFunnelChart;
 let contributorMomentumChart;
 let containerActivityChart;
+let healthActivitySparkline;
+let repoMetaSparkline;
 let searchItem;
 
 // Tab state
@@ -522,6 +524,18 @@ function resetCharts() {
     if (contributorMomentumChart) {
         contributorMomentumChart.destroy();
     }
+    if (healthActivitySparkline) {
+        healthActivitySparkline.destroy();
+    }
+    if (repoMetaSparkline) {
+        repoMetaSparkline.destroy();
+    }
+    if (starsTrendChart) {
+        starsTrendChart.destroy();
+    }
+    if (forksTrendChart) {
+        forksTrendChart.destroy();
+    }
 }
 
 function onTimeSeriesChartSelect(label, val) {
@@ -838,7 +852,8 @@ function loadInsightsSummary(url) {
 function loadHealthActivitySparkline(url) {
     $.get(url, function (data) {
         if (!data || !data.dates || data.dates.length === 0) return;
-        new Chart($("#health-activity-sparkline")[0].getContext("2d"), {
+        if (healthActivitySparkline) healthActivitySparkline.destroy();
+        healthActivitySparkline = new Chart($("#health-activity-sparkline")[0].getContext("2d"), {
             type: 'line',
             data: {
                 labels: data.dates,
@@ -1121,7 +1136,8 @@ function loadRepoMeta(url) {
                 sStars.push(d.stars);
                 sForks.push(d.forks);
             });
-            new Chart($("#repo-meta-sparkline")[0].getContext("2d"), {
+            if (repoMetaSparkline) repoMetaSparkline.destroy();
+            repoMetaSparkline = new Chart($("#repo-meta-sparkline")[0].getContext("2d"), {
                 type: 'line',
                 data: {
                     labels: sLabels,
@@ -1659,6 +1675,9 @@ function loadChangeFailureRateChart(url) {
 
 function loadPRSizeChart(url) {
     $.get(url, function (data) {
+        if (!data.months || data.months.length === 0) {
+            return;
+        }
         prSizeChart = new Chart($("#pr-size-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {

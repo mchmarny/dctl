@@ -36,6 +36,22 @@ const (
 	sortForkField    string = "newest"
 	sortDirection    string = "desc"
 
+	selectPRsMissingSizeSQL = `SELECT org, repo, number
+		FROM event
+		WHERE type = 'pr'
+		  AND org = ?
+		  AND repo = ?
+		  AND number IS NOT NULL
+		  AND number > 0
+		  AND additions IS NULL
+		  AND deletions IS NULL
+	`
+
+	updatePRSizeSQL = `UPDATE event
+		SET additions = ?, deletions = ?
+		WHERE type = 'pr' AND org = ? AND repo = ? AND number = ?
+	`
+
 	insertEventSQL = `INSERT INTO event (
 			org, repo, username, type, date, url, mentions, labels,
 			state, number, created_at, closed_at, merged_at, additions, deletions, title
@@ -186,6 +202,10 @@ func ImportEvents(ctx context.Context, dbPath, token, owner, repo string, months
 
 	if err := imp.flush(); err != nil {
 		return nil, nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
+	}
+
+	if err := imp.backfillPRSize(ctx); err != nil {
+		slog.Warn("error backfilling PR size data", "repo", owner+"/"+repo, "error", err)
 	}
 
 	total := 0
@@ -548,6 +568,70 @@ func (e *EventImporter) importPREvents(ctx context.Context) error {
 		opt.ListOptions.Page = resp.NextPage
 	}
 
+	return nil
+}
+
+func (e *EventImporter) backfillPRSize(ctx context.Context) error {
+	db, err := GetDB(e.dbPath)
+	if err != nil {
+		return fmt.Errorf("error getting DB for PR size backfill: %w", err)
+	}
+	defer db.Close()
+
+	rows, err := db.QueryContext(ctx, selectPRsMissingSizeSQL, e.owner, e.repo)
+	if err != nil {
+		return fmt.Errorf("error querying PRs missing size: %w", err)
+	}
+	defer rows.Close()
+
+	type prRef struct {
+		org, repo string
+		number    int
+	}
+	var prs []prRef
+	for rows.Next() {
+		var r prRef
+		if err := rows.Scan(&r.org, &r.repo, &r.number); err != nil {
+			return fmt.Errorf("error scanning PR ref: %w", err)
+		}
+		prs = append(prs, r)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating PR refs: %w", err)
+	}
+
+	if len(prs) == 0 {
+		return nil
+	}
+
+	slog.Info("backfilling PR size data", "repo", e.owner+"/"+e.repo, "prs", len(prs))
+
+	updated := 0
+	for _, p := range prs {
+		pr, resp, err := e.client.PullRequests.Get(ctx, e.owner, e.repo, p.number)
+		if err != nil {
+			slog.Warn("error fetching PR details", "number", p.number, "error", err)
+			continue
+		}
+		if resp.StatusCode != http.StatusOK {
+			continue
+		}
+		checkRateLimit(resp)
+
+		additions := pr.GetAdditions()
+		deletions := pr.GetDeletions()
+		if additions == 0 && deletions == 0 {
+			continue
+		}
+
+		if _, err := db.ExecContext(ctx, updatePRSizeSQL, additions, deletions, p.org, p.repo, p.number); err != nil {
+			slog.Warn("error updating PR size", "number", p.number, "error", err)
+			continue
+		}
+		updated++
+	}
+
+	slog.Info("PR size backfill complete", "repo", e.owner+"/"+e.repo, "updated", updated, "total", len(prs))
 	return nil
 }
 
