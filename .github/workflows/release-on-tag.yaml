@@ -89,7 +89,7 @@ jobs:
           gcloud auth configure-docker "${REGISTRY_HOST}" --quiet
 
       - name: Install crane
-        uses: imjasonh/setup-crane@31b88ead71b86f2d2591ed4a3e99ff42b4b1544e  # v0.4
+        uses: imjasonh/setup-crane@6da1ae018866400525525ce74ff892880c099987  # v0.5
 
       - name: Authenticate to GHCR
         shell: bash
