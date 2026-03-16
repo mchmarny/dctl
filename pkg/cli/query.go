@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/mchmarny/devpulse/pkg/data"
-	"github.com/mchmarny/devpulse/pkg/data/sqlite"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/urfave/cli/v3"
 )
@@ -326,7 +326,7 @@ func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	client := net.GetOAuthClient(ctx, token)
-	dev.Organizations, err = sqlite.GetUserOrgs(ctx, client, val, 0)
+	dev.Organizations, err = ghutil.GetUserOrgs(ctx, client, val, 0)
 	if err != nil {
 		slog.Warn("failed to get user orgs", "error", err)
 	}
@@ -356,7 +356,7 @@ func cmdQueryOrgRepos(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	client := net.GetOAuthClient(ctx, token)
-	list, err := sqlite.GetOrgRepos(ctx, client, org)
+	list, err := ghutil.GetOrgRepos(ctx, client, org)
 	if err != nil {
 		return fmt.Errorf("failed to list org repos: %w", err)
 	}

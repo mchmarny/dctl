@@ -1,4 +1,4 @@
-package sqlite
+package ghutil
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 
 func TestCheckRateLimit_Nil(t *testing.T) {
 	start := time.Now()
-	checkRateLimit(nil)
+	CheckRateLimit(nil)
 	assert.Less(t, time.Since(start), time.Second, "nil response should return immediately")
 }
 
@@ -23,7 +23,7 @@ func TestCheckRateLimit_HighRemaining(t *testing.T) {
 		},
 	}
 	start := time.Now()
-	checkRateLimit(resp)
+	CheckRateLimit(resp)
 	assert.Less(t, time.Since(start), time.Second, "high remaining should not sleep")
 }
 
@@ -36,6 +36,6 @@ func TestCheckRateLimit_ResetInPast(t *testing.T) {
 		},
 	}
 	start := time.Now()
-	checkRateLimit(resp)
+	CheckRateLimit(resp)
 	assert.Less(t, time.Since(start), time.Second, "past reset should not sleep")
 }

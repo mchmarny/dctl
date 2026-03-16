@@ -1,4 +1,4 @@
-package sqlite
+package ghutil
 
 import (
 	"context"
@@ -17,46 +17,46 @@ import (
 
 var usernameRegEx = regexp.MustCompile(`@([A-Za-z0-9_]+)`)
 
-func mapUserToDeveloper(u *github.User) *data.Developer {
+func MapUserToDeveloper(u *github.User) *data.Developer {
 	return &data.Developer{
-		Username:   trim(u.Login),
-		FullName:   trim(u.Name),
-		Email:      deref(u.Email),
-		AvatarURL:  deref(u.AvatarURL),
-		ProfileURL: deref(u.HTMLURL),
-		Entity:     trim(u.Company),
+		Username:   Trim(u.Login),
+		FullName:   Trim(u.Name),
+		Email:      Deref(u.Email),
+		AvatarURL:  Deref(u.AvatarURL),
+		ProfileURL: Deref(u.HTMLURL),
+		Entity:     Trim(u.Company),
 	}
 }
 
-func deref(s *string) string {
+func Deref(s *string) string {
 	if s != nil {
 		return strings.TrimSpace(*s)
 	}
 	return ""
 }
 
-func mapGitHubUserToDeveloperListItem(u *github.User) *data.DeveloperListItem {
+func MapGitHubUserToDeveloperListItem(u *github.User) *data.DeveloperListItem {
 	return &data.DeveloperListItem{
-		Username: trim(u.Login),
-		Entity:   trim(u.Company),
+		Username: Trim(u.Login),
+		Entity:   Trim(u.Company),
 	}
 }
 
-func trim(s *string) string {
+func Trim(s *string) string {
 	if s != nil {
 		return strings.ReplaceAll(strings.TrimSpace(*s), "@", "")
 	}
 	return ""
 }
 
-func parseDate(t *time.Time) string {
+func ParseDate(t *time.Time) string {
 	if t != nil {
 		return t.Format("2006-01-02")
 	}
 	return time.Now().UTC().Format("2006-01-02")
 }
 
-func rateInfo(r *github.Rate) string {
+func RateInfo(r *github.Rate) string {
 	if r == nil {
 		return ""
 	}
@@ -73,9 +73,9 @@ func GetGitHubDeveloper(ctx context.Context, client *http.Client, username strin
 		return nil, fmt.Errorf("failed to list repositories for: %s: %w", username, err)
 	}
 
-	slog.Debug("got details for user", "username", username, "rate", rateInfo(&resp.Rate))
+	slog.Debug("got details for user", "username", username, "rate", RateInfo(&resp.Rate))
 
-	return mapUserToDeveloper(usr), nil
+	return MapUserToDeveloper(usr), nil
 }
 
 func SearchGitHubUsers(ctx context.Context, client *http.Client, query string, limit int) ([]*data.DeveloperListItem, error) {
@@ -108,13 +108,13 @@ func SearchGitHubUsers(ctx context.Context, client *http.Client, query string, l
 
 	r := make([]*data.DeveloperListItem, len(list.Users))
 	for i, u := range list.Users {
-		r[i] = mapGitHubUserToDeveloperListItem(u)
+		r[i] = MapGitHubUserToDeveloperListItem(u)
 	}
 
 	return r, nil
 }
 
-func getLabels(labels []*github.Label) []string {
+func GetLabels(labels []*github.Label) []string {
 	if labels == nil {
 		return make([]string, 0)
 	}
@@ -122,13 +122,13 @@ func getLabels(labels []*github.Label) []string {
 	r := make([]string, 0)
 	for _, l := range labels {
 		if l != nil {
-			r = append(r, strings.ToLower(trim(l.Name)))
+			r = append(r, strings.ToLower(Trim(l.Name)))
 		}
 	}
 	return r
 }
 
-func getUsernames(users ...*github.User) []string {
+func GetUsernames(users ...*github.User) []string {
 	if users == nil {
 		return make([]string, 0)
 	}
@@ -136,34 +136,34 @@ func getUsernames(users ...*github.User) []string {
 	r := make([]string, 0)
 	for _, u := range users {
 		if u != nil {
-			r = append(r, trim(u.Login))
+			r = append(r, Trim(u.Login))
 		}
 	}
 	return r
 }
 
-func parseUsers(body *string) []string {
+func ParseUsers(body *string) []string {
 	if body == nil {
 		return make([]string, 0)
 	}
 	return usernameRegEx.FindAllString(*body, -1)
 }
 
-func mapRepo(r *github.Repository) *data.Repo {
+func MapRepo(r *github.Repository) *data.Repo {
 	return &data.Repo{
-		Name:        trim(r.Name),
-		FullName:    trim(r.FullName),
-		Description: trim(r.Description),
-		URL:         trim(r.HTMLURL),
+		Name:        Trim(r.Name),
+		FullName:    Trim(r.FullName),
+		Description: Trim(r.Description),
+		URL:         Trim(r.HTMLURL),
 	}
 }
 
-func mapOrg(r *github.Organization) *data.Org {
+func MapOrg(r *github.Organization) *data.Org {
 	return &data.Org{
-		Name:        trim(r.Login),
-		Company:     trim(r.Company),
-		Description: trim(r.Description),
-		URL:         trim(r.URL),
+		Name:        Trim(r.Login),
+		Company:     Trim(r.Company),
+		Description: Trim(r.Description),
+		URL:         Trim(r.URL),
 	}
 }
 
@@ -187,7 +187,7 @@ func GetUserOrgs(ctx context.Context, client *http.Client, username string, limi
 	list := make([]*data.Org, 0)
 	for _, r := range items {
 		slog.Debug("org", "value", r)
-		list = append(list, mapOrg(r))
+		list = append(list, MapOrg(r))
 	}
 
 	return list, nil
@@ -210,10 +210,10 @@ func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*data.
 		if err != nil {
 			return nil, fmt.Errorf("failed to list repositories for: %s: %w", org, err)
 		}
-		checkRateLimit(resp)
+		CheckRateLimit(resp)
 
 		for _, r := range items {
-			list = append(list, mapRepo(r))
+			list = append(list, MapRepo(r))
 		}
 
 		if resp.NextPage == 0 {

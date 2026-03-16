@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 )
 
 const (
@@ -169,7 +170,7 @@ func (s *Store) MergeDeveloper(ctx context.Context, client *http.Client, usernam
 		return nil, fmt.Errorf("username mismatch (CNCF): %s != %s", dbDev.Username, cDev.Username)
 	}
 
-	ghDev, err := GetGitHubDeveloper(ctx, client, username)
+	ghDev, err := ghutil.GetGitHubDeveloper(ctx, client, username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get github developer %s: %w", username, err)
 	}

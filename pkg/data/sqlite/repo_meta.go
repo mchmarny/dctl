@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
 )
 
@@ -53,7 +54,7 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error getting repo %s/%s: %w", owner, repo, err)
 	}
-	checkRateLimit(resp)
+	ghutil.CheckRateLimit(resp)
 
 	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 	lang := r.GetLanguage()

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
 )
 
@@ -63,7 +64,7 @@ func (s *Store) ImportRepoMetricHistory(ctx context.Context, token, owner, repo 
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error getting repo %s/%s: %w", owner, repo, err)
 	}
-	checkRateLimit(resp)
+	ghutil.CheckRateLimit(resp)
 
 	currentStars := r.GetStargazersCount()
 	currentForks := r.GetForksCount()
@@ -91,7 +92,7 @@ func countRecentStarsByDay(ctx context.Context, client *github.Client, owner, re
 	if err != nil {
 		return nil, fmt.Errorf("error listing stargazers: %w", err)
 	}
-	checkRateLimit(resp)
+	ghutil.CheckRateLimit(resp)
 
 	lastPage := resp.LastPage
 	if lastPage == 0 {
@@ -103,7 +104,7 @@ func countRecentStarsByDay(ctx context.Context, client *github.Client, owner, re
 		if err != nil {
 			return nil, fmt.Errorf("error listing stargazers page %d: %w", page, err)
 		}
-		checkRateLimit(resp)
+		ghutil.CheckRateLimit(resp)
 
 		if len(stargazers) == 0 {
 			break
@@ -143,7 +144,7 @@ func countRecentForksByDay(ctx context.Context, client *github.Client, owner, re
 		if err != nil {
 			return nil, fmt.Errorf("error listing forks: %w", err)
 		}
-		checkRateLimit(resp)
+		ghutil.CheckRateLimit(resp)
 
 		if len(forks) == 0 {
 			break

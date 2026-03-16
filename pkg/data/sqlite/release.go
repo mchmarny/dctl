@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
 )
 
@@ -127,7 +128,7 @@ func (s *Store) ImportReleases(ctx context.Context, token, owner, repo string) e
 		if listErr != nil || resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("error listing releases %s/%s: %w", owner, repo, listErr)
 		}
-		checkRateLimit(resp)
+		ghutil.CheckRateLimit(resp)
 
 		if len(releases) == 0 {
 			break

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v83/github"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +61,7 @@ func TestMapOrg(t *testing.T) {
 		Description: &desc,
 		URL:         &url,
 	}
-	org := mapOrg(o)
+	org := ghutil.MapOrg(o)
 	assert.Equal(t, "testorg", org.Name)
 	assert.Equal(t, "TestCo", org.Company)
 	assert.Equal(t, "An org", org.Description)

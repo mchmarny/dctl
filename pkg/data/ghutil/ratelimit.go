@@ -1,4 +1,4 @@
-package sqlite
+package ghutil
 
 import (
 	"errors"
@@ -9,14 +9,14 @@ import (
 	"github.com/google/go-github/v83/github"
 )
 
-const rateLimitThreshold = 10
+const RateLimitThreshold = 10
 
-func checkRateLimit(resp *github.Response) {
+func CheckRateLimit(resp *github.Response) {
 	if resp == nil {
 		return
 	}
 
-	if resp.Rate.Remaining > rateLimitThreshold {
+	if resp.Rate.Remaining > RateLimitThreshold {
 		return
 	}
 
@@ -45,9 +45,9 @@ func checkRateLimit(resp *github.Response) {
 	time.Sleep(total)
 }
 
-// abuseRetryAfter returns the retry-after duration if the error is a secondary
+// AbuseRetryAfter returns the retry-after duration if the error is a secondary
 // (abuse) rate limit error. Returns 0 if the error is not an abuse rate limit.
-func abuseRetryAfter(err error) time.Duration {
+func AbuseRetryAfter(err error) time.Duration {
 	var abuse *github.AbuseRateLimitError
 	if errors.As(err, &abuse) {
 		d := abuse.GetRetryAfter()

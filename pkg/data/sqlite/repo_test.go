@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v83/github"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +49,7 @@ func TestMapRepo(t *testing.T) {
 		Description: &desc,
 		HTMLURL:     &htmlURL,
 	}
-	repo := mapRepo(r)
+	repo := ghutil.MapRepo(r)
 	assert.Equal(t, "my-repo", repo.Name)
 	assert.Equal(t, "org/my-repo", repo.FullName)
 	assert.Equal(t, "A test repo", repo.Description)

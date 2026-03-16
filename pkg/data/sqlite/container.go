@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
 )
 
@@ -79,7 +80,7 @@ func listRepoContainerPackages(ctx context.Context, client *github.Client, org, 
 			}
 			return nil, fmt.Errorf("listing packages for %s: %w", org, err)
 		}
-		checkRateLimit(resp)
+		ghutil.CheckRateLimit(resp)
 
 		total += len(packages)
 
@@ -149,7 +150,7 @@ func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql
 		if err != nil {
 			return 0, fmt.Errorf("listing versions for %s/%s: %w", org, pkgName, err)
 		}
-		checkRateLimit(resp)
+		ghutil.CheckRateLimit(resp)
 
 		seenOld := false
 		for _, v := range versions {

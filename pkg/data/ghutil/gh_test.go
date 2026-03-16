@@ -1,4 +1,4 @@
-package sqlite
+package ghutil
 
 import (
 	"testing"
@@ -17,25 +17,25 @@ func TestParsingBody(t *testing.T) {
 	}
 
 	for input, expected := range tests {
-		names := parseUsers(&input)
+		names := ParseUsers(&input)
 		assert.Len(t, names, expected)
 	}
 }
 
 func TestParseDate(t *testing.T) {
 	now := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
-	assert.Equal(t, "2025-06-15", parseDate(&now))
-	assert.NotEmpty(t, parseDate(nil))
+	assert.Equal(t, "2025-06-15", ParseDate(&now))
+	assert.NotEmpty(t, ParseDate(nil))
 }
 
 func TestTrim(t *testing.T) {
 	s := " @hello "
-	assert.Equal(t, "hello", trim(&s))
-	assert.Equal(t, "", trim(nil))
+	assert.Equal(t, "hello", Trim(&s))
+	assert.Equal(t, "", Trim(nil))
 }
 
 func TestGetLabels_Nil(t *testing.T) {
-	assert.Empty(t, getLabels(nil))
+	assert.Empty(t, GetLabels(nil))
 }
 
 func TestGetLabels_WithValues(t *testing.T) {
@@ -46,14 +46,14 @@ func TestGetLabels_WithValues(t *testing.T) {
 		{Name: &name2},
 		nil,
 	}
-	result := getLabels(labels)
+	result := GetLabels(labels)
 	assert.Len(t, result, 2)
 	assert.Equal(t, "bug", result[0])
 	assert.Equal(t, "feature", result[1])
 }
 
 func TestGetUsernames_Nil(t *testing.T) {
-	assert.Empty(t, getUsernames(nil))
+	assert.Empty(t, GetUsernames(nil))
 }
 
 func TestGetUsernames_WithValues(t *testing.T) {
@@ -64,12 +64,12 @@ func TestGetUsernames_WithValues(t *testing.T) {
 		nil,
 		{Login: &login2},
 	}
-	result := getUsernames(users...)
+	result := GetUsernames(users...)
 	assert.Len(t, result, 2)
 }
 
 func TestParseUsers_NilBody(t *testing.T) {
-	assert.Empty(t, parseUsers(nil))
+	assert.Empty(t, ParseUsers(nil))
 }
 
 func TestMapUserToDeveloper(t *testing.T) {
@@ -87,7 +87,7 @@ func TestMapUserToDeveloper(t *testing.T) {
 		HTMLURL:   &htmlURL,
 		Company:   &company,
 	}
-	dev := mapUserToDeveloper(u)
+	dev := MapUserToDeveloper(u)
 	assert.Equal(t, "testuser", dev.Username)
 	assert.Equal(t, "Test User", dev.FullName)
 	assert.Equal(t, "test@example.com", dev.Email)
@@ -95,7 +95,7 @@ func TestMapUserToDeveloper(t *testing.T) {
 }
 
 func TestRateInfo_Nil(t *testing.T) {
-	assert.Equal(t, "", rateInfo(nil))
+	assert.Equal(t, "", RateInfo(nil))
 }
 
 func TestRateInfo_WithRate(t *testing.T) {
@@ -104,7 +104,7 @@ func TestRateInfo_WithRate(t *testing.T) {
 		Limit:     5000,
 		Reset:     github.Timestamp{Time: time.Date(2025, 6, 15, 14, 30, 0, 0, time.UTC)},
 	}
-	info := rateInfo(r)
+	info := RateInfo(r)
 	assert.Contains(t, info, "4999")
 	assert.Contains(t, info, "5000")
 }
@@ -116,27 +116,27 @@ func TestMapGitHubUserToDeveloperListItem(t *testing.T) {
 		Login:   &login,
 		Company: &company,
 	}
-	item := mapGitHubUserToDeveloperListItem(u)
+	item := MapGitHubUserToDeveloperListItem(u)
 	assert.Equal(t, "testuser", item.Username)
 	assert.Equal(t, "TestCo", item.Entity)
 }
 
 func TestGetUsernames_EmptySlice(t *testing.T) {
-	result := getUsernames([]*github.User{}...)
+	result := GetUsernames([]*github.User{}...)
 	assert.Empty(t, result)
 }
 
 func TestGetLabels_EmptySlice(t *testing.T) {
-	result := getLabels([]*github.Label{})
+	result := GetLabels([]*github.Label{})
 	assert.Empty(t, result)
 }
 
 func TestTrim_EmptyString(t *testing.T) {
 	s := ""
-	assert.Equal(t, "", trim(&s))
+	assert.Equal(t, "", Trim(&s))
 }
 
 func TestTrim_AtSign(t *testing.T) {
 	s := "@org"
-	assert.Equal(t, "org", trim(&s))
+	assert.Equal(t, "org", Trim(&s))
 }

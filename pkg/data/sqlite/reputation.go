@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-github/v83/github"
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/mchmarny/reputer/pkg/score"
 )
@@ -381,7 +382,7 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 	if err != nil {
 		return sig, fmt.Errorf("error getting user %s: %w", username, err)
 	}
-	checkRateLimit(resp)
+	ghutil.CheckRateLimit(resp)
 
 	if usr.CreatedAt != nil {
 		sig.AgeDays = int64(time.Since(usr.CreatedAt.Time).Hours() / 24)
@@ -405,7 +406,7 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 				slog.Debug("error checking org membership", "org", org, "username", username, "error", memberErr)
 				continue
 			}
-			checkRateLimit(memberResp)
+			ghutil.CheckRateLimit(memberResp)
 			if isMember {
 				sig.OrgMember = true
 				break
@@ -426,7 +427,7 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 			slog.Debug("error listing repos for fork count", "username", username, "error", repoErr)
 			break
 		}
-		checkRateLimit(repoResp)
+		ghutil.CheckRateLimit(repoResp)
 		for _, r := range repos {
 			if r.GetFork() {
 				forkedCount++
@@ -446,7 +447,7 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 	if mergedErr != nil {
 		slog.Debug("error searching merged PRs", "username", username, "error", mergedErr)
 	} else {
-		checkRateLimit(mergedResp)
+		ghutil.CheckRateLimit(mergedResp)
 		sig.PRsMerged = int64(mergedResult.GetTotal())
 	}
 
@@ -457,7 +458,7 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 	if closedErr != nil {
 		slog.Debug("error searching closed PRs", "username", username, "error", closedErr)
 	} else {
-		checkRateLimit(closedResp)
+		ghutil.CheckRateLimit(closedResp)
 		sig.PRsClosed = int64(closedResult.GetTotal())
 	}
 
@@ -473,7 +474,7 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 			slog.Debug("error searching recent PRs", "username", username, "error", recentErr)
 			break
 		}
-		checkRateLimit(recentResp)
+		ghutil.CheckRateLimit(recentResp)
 		for _, issue := range recentResult.Issues {
 			if repoURL := issue.GetRepositoryURL(); repoURL != "" {
 				recentRepoSet[repoURL] = true
