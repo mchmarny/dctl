@@ -26,8 +26,8 @@ func TestMain(m *testing.M) {
 		slog.Error("fatal error", "error", err)
 		os.Exit(1)
 	}
-	defer store.Close()
 
 	code := m.Run()
+	store.Close()
 	os.Exit(code)
 }

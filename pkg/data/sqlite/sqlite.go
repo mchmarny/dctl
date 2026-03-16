@@ -8,8 +8,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mchmarny/devpulse/pkg/data"
 	_ "modernc.org/sqlite"
 )
+
+// Compile-time check that Store implements data.Store.
+var _ data.Store = (*Store)(nil)
 
 //go:embed sql/migrations/*.sql
 var migrationsFS embed.FS

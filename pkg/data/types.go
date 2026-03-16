@@ -11,7 +11,7 @@ import (
 
 const (
 	DataFileName          string = "data.db"
-	EventAgeMonthsDefault        = 6
+	EventAgeMonthsDefault int    = 6
 
 	EventTypePR           string = "pr"
 	EventTypePRReview     string = "pr_review"
@@ -20,54 +20,10 @@ const (
 	EventTypeFork         string = "fork"
 )
 
-var (
-	UpdatableProperties = []string{
-		"entity",
-	}
-
-	entityNoise = map[string]bool{
-		"B.V.":        true,
-		"CDL":         true,
-		"CO":          true,
-		"COMPANY":     true,
-		"CORP":        true,
-		"CORPORATION": true,
-		"GMBH":        true,
-		"GROUP":       true,
-		"INC":         true,
-		"LLC":         true,
-		"LC":          true,
-		"P.C.":        true,
-		"P.A.":        true,
-		"S.C.":        true,
-		"LTD.":        true,
-		"CHTD.":       true,
-		"PC":          true,
-		"LTD":         true,
-		"PVT":         true,
-		"SE":          true,
-		"S.A.":        true,
-	}
-
-	entitySubstitutions = map[string]string{
-		"CHAINGUARDDEV":       "CHAINGUARD",
-		"GCP":                 "GOOGLE",
-		"GOOGLECLOUD":         "GOOGLE",
-		"GOOGLECLOUDPLATFORM": "GOOGLE",
-		"HUAWEICLOUD":         "HUAWEI",
-		"IBM CODAITY":         "IBM",
-		"IBM RESEARCH":        "IBM",
-		"INTERNATIONAL BUSINESS MACHINES CORPORATION":                 "IBM",
-		"INTERNATIONAL BUSINESS MACHINES":                             "IBM",
-		"INTERNATIONAL INSTITUTE OF INFORMATION TECHNOLOGY BANGALORE": "IIIT BANGALORE",
-		"LINE PLUS":       "LINE",
-		"MICROSOFT CHINA": "MICROSOFT",
-		"REDHATOFFICIAL":  "REDHAT",
-		"S&P GLOBAL INC":  "S&P",
-		"S&P GLOBAL":      "S&P",
-		"VERVERICA ORIGINAL CREATORS OF APACHE FLINK": "VERVERICA",
-	}
-)
+// UpdatableProperties lists developer fields that can be substituted.
+var UpdatableProperties = []string{
+	"entity",
+}
 
 // ---------------------------------------------------------------------------
 // Database state types
