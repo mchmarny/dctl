@@ -22,7 +22,7 @@ func faviconHandler() http.HandlerFunc {
 	}
 }
 
-func homeViewHandler(tmpl *template.Template) http.HandlerFunc {
+func homeViewHandler(tmpl *template.Template, basePath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		d := map[string]any{
 			"version":       version,
@@ -30,6 +30,7 @@ func homeViewHandler(tmpl *template.Template) http.HandlerFunc {
 			"build_date":    date,
 			"err":           r.URL.Query().Get("err"),
 			"period_months": data.EventAgeMonthsDefault,
+			"base_path":     basePath,
 		}
 		if err := tmpl.ExecuteTemplate(w, "home", d); err != nil {
 			slog.Error("template render failed", "error", err)

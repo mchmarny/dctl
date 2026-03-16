@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,6 +45,12 @@ var (
 		Sources: cli.EnvVars("DEVPULSE_NO_BROWSER"),
 	}
 
+	basePathFlag = &cli.StringFlag{
+		Name:    "base-path",
+		Usage:   "Base URL path when hosted behind a reverse proxy (e.g. /devpulse)",
+		Sources: cli.EnvVars("DEVPULSE_BASE_PATH"),
+	}
+
 	serverCmd = &cli.Command{
 		Name:    "server",
 		Aliases: []string{"view"},
@@ -52,21 +59,37 @@ var (
 		Flags: []cli.Flag{
 			portFlag,
 			noBrowserFlag,
+			basePathFlag,
 			debugFlag,
 		},
 	}
 )
+
+func normalizeBasePath(raw string) string {
+	bp := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if bp != "" && !strings.HasPrefix(bp, "/") {
+		bp = "/" + bp
+	}
+	return bp
+}
 
 func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	cfg := getConfig(cmd)
 	port := cmd.Int(portFlag.Name)
 	address := fmt.Sprintf("127.0.0.1:%d", port)
+	basePath := normalizeBasePath(cmd.String(basePathFlag.Name))
 
-	mux := makeRouter(cfg.DB)
+	mux := makeRouter(cfg.DB, basePath)
+
+	var handler http.Handler = mux
+	if basePath != "" {
+		handler = http.StripPrefix(basePath, mux)
+	}
+
 	s := &http.Server{
 		Addr:           address,
-		Handler:        mux,
+		Handler:        handler,
 		ReadTimeout:    serverTimeoutSeconds * time.Second,
 		WriteTimeout:   serverTimeoutSeconds * time.Second,
 		MaxHeaderBytes: 1 << serverMaxHeaderBytes,
@@ -81,7 +104,7 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 		}
 	}()
 
-	url := fmt.Sprintf("http://%s", address)
+	url := fmt.Sprintf("http://%s%s", address, basePath)
 	slog.Info("started", "address", url)
 
 	if !cmd.Bool(noBrowserFlag.Name) {
@@ -99,7 +122,7 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func makeRouter(db *sql.DB) *http.ServeMux {
+func makeRouter(db *sql.DB, basePath string) *http.ServeMux {
 	tmpl := template.Must(template.New("").ParseFS(embedFS, "templates/*.html"))
 
 	mux := http.NewServeMux()
@@ -109,7 +132,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /favicon.ico", faviconHandler())
 
 	// Views
-	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl))
+	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl, basePath))
 
 	// Data API
 	mux.HandleFunc("GET /data/min-date", minDateAPIHandler(db))
