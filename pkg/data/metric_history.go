@@ -27,14 +27,6 @@ const (
 	`
 )
 
-type RepoMetricHistory struct {
-	Org   string `json:"org"`
-	Repo  string `json:"repo"`
-	Date  string `json:"date"`
-	Stars int    `json:"stars"`
-	Forks int    `json:"forks"`
-}
-
 func GetRepoMetricHistory(db *sql.DB, org, repo *string) ([]*RepoMetricHistory, error) {
 	if db == nil {
 		return nil, errDBNotInitialized

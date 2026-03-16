@@ -32,18 +32,6 @@ const (
 	`
 )
 
-type RepoMeta struct {
-	Org        string `json:"org" yaml:"org"`
-	Repo       string `json:"repo" yaml:"repo"`
-	Stars      int    `json:"stars" yaml:"stars"`
-	Forks      int    `json:"forks" yaml:"forks"`
-	OpenIssues int    `json:"open_issues" yaml:"openIssues"`
-	Language   string `json:"language" yaml:"language"`
-	License    string `json:"license" yaml:"license"`
-	Archived   bool   `json:"archived" yaml:"archived"`
-	UpdatedAt  string `json:"updated_at" yaml:"updatedAt"`
-}
-
 func ImportRepoMeta(ctx context.Context, dbPath, token, owner, repo string) error {
 	db, err := GetDB(dbPath)
 	if err != nil {

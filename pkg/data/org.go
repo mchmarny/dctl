@@ -77,18 +77,6 @@ const (
 	`
 )
 
-type Org struct {
-	URL         string `json:"url,omitempty" yaml:"url,omitempty"`
-	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
-	Company     string `json:"company,omitempty" yaml:"company,omitempty"`
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-}
-
-type OrgRepoItem struct {
-	Org  string `json:"org,omitempty" yaml:"org,omitempty"`
-	Repo string `json:"repo,omitempty" yaml:"repo,omitempty"`
-}
-
 func mapOrg(r *github.Organization) *Org {
 	return &Org{
 		Name:        trim(r.Login),

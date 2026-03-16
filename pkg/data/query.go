@@ -2,7 +2,6 @@ package data
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -86,44 +85,6 @@ const (
 		LIMIT ? OFFSET ?
 	`
 )
-
-type EventTypeSeries struct {
-	Dates         []string  `json:"dates" yaml:"dates"`
-	PRs           []int     `json:"pr" yaml:"pr"`
-	PRReviews     []int     `json:"pr_review" yaml:"prReview"`
-	Issues        []int     `json:"issue" yaml:"issue"`
-	IssueComments []int     `json:"issue_comment" yaml:"issueComment"`
-	Forks         []int     `json:"fork" yaml:"fork"`
-	Total         []int     `json:"total" yaml:"total"`
-	Trend         []float32 `json:"trend" yaml:"trend"`
-}
-
-type EventDetails struct {
-	Event     *Event     `json:"event,omitempty" yaml:"event,omitempty"`
-	Developer *Developer `json:"developer,omitempty" yaml:"developer,omitempty"`
-}
-
-type EventSearchCriteria struct {
-	FromDate *string `json:"from,omitempty" yaml:"from,omitempty"`
-	ToDate   *string `json:"to,omitempty" yaml:"to,omitempty"`
-	Type     *string `json:"type,omitempty" yaml:"type,omitempty"`
-	Org      *string `json:"org,omitempty" yaml:"org,omitempty"`
-	Repo     *string `json:"repo,omitempty" yaml:"repo,omitempty"`
-	Username *string `json:"user,omitempty" yaml:"user,omitempty"`
-	Entity   *string `json:"entity,omitempty" yaml:"entity,omitempty"`
-	Mention  *string `json:"mention,omitempty" yaml:"mention,omitempty"`
-	Label    *string `json:"label,omitempty" yaml:"label,omitempty"`
-	Page     int     `json:"page,omitempty" yaml:"page,omitempty"`
-	PageSize int     `json:"page_size,omitempty" yaml:"pageSize,omitempty"`
-}
-
-func (c EventSearchCriteria) String() string {
-	b, err := json.Marshal(c)
-	if err != nil {
-		return ""
-	}
-	return string(b)
-}
 
 func optionalLike(s *string) *string {
 	if s == nil || *s == "" {

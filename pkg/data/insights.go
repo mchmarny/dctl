@@ -409,61 +409,6 @@ const (
 	`
 )
 
-type DailyActivitySeries struct {
-	Dates  []string `json:"dates"`
-	Counts []int    `json:"counts"`
-}
-
-type VelocitySeries struct {
-	Months  []string  `json:"months" yaml:"months"`
-	Count   []int     `json:"count" yaml:"count"`
-	AvgDays []float64 `json:"avg_days" yaml:"avgDays"`
-}
-
-type InsightsSummary struct {
-	BusFactor    int    `json:"bus_factor" yaml:"busFactor"`
-	PonyFactor   int    `json:"pony_factor" yaml:"ponyFactor"`
-	Orgs         int    `json:"orgs" yaml:"orgs"`
-	Repos        int    `json:"repos" yaml:"repos"`
-	Events       int    `json:"events" yaml:"events"`
-	Contributors int    `json:"contributors" yaml:"contributors"`
-	LastImport   string `json:"last_import" yaml:"lastImport"`
-}
-
-type RetentionSeries struct {
-	Months    []string `json:"months" yaml:"months"`
-	New       []int    `json:"new" yaml:"new"`
-	Returning []int    `json:"returning" yaml:"returning"`
-}
-
-type PRReviewRatioSeries struct {
-	Months  []string  `json:"months" yaml:"months"`
-	PRs     []int     `json:"prs" yaml:"prs"`
-	Reviews []int     `json:"reviews" yaml:"reviews"`
-	Ratio   []float64 `json:"ratio" yaml:"ratio"`
-}
-
-type ChangeFailureRateSeries struct {
-	Months      []string  `json:"months" yaml:"months"`
-	Failures    []int     `json:"failures" yaml:"failures"`
-	Deployments []int     `json:"deployments" yaml:"deployments"`
-	Rate        []float64 `json:"rate" yaml:"rate"`
-}
-
-type ReviewLatencySeries struct {
-	Months   []string  `json:"months" yaml:"months"`
-	Count    []int     `json:"count" yaml:"count"`
-	AvgHours []float64 `json:"avg_hours" yaml:"avgHours"`
-}
-
-type PRSizeSeries struct {
-	Months []string `json:"months" yaml:"months"`
-	Small  []int    `json:"small" yaml:"small"`
-	Medium []int    `json:"medium" yaml:"medium"`
-	Large  []int    `json:"large" yaml:"large"`
-	XLarge []int    `json:"xlarge" yaml:"xlarge"`
-}
-
 func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*InsightsSummary, error) {
 	if db == nil {
 		return nil, errDBNotInitialized
@@ -821,31 +766,6 @@ func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*
 	}
 
 	return s, nil
-}
-
-type MomentumSeries struct {
-	Months []string `json:"months" yaml:"months"`
-	Active []int    `json:"active" yaml:"active"`
-	Delta  []int    `json:"delta" yaml:"delta"`
-}
-
-type ForksAndActivitySeries struct {
-	Months []string `json:"months" yaml:"months"`
-	Forks  []int    `json:"forks" yaml:"forks"`
-	Events []int    `json:"events" yaml:"events"`
-}
-
-type ContributorFunnelSeries struct {
-	Months       []string `json:"months" yaml:"months"`
-	FirstComment []int    `json:"first_comment" yaml:"firstComment"`
-	FirstPR      []int    `json:"first_pr" yaml:"firstPR"`
-	FirstMerge   []int    `json:"first_merge" yaml:"firstMerge"`
-}
-
-type ContributorProfileSeries struct {
-	Metrics  []string  `json:"metrics"`
-	Values   []int     `json:"values"`
-	Averages []float64 `json:"averages"`
 }
 
 func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*ForksAndActivitySeries, error) {

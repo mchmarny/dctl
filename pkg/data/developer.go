@@ -61,21 +61,6 @@ const (
 	updateDeveloperPropertySQL = `UPDATE developer SET %s = ? WHERE %s = ?`
 )
 
-type Developer struct {
-	Username      string `json:"username,omitempty" yaml:"username,omitempty"`
-	FullName      string `json:"full_name,omitempty" yaml:"fullName,omitempty"`
-	Email         string `json:"email,omitempty" yaml:"email,omitempty"`
-	AvatarURL     string `json:"avatar,omitempty" yaml:"avatar,omitempty"`
-	ProfileURL    string `json:"url,omitempty" yaml:"url,omitempty"`
-	Entity        string `json:"entity,omitempty" yaml:"entity,omitempty"`
-	Organizations []*Org `json:"organizations,omitempty" yaml:"organizations,omitempty"`
-}
-
-type DeveloperListItem struct {
-	Username string `json:"username,omitempty" yaml:"username,omitempty"`
-	Entity   string `json:"entity,omitempty" yaml:"entity,omitempty"`
-}
-
 func GetDeveloperUsernames(db *sql.DB) ([]string, error) {
 	return getDBSlice(db, selectDeveloperUsernameSQL)
 }

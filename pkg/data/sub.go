@@ -13,62 +13,6 @@ const (
 	selectSubSQL = `SELECT type, old, new FROM sub`
 )
 
-var (
-	UpdatableProperties = []string{
-		"entity",
-	}
-
-	entityNoise = map[string]bool{
-		"B.V.":        true,
-		"CDL":         true,
-		"CO":          true,
-		"COMPANY":     true,
-		"CORP":        true,
-		"CORPORATION": true,
-		"GMBH":        true,
-		"GROUP":       true,
-		"INC":         true,
-		"LLC":         true,
-		"LC":          true,
-		"P.C.":        true,
-		"P.A.":        true,
-		"S.C.":        true,
-		"LTD.":        true,
-		"CHTD.":       true,
-		"PC":          true,
-		"LTD":         true,
-		"PVT":         true,
-		"SE":          true,
-		"S.A.":        true,
-	}
-
-	entitySubstitutions = map[string]string{
-		"CHAINGUARDDEV":       "CHAINGUARD",
-		"GCP":                 "GOOGLE",
-		"GOOGLECLOUD":         "GOOGLE",
-		"GOOGLECLOUDPLATFORM": "GOOGLE",
-		"HUAWEICLOUD":         "HUAWEI",
-		"IBM CODAITY":         "IBM",
-		"IBM RESEARCH":        "IBM",
-		"INTERNATIONAL BUSINESS MACHINES CORPORATION":                 "IBM",
-		"INTERNATIONAL BUSINESS MACHINES":                             "IBM",
-		"INTERNATIONAL INSTITUTE OF INFORMATION TECHNOLOGY BANGALORE": "IIIT BANGALORE",
-		"LINE PLUS":       "LINE",
-		"MICROSOFT CHINA": "MICROSOFT",
-		"REDHATOFFICIAL":  "REDHAT",
-		"S&P GLOBAL INC":  "S&P",
-		"S&P GLOBAL":      "S&P",
-		"VERVERICA ORIGINAL CREATORS OF APACHE FLINK": "VERVERICA",
-	}
-)
-
-type Substitution struct {
-	Prop    string `json:"prop" yaml:"prop"`
-	Old     string `json:"old" yaml:"old"`
-	New     string `json:"new" yaml:"new"`
-	Records int64  `json:"records" yaml:"records"`
-}
-
 func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 	if db == nil {
 		return errDBNotInitialized

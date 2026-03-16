@@ -21,47 +21,6 @@ const (
 	affilFileURL = "https://raw.githubusercontent.com/cncf/gitdm/master/developers_affiliations%d.txt"
 )
 
-type CNCFDeveloper struct {
-	Username     string             `json:"username,omitempty" yaml:"username,omitempty"`
-	Identities   []string           `json:"identities,omitempty" yaml:"identities,omitempty"`
-	Affiliations []*CNCFAffiliation `json:"affiliations,omitempty" yaml:"affiliations,omitempty"`
-}
-
-func (c *CNCFDeveloper) GetBestIdentity() string {
-	if len(c.Identities) == 0 {
-		return ""
-	}
-
-	return c.Identities[0] // TODO: use regex to ensure a valid email address
-}
-
-func (c *CNCFDeveloper) GetLatestAffiliation() string {
-	if len(c.Affiliations) == 0 {
-		return ""
-	}
-
-	lastFrom := &CNCFAffiliation{From: "0000-00-00"}
-	for _, a := range c.Affiliations {
-		if a.From > lastFrom.From {
-			lastFrom = a
-		}
-	}
-	return lastFrom.Entity
-}
-
-type CNCFAffiliation struct {
-	Entity string `json:"entity,omitempty" yaml:"entity,omitempty"`
-	From   string `json:"from,omitempty" yaml:"from,omitempty"`
-	To     string `json:"to,omitempty" yaml:"to,omitempty"`
-}
-
-type AffiliationImportResult struct {
-	Duration   string `json:"duration,omitempty" yaml:"duration,omitempty"`
-	DBDevs     int    `json:"db_devs,omitempty" yaml:"dbDevs,omitempty"`
-	CNCFDevs   int    `json:"cncf_devs,omitempty" yaml:"cncfDevs,omitempty"`
-	MappedDevs int    `json:"mapped_devs,omitempty" yaml:"mappedDevs,omitempty"`
-}
-
 // UpdateDevelopersWithCNCFEntityAffiliations updates the developers with the CNCF entity affiliations.
 func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB, client *http.Client) (*AffiliationImportResult, error) {
 	if db == nil {

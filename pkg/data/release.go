@@ -101,23 +101,6 @@ const (
 	`
 )
 
-type ReleaseCadenceSeries struct {
-	Months      []string `json:"months" yaml:"months"`
-	Total       []int    `json:"total" yaml:"total"`
-	Stable      []int    `json:"stable" yaml:"stable"`
-	Deployments []int    `json:"deployments" yaml:"deployments"`
-}
-
-type ReleaseDownloadsSeries struct {
-	Months    []string `json:"months" yaml:"months"`
-	Downloads []int    `json:"downloads" yaml:"downloads"`
-}
-
-type ReleaseDownloadsByTagSeries struct {
-	Tags      []string `json:"tags" yaml:"tags"`
-	Downloads []int    `json:"downloads" yaml:"downloads"`
-}
-
 func ImportReleases(ctx context.Context, dbPath, token, owner, repo string) error {
 	client := github.NewClient(net.GetOAuthClient(ctx, token))
 

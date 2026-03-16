@@ -37,12 +37,6 @@ const (
 	`
 )
 
-// ContainerActivitySeries is the chart data for container version publishes per month.
-type ContainerActivitySeries struct {
-	Months   []string `json:"months" yaml:"months"`
-	Versions []int    `json:"versions" yaml:"versions"`
-}
-
 // ImportContainerVersions fetches container package versions from the GitHub API
 // and stores them. Repos without container packages are silently skipped.
 func ImportContainerVersions(ctx context.Context, dbPath, token, org, repo string) error {

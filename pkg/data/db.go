@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	DataFileName     string = "data.db"
 	nonAlphaNumRegex string = "[^a-zA-Z0-9 ]+"
 
 	// botExcludeSQL filters out bot accounts using the "e" table alias.
@@ -172,15 +171,3 @@ func Contains[T comparable](list []T, val T) bool {
 	return false
 }
 
-type Query struct {
-	On    int64  `json:"on,omitempty" yaml:"on,omitempty"`
-	Type  string `json:"type,omitempty" yaml:"type,omitempty"`
-	Value string `json:"value,omitempty" yaml:"value,omitempty"`
-	Limit int    `json:"limit,omitempty" yaml:"limit,omitempty"`
-}
-
-type CountedResult struct {
-	Query   Query            `json:"query,omitempty" yaml:"query,omitempty"`
-	Results int              `json:"results,omitempty" yaml:"results,omitempty"`
-	Data    map[string]int64 `json:"data,omitempty" yaml:"data,omitempty"`
-}

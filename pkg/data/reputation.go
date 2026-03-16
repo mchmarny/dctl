@@ -93,58 +93,6 @@ const (
 	`
 )
 
-// ReputationResult is returned by the shallow bulk import.
-type ReputationResult struct {
-	Updated int `json:"updated" yaml:"updated"`
-	Skipped int `json:"skipped" yaml:"skipped"`
-	Errors  int `json:"errors" yaml:"errors"`
-}
-
-// DeepReputationResult is returned by the bulk deep scoring step.
-type DeepReputationResult struct {
-	Scored  int `json:"scored" yaml:"scored"`
-	Skipped int `json:"skipped" yaml:"skipped"`
-	Errors  int `json:"errors" yaml:"errors"`
-}
-
-// ReputationDistribution is the dashboard chart data.
-type ReputationDistribution struct {
-	Labels []string  `json:"labels" yaml:"labels"`
-	Data   []float64 `json:"data" yaml:"data"`
-}
-
-// UserReputation is returned by the on-demand deep score endpoint.
-type UserReputation struct {
-	Username   string         `json:"username" yaml:"username"`
-	Reputation float64        `json:"reputation" yaml:"reputation"`
-	Deep       bool           `json:"deep" yaml:"deep"`
-	Signals    *SignalSummary `json:"signals,omitempty" yaml:"signals,omitempty"`
-}
-
-// SignalSummary exposes gathered signals to the UI.
-type SignalSummary struct {
-	AgeDays           int64  `json:"age_days" yaml:"ageDays"`
-	Followers         int64  `json:"followers" yaml:"followers"`
-	Following         int64  `json:"following" yaml:"following"`
-	PublicRepos       int64  `json:"public_repos" yaml:"publicRepos"`
-	Suspended         bool   `json:"suspended" yaml:"suspended"`
-	OrgMember         bool   `json:"org_member" yaml:"orgMember"`
-	Commits           int64  `json:"commits" yaml:"commits"`
-	TotalCommits      int64  `json:"total_commits" yaml:"totalCommits"`
-	TotalContributors int    `json:"total_contributors" yaml:"totalContributors"`
-	LastCommitDays    int64  `json:"last_commit_days" yaml:"lastCommitDays"`
-	AuthorAssociation string `json:"author_association" yaml:"authorAssociation"`
-	HasBio            bool   `json:"has_bio" yaml:"hasBio"`
-	HasCompany        bool   `json:"has_company" yaml:"hasCompany"`
-	HasLocation       bool   `json:"has_location" yaml:"hasLocation"`
-	HasWebsite        bool   `json:"has_website" yaml:"hasWebsite"`
-	PRsMerged         int64  `json:"prs_merged" yaml:"prsMerged"`
-	PRsClosed         int64  `json:"prs_closed" yaml:"prsClosed"`
-	RecentPRRepoCount int64  `json:"recent_pr_repo_count" yaml:"recentPRRepoCount"`
-	ForkedRepos       int64  `json:"forked_repos" yaml:"forkedRepos"`
-	TrustedOrgMember  bool   `json:"trusted_org_member" yaml:"trustedOrgMember"`
-}
-
 // globalStats holds DB-wide statistics computed once per import run.
 type globalStats struct {
 	totalCommits      int64

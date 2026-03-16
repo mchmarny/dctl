@@ -13,16 +13,6 @@ const (
 	deleteState         = `DELETE FROM state WHERE org = ? AND repo = ?`
 )
 
-type DeleteResult struct {
-	Org           string `json:"org" yaml:"org"`
-	Repo          string `json:"repo" yaml:"repo"`
-	Events        int64  `json:"events" yaml:"events"`
-	RepoMeta      int64  `json:"repo_meta" yaml:"repo_meta"`
-	Releases      int64  `json:"releases" yaml:"releases"`
-	ReleaseAssets int64  `json:"release_assets" yaml:"release_assets"`
-	State         int64  `json:"state" yaml:"state"`
-}
-
 func DeleteRepoData(db *sql.DB, org, repo string) (*DeleteResult, error) {
 	if db == nil {
 		return nil, errDBNotInitialized

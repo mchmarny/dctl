@@ -42,12 +42,6 @@ const (
 	updateEntityNamesSQL = `UPDATE developer SET entity = ? WHERE entity = ?`
 )
 
-type EntityResult struct {
-	Entity         string               `json:"entity,omitempty" yaml:"entity,omitempty"`
-	DeveloperCount int                  `json:"developer_count,omitempty" yaml:"developerCount,omitempty"`
-	Developers     []*DeveloperListItem `json:"developers,omitempty" yaml:"developers,omitempty"`
-}
-
 // GetEntityLike returns a list of repos that match the given pattern.
 func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if db == nil {
