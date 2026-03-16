@@ -7,11 +7,11 @@
     <meta name="description" content="DevPulse - Activity Dashboard">
     <meta name="keywords" content="developer, git, github, stats, activity">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="{{ .base_path }}/static/assets/img/favicon.ico" rel="shortcut icon" />
-    <link rel="stylesheet" href="{{ .base_path }}/static/assets/css/app.css?version={{ .version }}" />
+    <link href="{{if .base_path}}{{ .base_path }}{{end}}/static/assets/img/favicon.ico" rel="shortcut icon" />
+    <link rel="stylesheet" href="{{if .base_path}}{{ .base_path }}{{end}}/static/assets/css/app.css?version={{ .version }}" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="{{ .base_path }}/static/assets/js/app.js?v={{ .version }}"></script>
+    <script src="{{if .base_path}}{{ .base_path }}{{end}}/static/assets/js/app.js?v={{ .version }}"></script>
 </head>
 
 <body>

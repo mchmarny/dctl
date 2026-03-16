@@ -74,12 +74,20 @@ var (
 	}
 )
 
-func normalizeBasePath(raw string) string {
+var errInvalidBasePath = errors.New("base path must not contain '..' or '://'")
+
+func normalizeBasePath(raw string) (string, error) {
 	bp := strings.TrimRight(strings.TrimSpace(raw), "/")
-	if bp != "" && !strings.HasPrefix(bp, "/") {
+	if bp == "" {
+		return "", nil
+	}
+	if strings.Contains(bp, "..") || strings.Contains(bp, "://") {
+		return "", errInvalidBasePath
+	}
+	if !strings.HasPrefix(bp, "/") {
 		bp = "/" + bp
 	}
-	return bp
+	return bp, nil
 }
 
 func cmdStartServer(_ context.Context, cmd *cli.Command) error {
@@ -88,7 +96,10 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	port := cmd.Int(portFlag.Name)
 	addr := cmd.String(addressFlag.Name)
 	address := fmt.Sprintf("%s:%d", addr, port)
-	basePath := normalizeBasePath(cmd.String(basePathFlag.Name))
+	basePath, err := normalizeBasePath(cmd.String(basePathFlag.Name))
+	if err != nil {
+		return fmt.Errorf("invalid base path: %w", err)
+	}
 
 	mux := makeRouter(cfg.DB, basePath)
 
