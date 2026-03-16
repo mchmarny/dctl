@@ -29,7 +29,7 @@ const (
 
 func GetRepoMetricHistory(db *sql.DB, org, repo *string) ([]*RepoMetricHistory, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	rows, err := db.Query(selectRepoMetricHistorySQL, org, repo)

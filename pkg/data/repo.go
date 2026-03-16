@@ -32,7 +32,7 @@ func mapRepo(r *github.Repository) *Repo {
 // GetRepoLike returns a list of repos that match the given pattern.
 func GetRepoLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if query == "" {

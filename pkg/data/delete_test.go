@@ -9,7 +9,7 @@ import (
 
 func TestDeleteRepoData_NilDB(t *testing.T) {
 	_, err := DeleteRepoData(nil, "org", "repo")
-	assert.ErrorIs(t, err, errDBNotInitialized)
+	assert.ErrorIs(t, err, ErrDBNotInitialized)
 }
 
 func TestDeleteRepoData_EmptyDB(t *testing.T) {

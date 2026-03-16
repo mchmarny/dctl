@@ -15,7 +15,7 @@ const (
 
 func DeleteRepoData(db *sql.DB, org, repo string) (*DeleteResult, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if org == "" || repo == "" {

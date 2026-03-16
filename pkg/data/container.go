@@ -218,7 +218,7 @@ func ImportAllContainerVersions(ctx context.Context, dbPath, token string) error
 // GetContainerActivity returns monthly container version publish counts.
 func GetContainerActivity(db *sql.DB, org, repo *string, months int) (*ContainerActivitySeries, error) { //nolint:dupl,nolintlint // different types and SQL than GetReleaseDownloads
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)

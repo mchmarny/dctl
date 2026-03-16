@@ -15,7 +15,7 @@ const (
 
 func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	if sub == nil {
@@ -50,7 +50,7 @@ func applyDeveloperSub(db *sql.DB, sub *Substitution) error {
 
 func SaveAndApplyDeveloperSub(db *sql.DB, prop, old, new string) (*Substitution, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	s := &Substitution{
@@ -78,7 +78,7 @@ func SaveAndApplyDeveloperSub(db *sql.DB, prop, old, new string) (*Substitution,
 
 func ApplySubstitutions(db *sql.DB) ([]*Substitution, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectSubSQL)

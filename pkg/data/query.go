@@ -96,7 +96,7 @@ func optionalLike(s *string) *string {
 
 func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectEventSQL)
@@ -140,7 +140,7 @@ func SearchEvents(db *sql.DB, q *EventSearchCriteria) ([]*EventDetails, error) {
 // GetMinEventDate returns the earliest event date, optionally filtered by org/repo.
 func GetMinEventDate(db *sql.DB, org, repo *string) (string, error) {
 	if db == nil {
-		return "", errDBNotInitialized
+		return "", ErrDBNotInitialized
 	}
 
 	var minDate string
@@ -153,7 +153,7 @@ func GetMinEventDate(db *sql.DB, org, repo *string) (string, error) {
 
 func GetEventTypeSeries(db *sql.DB, org, repo, entity *string, months int) (*EventTypeSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectEventTypesSinceSQL)

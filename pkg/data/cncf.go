@@ -24,7 +24,7 @@ const (
 // UpdateDevelopersWithCNCFEntityAffiliations updates the developers with the CNCF entity affiliations.
 func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, db *sql.DB, client *http.Client) (*AffiliationImportResult, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if client == nil {

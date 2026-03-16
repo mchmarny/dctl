@@ -71,7 +71,7 @@ func GetNoFullnameDeveloperUsernames(db *sql.DB) ([]string, error) {
 
 func getDBSlice(db *sql.DB, sqlQuery string) ([]string, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(sqlQuery)
@@ -105,7 +105,7 @@ func getDBSlice(db *sql.DB, sqlQuery string) ([]string, error) {
 
 func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	if len(devs) == 0 {
@@ -155,7 +155,7 @@ func SaveDevelopers(db *sql.DB, devs []*Developer) error {
 // updated Developer ready to be saved, without writing to the DB.
 func MergeDeveloper(ctx context.Context, db *sql.DB, client *http.Client, username string, cDev *CNCFDeveloper) (*Developer, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	dbDev, err := GetDeveloper(db, username)
@@ -223,7 +223,7 @@ func printDevDeltas(dbDev *Developer, ghDev *Developer, cncfDev *CNCFDeveloper) 
 
 func GetDeveloper(db *sql.DB, username string) (*Developer, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectDeveloperSQL)
@@ -265,7 +265,7 @@ func mapDeveloperListItem(rows *sql.Rows) ([]*DeveloperListItem, error) {
 // SearchDevelopers returns a list of developers matching the given query.
 func SearchDevelopers(db *sql.DB, val string, limit int) ([]*DeveloperListItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(queryDeveloperSQL)
@@ -286,7 +286,7 @@ func SearchDevelopers(db *sql.DB, val string, limit int) ([]*DeveloperListItem, 
 
 func UpdateDeveloperNames(db *sql.DB, devs map[string]string) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	updateStmt, err := db.Prepare(updateDeveloperNamesSQL)

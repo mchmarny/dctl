@@ -103,7 +103,7 @@ type globalStats struct {
 // contributors with stale or missing scores. No GitHub API calls.
 func ImportReputation(db *sql.DB, org, repo *string) (*ReputationResult, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	threshold := time.Now().UTC().Add(-reputationStaleHours * time.Hour).Format("2006-01-02T15:04:05Z")
@@ -176,7 +176,7 @@ func ImportReputation(db *sql.DB, org, repo *string) (*ReputationResult, error) 
 // per-user and never fatal to the overall import.
 func ImportDeepReputation(ctx context.Context, db *sql.DB, token string, limit int, org, repo *string) (*DeepReputationResult, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if token == "" {
@@ -224,7 +224,7 @@ func ImportDeepReputation(ctx context.Context, db *sql.DB, token string, limit i
 // otherwise computes a new one via GitHub API.
 func GetOrComputeDeepReputation(ctx context.Context, db *sql.DB, token, username string) (*UserReputation, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	threshold := time.Now().UTC().Add(-reputationStaleHours * time.Hour).Format("2006-01-02T15:04:05Z")
@@ -254,7 +254,7 @@ func GetOrComputeDeepReputation(ctx context.Context, db *sql.DB, token, username
 // and stores the result. Called on-demand from the UI.
 func ComputeDeepReputation(ctx context.Context, db *sql.DB, token, username string) (*UserReputation, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if token == "" || username == "" {
@@ -325,7 +325,7 @@ func ComputeDeepReputation(ctx context.Context, db *sql.DB, token, username stri
 
 func GetReputationDistribution(db *sql.DB, org, repo, entity *string, months int) (*ReputationDistribution, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -519,7 +519,7 @@ func computeGlobalStats(db *sql.DB, since string) (*globalStats, error) {
 
 func getStaleReputationUsernames(db *sql.DB, org, repo *string, threshold string) ([]string, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	rows, err := db.Query(selectStaleReputationUsernamesSQL, org, repo, threshold)
@@ -546,7 +546,7 @@ func getStaleReputationUsernames(db *sql.DB, org, repo *string, threshold string
 
 func getLowestReputationUsernames(db *sql.DB, org, repo *string, threshold string, limit int) ([]string, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	rows, err := db.Query(selectLowestReputationUsernamesSQL, org, repo, threshold, limit)
@@ -573,7 +573,7 @@ func getLowestReputationUsernames(db *sql.DB, org, repo *string, threshold strin
 
 func updateReputation(db *sql.DB, username string, reputation float64, updatedAt string, deep bool, signals *SignalSummary) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	deepVal := 0
@@ -601,7 +601,7 @@ func updateReputation(db *sql.DB, username string, reputation float64, updatedAt
 
 func getDistinctOrgs(db *sql.DB) ([]string, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	rows, err := db.Query(selectDistinctOrgsSQL)

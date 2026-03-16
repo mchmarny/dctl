@@ -25,7 +25,7 @@ var (
 
 func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stateStmt, err := db.Prepare(selectState)
@@ -56,7 +56,7 @@ func GetState(db *sql.DB, query, org, repo string, min time.Time) (*State, error
 
 func SaveState(db *sql.DB, query, org, repo string, state *State) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	if state == nil {
@@ -83,7 +83,7 @@ func SaveState(db *sql.DB, query, org, repo string, state *State) error {
 
 func ClearState(db *sql.DB, org, repo string) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	q := "DELETE FROM state WHERE org = ? AND repo = ?"
@@ -97,7 +97,7 @@ func ClearState(db *sql.DB, org, repo string) error {
 // GetDataState returns the current state of the database.
 func GetDataState(db *sql.DB) (map[string]int64, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	state := make(map[string]int64)
@@ -120,7 +120,7 @@ func GetDataState(db *sql.DB) (map[string]int64, error) {
 
 func getCount(db *sql.DB, stmt *sql.Stmt) (int64, error) {
 	if db == nil {
-		return 0, errDBNotInitialized
+		return 0, ErrDBNotInitialized
 	}
 
 	row := stmt.QueryRow()

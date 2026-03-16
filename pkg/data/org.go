@@ -89,7 +89,7 @@ func mapOrg(r *github.Organization) *Org {
 // GetAllOrgRepos returns a list of repo percentages for the given organization.
 func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectAllOrgRepos)
@@ -122,7 +122,7 @@ func GetAllOrgRepos(db *sql.DB) ([]*OrgRepoItem, error) {
 
 func getPercentages(db *sql.DB, sqlStr string, entity, org, repo *string, ex []string, months int) ([]*CountedItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -176,7 +176,7 @@ func GetEntityPercentages(db *sql.DB, entity, org, repo *string, ex []string, mo
 // SearchDeveloperUsernames returns a list of developer usernames matching the given query.
 func SearchDeveloperUsernames(db *sql.DB, query string, org, repo *string, months, limit int) ([]string, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if query == "" {
@@ -211,7 +211,7 @@ func SearchDeveloperUsernames(db *sql.DB, query string, org, repo *string, month
 // GetOrgLike returns a list of orgs and repos that match the given pattern.
 func GetOrgLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if query == "" {

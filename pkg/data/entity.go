@@ -45,7 +45,7 @@ const (
 // GetEntityLike returns a list of repos that match the given pattern.
 func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if query == "" {
@@ -88,7 +88,7 @@ func GetEntityLike(db *sql.DB, query string, limit int) ([]*ListItem, error) {
 
 func GetEntity(db *sql.DB, val string) (*EntityResult, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectEntityDevelopersSQL)
@@ -123,7 +123,7 @@ func GetEntity(db *sql.DB, val string) (*EntityResult, error) {
 
 func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(queryEntitySQL)
@@ -161,7 +161,7 @@ func QueryEntities(db *sql.DB, val string, limit int) ([]*CountedItem, error) {
 
 func CleanEntities(db *sql.DB) error {
 	if db == nil {
-		return errDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	stmt, err := db.Prepare(selectEntityNamesSQL)

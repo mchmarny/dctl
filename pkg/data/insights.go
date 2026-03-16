@@ -411,7 +411,7 @@ const (
 
 func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*InsightsSummary, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -436,7 +436,7 @@ func GetInsightsSummary(db *sql.DB, org, repo, entity *string, months int) (*Ins
 
 func GetDailyActivity(db *sql.DB, org, repo, entity *string, months int) (*DailyActivitySeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -467,7 +467,7 @@ func GetDailyActivity(db *sql.DB, org, repo, entity *string, months int) (*Daily
 
 func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) (*RetentionSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -504,7 +504,7 @@ func GetContributorRetention(db *sql.DB, org, repo, entity *string, months int) 
 
 func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRReviewRatioSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -551,7 +551,7 @@ func GetPRReviewRatio(db *sql.DB, org, repo, entity *string, months int) (*PRRev
 
 func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*ChangeFailureRateSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -641,7 +641,7 @@ func GetChangeFailureRate(db *sql.DB, org, repo, entity *string, months int) (*C
 
 func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*ReviewLatencySeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -679,7 +679,7 @@ func GetReviewLatency(db *sql.DB, org, repo, entity *string, months int) (*Revie
 
 func getVelocitySeries(db *sql.DB, query string, org, repo, entity *string, months int) (*VelocitySeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -729,7 +729,7 @@ func GetTimeToRestoreBugs(db *sql.DB, org, repo, entity *string, months int) (*V
 
 func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*PRSizeSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -770,7 +770,7 @@ func GetPRSizeDistribution(db *sql.DB, org, repo, entity *string, months int) (*
 
 func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*ForksAndActivitySeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -807,7 +807,7 @@ func GetForksAndActivity(db *sql.DB, org, repo, entity *string, months int) (*Fo
 
 func GetContributorFunnel(db *sql.DB, org, repo, entity *string, months int) (*ContributorFunnelSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -846,7 +846,7 @@ func GetContributorFunnel(db *sql.DB, org, repo, entity *string, months int) (*C
 
 func GetContributorMomentum(db *sql.DB, org, repo, entity *string, months int) (*MomentumSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -891,7 +891,7 @@ func GetContributorMomentum(db *sql.DB, org, repo, entity *string, months int) (
 
 func GetContributorProfile(db *sql.DB, username string, org, repo, entity *string, months int) (*ContributorProfileSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	if username == "" {

@@ -118,7 +118,7 @@ func ImportAllRepoMeta(ctx context.Context, dbPath, token string) error {
 
 func GetRepoMetas(db *sql.DB, org, repo *string) ([]*RepoMeta, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	rows, err := db.Query(selectRepoMetaSQL, org, repo)

@@ -233,7 +233,7 @@ func ImportAllReleases(ctx context.Context, dbPath, token string) error {
 
 func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*ReleaseCadenceSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -298,7 +298,7 @@ func GetReleaseCadence(db *sql.DB, org, repo, entity *string, months int) (*Rele
 
 func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDownloadsSeries, error) { //nolint:dupl,nolintlint // different types and SQL than GetContainerActivity
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
@@ -333,7 +333,7 @@ func GetReleaseDownloads(db *sql.DB, org, repo *string, months int) (*ReleaseDow
 
 func GetReleaseDownloadsByTag(db *sql.DB, org, repo *string, months int) (*ReleaseDownloadsByTagSeries, error) {
 	if db == nil {
-		return nil, errDBNotInitialized
+		return nil, ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
