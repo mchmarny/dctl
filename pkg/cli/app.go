@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/postgres"
 	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/logging"
 	urfave "github.com/urfave/cli/v3"
@@ -133,7 +134,7 @@ func newApp() *urfave.Command {
 
 func openStore(dsn string) (data.Store, error) {
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
-		return nil, fmt.Errorf("postgres support not yet implemented")
+		return postgres.New(dsn)
 	}
 	return sqlite.New(dsn)
 }

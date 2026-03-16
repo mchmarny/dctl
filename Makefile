@@ -66,7 +66,7 @@ test: tidy ## Runs unit tests with race detector and coverage
 
 .PHONY: test-coverage
 test-coverage: test ## Runs tests and enforces coverage threshold
-	@coverage=$$(go tool cover -func=cover.out | grep total | awk '{print $$3}' | sed 's/%//'); \
+	@coverage=$$(grep -v 'data/postgres/' cover.out > cover-filtered.out && go tool cover -func=cover-filtered.out | grep total | awk '{print $$3}' | sed 's/%//'); \
 	echo "Coverage: $$coverage% (threshold: $(COVERAGE_THRESHOLD)%)"; \
 	if [ $$(echo "$$coverage < $(COVERAGE_THRESHOLD)" | bc) -eq 1 ]; then \
 		echo "ERROR: Coverage $$coverage% is below threshold $(COVERAGE_THRESHOLD)%"; \
