@@ -57,6 +57,23 @@ jobs:
         with:
           yamllint_config_filepath: .yamllint.yaml
 
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go-env
+
+      - name: Postgres Integration Tests
+        run: go test -race -count=1 -timeout=600s ./pkg/data/postgres/...
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 10

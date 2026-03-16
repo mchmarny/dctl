@@ -23,7 +23,7 @@ const (
 			AND d.entity = COALESCE($2, d.entity)
 			AND e.org = COALESCE($3, e.org)
 			AND e.repo = COALESCE($4, e.repo)
-			AND d.entity NOT IN (%s)
+			%s
 			GROUP BY d.entity
 		) dt
 		ORDER BY 2 DESC
@@ -42,7 +42,7 @@ const (
 			AND d.entity = COALESCE($2, d.entity)
 			AND e.org = COALESCE($3, e.org)
 			AND e.repo = COALESCE($4, e.repo)
-			AND d.username NOT IN (%s)
+			%s
 			AND d.username NOT LIKE '%%[bot]'
 			GROUP BY d.username
 		) dt
@@ -105,7 +105,7 @@ func (s *Store) GetAllOrgRepos() ([]*data.OrgRepoItem, error) {
 	return list, nil
 }
 
-func (s *Store) getPercentages(sqlStr string, entity, org, repo *string, ex []string, months int) ([]*data.CountedItem, error) {
+func (s *Store) getPercentages(sqlStr, exColumn string, entity, org, repo *string, ex []string, months int) ([]*data.CountedItem, error) {
 	if s.db == nil {
 		return nil, data.ErrDBNotInitialized
 	}
@@ -115,14 +115,22 @@ func (s *Store) getPercentages(sqlStr string, entity, org, repo *string, ex []st
 	// First 4 params are $1-$4 (since, entity, org, repo).
 	// The exclusion list starts at $5.
 	qArgs := []interface{}{since, entity, org, repo}
-	params := make([]string, len(ex))
 
-	for i, v := range ex {
-		params[i] = fmt.Sprintf("$%d", 5+i)
-		qArgs = append(qArgs, v)
+	var formattedSQL string
+	if len(ex) == 0 {
+		// When no exclusions, omit the NOT IN clause entirely.
+		formattedSQL = fmt.Sprintf(sqlStr, "")
+	} else {
+		params := make([]string, len(ex))
+		for i, v := range ex {
+			params[i] = fmt.Sprintf("$%d", 5+i)
+			qArgs = append(qArgs, v)
+		}
+		clause := fmt.Sprintf("AND %s NOT IN (%s)", exColumn, strings.Join(params, ","))
+		formattedSQL = fmt.Sprintf(sqlStr, clause)
 	}
 
-	stmt, err := s.db.Prepare(fmt.Sprintf(sqlStr, strings.Join(params, ",")))
+	stmt, err := s.db.Prepare(formattedSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare percentages statement: %w", err)
 	}
@@ -151,11 +159,11 @@ func (s *Store) getPercentages(sqlStr string, entity, org, repo *string, ex []st
 }
 
 func (s *Store) GetDeveloperPercentages(entity, org, repo *string, ex []string, months int) ([]*data.CountedItem, error) {
-	return s.getPercentages(selectDeveloperPercentSQL, entity, org, repo, ex, months)
+	return s.getPercentages(selectDeveloperPercentSQL, "d.username", entity, org, repo, ex, months)
 }
 
 func (s *Store) GetEntityPercentages(entity, org, repo *string, ex []string, months int) ([]*data.CountedItem, error) {
-	return s.getPercentages(selectOrgEntityPercentSQL, entity, org, repo, ex, months)
+	return s.getPercentages(selectOrgEntityPercentSQL, "d.entity", entity, org, repo, ex, months)
 }
 
 func (s *Store) SearchDeveloperUsernames(query string, org, repo *string, months, limit int) ([]string, error) {

@@ -227,7 +227,7 @@ const (
 	latency AS (
 		SELECT
 			SUBSTRING(pr.created_at, 1, 7) AS month,
-			(EXTRACT(EPOCH FROM (MIN(rev.created_at::timestamp) - pr.created_at::timestamp)) / 3600.0) AS hours
+			(EXTRACT(EPOCH FROM (MIN(rev.created_at::timestamp) - MIN(pr.created_at::timestamp))) / 3600.0) AS hours
 		FROM event pr
 		JOIN event rev ON pr.org = rev.org AND pr.repo = rev.repo AND pr.number = rev.number
 			AND rev.type = 'pr_review'
@@ -241,7 +241,7 @@ const (
 		  AND COALESCE(d.entity, '') = COALESCE($4, COALESCE(d.entity, ''))
 		  AND pr.created_at >= $5
 		  ` + botExcludePrSQL + `
-		GROUP BY pr.org, pr.repo, pr.number, SUBSTRING(pr.created_at, 1, 7)
+		GROUP BY pr.org, pr.repo, pr.number, pr.created_at
 	)
 	SELECT
 		m.month,
@@ -283,7 +283,7 @@ const (
 		m.month,
 		COUNT(DISTINCT e.username) AS active
 	FROM months m
-	JOIN event e ON SUBSTRING(e.date, 1, 7) >= SUBSTRING((m.month || '-01')::date - INTERVAL '2 months', 1, 7)
+	JOIN event e ON SUBSTRING(e.date, 1, 7) >= TO_CHAR((m.month || '-01')::date - INTERVAL '2 months', 'YYYY-MM')
 		AND SUBSTRING(e.date, 1, 7) <= m.month
 	JOIN developer d ON e.username = d.username
 	WHERE e.org = COALESCE($2, e.org)
