@@ -55,10 +55,67 @@ jobs:
         with:
           subject-checksums: dist/checksums-sha256.txt
 
+  copy-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: release
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    env:
+      SOURCE_IMAGE: 'ghcr.io/mchmarny/devpulse'
+      ARTIFACT_REGISTRY: 'us-docker.pkg.dev/eidosx/devpulse'
+      IDENTITY_PROVIDER: 'projects/116689922666/locations/global/workloadIdentityPools/github-actions-pool-devpulse/providers/github-actions-provider-devpulse'
+      PROJECT_ID: 'eidosx'
+      SERVICE_ACCOUNT: 'github-actions-devpulse@eidosx.iam.gserviceaccount.com'
+    steps:
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093  # v3
+        with:
+          token_format: access_token
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ env.IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db  # v3.0.1
+
+      - name: Configure Docker for Artifact Registry
+        shell: bash
+        run: |
+          REGISTRY_HOST="${ARTIFACT_REGISTRY%%/*}"
+          gcloud auth configure-docker "${REGISTRY_HOST}" --quiet
+
+      - name: Install crane
+        uses: imjasonh/setup-crane@31b88ead71b86f2d2591ed4a3e99ff42b4b1544e  # v0.4
+
+      - name: Authenticate to GHCR
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          echo "${GHCR_TOKEN}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Copy image to Artifact Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          echo "Copying image..."
+          echo "  Source: ${SOURCE_IMAGE}:${TAG}"
+          echo "  Target: ${ARTIFACT_REGISTRY}/devpulse:${TAG}"
+          crane copy "${SOURCE_IMAGE}:${TAG}" "${ARTIFACT_REGISTRY}/devpulse:${TAG}"
+          crane copy "${SOURCE_IMAGE}:latest" "${ARTIFACT_REGISTRY}/devpulse:latest"
+          echo "Image copied successfully"
+
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: release
+    needs:
+      - release
+      - copy-image
     permissions:
       contents: write
     steps:
