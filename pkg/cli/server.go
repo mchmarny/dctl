@@ -51,6 +51,14 @@ var (
 		Sources: cli.EnvVars("DEVPULSE_BASE_PATH"),
 	}
 
+	addressFlag = &cli.StringFlag{
+		Name:    "address",
+		Aliases: []string{"addr"},
+		Usage:   "Bind address (e.g. 0.0.0.0 for all interfaces)",
+		Value:   "127.0.0.1",
+		Sources: cli.EnvVars("DEVPULSE_ADDRESS"),
+	}
+
 	serverCmd = &cli.Command{
 		Name:    "server",
 		Aliases: []string{"view"},
@@ -58,6 +66,7 @@ var (
 		Action:  cmdStartServer,
 		Flags: []cli.Flag{
 			portFlag,
+			addressFlag,
 			noBrowserFlag,
 			basePathFlag,
 			debugFlag,
@@ -77,7 +86,8 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	cfg := getConfig(cmd)
 	port := cmd.Int(portFlag.Name)
-	address := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := cmd.String(addressFlag.Name)
+	address := fmt.Sprintf("%s:%d", addr, port)
 	basePath := normalizeBasePath(cmd.String(basePathFlag.Name))
 
 	mux := makeRouter(cfg.DB, basePath)
