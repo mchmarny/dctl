@@ -1,4 +1,4 @@
-package data
+package sqlite
 
 import (
 	"testing"
@@ -8,25 +8,26 @@ import (
 )
 
 func TestGetRepoMetas_EmptyDB(t *testing.T) {
-	db := setupTestDB(t)
-	list, err := GetRepoMetas(db, nil, nil)
+	store := setupTestDB(t)
+	list, err := store.GetRepoMetas(nil, nil)
 	require.NoError(t, err)
 	assert.Empty(t, list)
 }
 
 func TestGetRepoMetas_NilDB(t *testing.T) {
-	_, err := GetRepoMetas(nil, nil, nil)
+	s := &Store{db: nil}
+	_, err := s.GetRepoMetas(nil, nil)
 	assert.Error(t, err)
 }
 
 func TestGetRepoMetas_WithData(t *testing.T) {
-	db := setupTestDB(t)
+	store := setupTestDB(t)
 
-	_, err := db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived)
+	_, err := store.db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived)
 		VALUES ('org1', 'repo1', 100, 50, 10, 'Go', 'Apache-2.0', 0)`)
 	require.NoError(t, err)
 
-	list, err := GetRepoMetas(db, nil, nil)
+	list, err := store.GetRepoMetas(nil, nil)
 	require.NoError(t, err)
 	require.Len(t, list, 1)
 	assert.Equal(t, "org1", list[0].Org)
@@ -36,16 +37,16 @@ func TestGetRepoMetas_WithData(t *testing.T) {
 }
 
 func TestGetRepoMetas_WithFilter(t *testing.T) {
-	db := setupTestDB(t)
+	store := setupTestDB(t)
 
-	_, err := db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived)
+	_, err := store.db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived)
 		VALUES
 		('org1', 'repo1', 100, 50, 10, 'Go', 'Apache-2.0', 0),
 		('org2', 'repo2', 200, 80, 5, 'Python', 'MIT', 0)`)
 	require.NoError(t, err)
 
 	org := "org1"
-	list, err := GetRepoMetas(db, &org, nil)
+	list, err := store.GetRepoMetas(&org, nil)
 	require.NoError(t, err)
 	require.Len(t, list, 1)
 	assert.Equal(t, "org1", list[0].Org)

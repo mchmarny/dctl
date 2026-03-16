@@ -1,4 +1,4 @@
-package data
+package sqlite
 
 import (
 	"testing"
@@ -9,40 +9,42 @@ import (
 )
 
 func TestGetAllOrgRepos(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	repos, err := GetAllOrgRepos(db)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	repos, err := store.GetAllOrgRepos()
 	require.NoError(t, err)
 	assert.NotEmpty(t, repos)
 }
 
 func TestGetAllOrgRepos_NilDB(t *testing.T) {
-	_, err := GetAllOrgRepos(nil)
+	s := &Store{db: nil}
+	_, err := s.GetAllOrgRepos()
 	assert.Error(t, err)
 }
 
 func TestGetOrgLike(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	items, err := GetOrgLike(db, "test", 10)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	items, err := store.GetOrgLike("test", 10)
 	require.NoError(t, err)
 	assert.NotEmpty(t, items)
 }
 
 func TestGetOrgLike_EmptyQuery(t *testing.T) {
-	db := setupTestDB(t)
-	_, err := GetOrgLike(db, "", 10)
+	store := setupTestDB(t)
+	_, err := store.GetOrgLike("", 10)
 	assert.Error(t, err)
 }
 
 func TestGetOrgLike_NilDB(t *testing.T) {
-	_, err := GetOrgLike(nil, "test", 10)
+	s := &Store{db: nil}
+	_, err := s.GetOrgLike("test", 10)
 	assert.Error(t, err)
 }
 
 func TestGetAllOrgRepos_EmptyDB(t *testing.T) {
-	db := setupTestDB(t)
-	repos, err := GetAllOrgRepos(db)
+	store := setupTestDB(t)
+	repos, err := store.GetAllOrgRepos()
 	require.NoError(t, err)
 	assert.Empty(t, repos)
 }
@@ -65,53 +67,56 @@ func TestMapOrg(t *testing.T) {
 }
 
 func TestGetDeveloperPercentages_NilDB(t *testing.T) {
-	_, err := GetDeveloperPercentages(nil, nil, nil, nil, nil, 6)
+	s := &Store{db: nil}
+	_, err := s.GetDeveloperPercentages(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
 func TestGetEntityPercentages_NilDB(t *testing.T) {
-	_, err := GetEntityPercentages(nil, nil, nil, nil, nil, 6)
+	s := &Store{db: nil}
+	_, err := s.GetEntityPercentages(nil, nil, nil, nil, 6)
 	assert.Error(t, err)
 }
 
 func TestGetDeveloperPercentages(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	results, err := GetDeveloperPercentages(db, nil, nil, nil, []string{}, 12)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	results, err := store.GetDeveloperPercentages(nil, nil, nil, []string{}, 12)
 	require.NoError(t, err)
 	assert.NotEmpty(t, results)
 }
 
 func TestGetEntityPercentages(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	results, err := GetEntityPercentages(db, nil, nil, nil, []string{}, 12)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	results, err := store.GetEntityPercentages(nil, nil, nil, []string{}, 12)
 	require.NoError(t, err)
 	assert.NotEmpty(t, results)
 }
 
 func TestSearchDeveloperUsernames_NilDB(t *testing.T) {
-	_, err := SearchDeveloperUsernames(nil, "dev", nil, nil, 6, 10)
+	s := &Store{db: nil}
+	_, err := s.SearchDeveloperUsernames("dev", nil, nil, 6, 10)
 	assert.Error(t, err)
 }
 
 func TestSearchDeveloperUsernames_EmptyQuery(t *testing.T) {
-	db := setupTestDB(t)
-	_, err := SearchDeveloperUsernames(db, "", nil, nil, 6, 10)
+	store := setupTestDB(t)
+	_, err := store.SearchDeveloperUsernames("", nil, nil, 6, 10)
 	assert.Error(t, err)
 }
 
 func TestSearchDeveloperUsernames_EmptyDB(t *testing.T) {
-	db := setupTestDB(t)
-	results, err := SearchDeveloperUsernames(db, "dev", nil, nil, 6, 10)
+	store := setupTestDB(t)
+	results, err := store.SearchDeveloperUsernames("dev", nil, nil, 6, 10)
 	require.NoError(t, err)
 	assert.Empty(t, results)
 }
 
 func TestSearchDeveloperUsernames_WithData(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	results, err := SearchDeveloperUsernames(db, "dev", nil, nil, 12, 10)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	results, err := store.SearchDeveloperUsernames("dev", nil, nil, 12, 10)
 	require.NoError(t, err)
 	assert.NotEmpty(t, results)
 	for _, r := range results {

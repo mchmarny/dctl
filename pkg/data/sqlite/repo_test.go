@@ -1,4 +1,4 @@
-package data
+package sqlite
 
 import (
 	"testing"
@@ -9,29 +9,30 @@ import (
 )
 
 func TestGetRepoLike(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	items, err := GetRepoLike(db, "test", 10)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	items, err := store.GetRepoLike("test", 10)
 	require.NoError(t, err)
 	assert.NotEmpty(t, items)
 	assert.Contains(t, items[0].Value, "testorg/testrepo")
 }
 
 func TestGetRepoLike_EmptyQuery(t *testing.T) {
-	db := setupTestDB(t)
-	_, err := GetRepoLike(db, "", 10)
+	store := setupTestDB(t)
+	_, err := store.GetRepoLike("", 10)
 	assert.Error(t, err)
 }
 
 func TestGetRepoLike_NilDB(t *testing.T) {
-	_, err := GetRepoLike(nil, "test", 10)
+	s := &Store{db: nil}
+	_, err := s.GetRepoLike("test", 10)
 	assert.Error(t, err)
 }
 
 func TestGetRepoLike_NoResults(t *testing.T) {
-	db := setupTestDB(t)
-	seedTestData(t, db)
-	items, err := GetRepoLike(db, "nonexistent", 10)
+	store := setupTestDB(t)
+	seedTestData(t, store)
+	items, err := store.GetRepoLike("nonexistent", 10)
 	require.NoError(t, err)
 	assert.Empty(t, items)
 }

@@ -1,4 +1,4 @@
-package data
+package sqlite
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ func TestUnique(t *testing.T) {
 
 func TestIsEventBatchValidAge(t *testing.T) {
 	minTime := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
-	imp := &EventImporter{minEventTime: minTime}
+	imp := &eventImporter{minEventTime: minTime}
 
 	recent := time.Date(2025, 7, 1, 0, 0, 0, 0, time.UTC)
 	old := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -37,7 +37,7 @@ func TestIsEventBatchValidAge(t *testing.T) {
 }
 
 func TestQualifyTypeKey(t *testing.T) {
-	imp := &EventImporter{owner: "org", repo: "repo"}
+	imp := &eventImporter{owner: "org", repo: "repo"}
 	assert.Equal(t, "org/repo/pr", imp.qualifyTypeKey("pr"))
 }
 
