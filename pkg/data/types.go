@@ -12,6 +12,12 @@ import (
 const (
 	DataFileName          string = "data.db"
 	EventAgeMonthsDefault        = 6
+
+	EventTypePR           string = "pr"
+	EventTypePRReview     string = "pr_review"
+	EventTypeIssue        string = "issue"
+	EventTypeIssueComment string = "issue_comment"
+	EventTypeFork         string = "fork"
 )
 
 var (

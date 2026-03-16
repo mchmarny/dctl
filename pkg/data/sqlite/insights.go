@@ -500,9 +500,9 @@ func (s *Store) GetPRReviewRatio(org, repo, entity *string, months int) (*data.P
 	since := sinceDate(months)
 
 	rows, err := s.db.Query(selectPRReviewRatioSQL,
-		EventTypePR, EventTypePRReview,
+		data.EventTypePR, data.EventTypePRReview,
 		org, repo, entity, since,
-		EventTypePR, EventTypePRReview)
+		data.EventTypePR, data.EventTypePRReview)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query PR review ratio: %w", err)
 	}

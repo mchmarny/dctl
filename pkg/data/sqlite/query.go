@@ -166,7 +166,7 @@ func (s *Store) GetEventTypeSeries(org, repo, entity *string, months int) (*data
 	to := time.Now().UTC().Format("2006-01-02")
 
 	rows, err := stmt.Query(since, to,
-		EventTypePR, EventTypePRReview, EventTypeIssue, EventTypeIssueComment, EventTypeFork,
+		data.EventTypePR, data.EventTypePRReview, data.EventTypeIssue, data.EventTypeIssueComment, data.EventTypeFork,
 		org, repo, entity)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute series select statement: %w", err)

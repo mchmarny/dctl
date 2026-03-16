@@ -18,12 +18,6 @@ import (
 )
 
 const (
-	EventTypePR           string = "pr"
-	EventTypePRReview     string = "pr_review"
-	EventTypeIssue        string = "issue"
-	EventTypeIssueComment string = "issue_comment"
-	EventTypeFork         string = "fork"
-
 	pageSizeDefault = 100
 	importBatchSize = 500
 	nilNumber       = 0
@@ -70,11 +64,11 @@ const (
 )
 
 var EventTypes = []string{
-	EventTypePR,
-	EventTypeIssue,
-	EventTypeIssueComment,
-	EventTypePRReview,
-	EventTypeFork,
+	data.EventTypePR,
+	data.EventTypeIssue,
+	data.EventTypeIssueComment,
+	data.EventTypePRReview,
+	data.EventTypeFork,
 }
 
 type importerFunc func(ctx context.Context) error
@@ -465,7 +459,7 @@ func parsePRNumberFromURL(url string) int {
 }
 
 func (e *eventImporter) importPREvents(ctx context.Context) error {
-	slog.Debug("starting pr event import", "page", e.state[EventTypePR].Page, "since", e.state[EventTypePR].Since.Format("2006-01-02"))
+	slog.Debug("starting pr event import", "page", e.state[data.EventTypePR].Page, "since", e.state[data.EventTypePR].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListOptions{
 		State:     "all",
@@ -473,7 +467,7 @@ func (e *eventImporter) importPREvents(ctx context.Context) error {
 		Direction: sortDirection,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypePR].Page,
+			Page:    e.state[data.EventTypePR].Page,
 		},
 	}
 
@@ -513,7 +507,7 @@ func (e *eventImporter) importPREvents(ctx context.Context) error {
 				Deletions: intPtr(items[i].GetDeletions()),
 				Title:     items[i].GetTitle(),
 			}
-			if err := e.add(EventTypePR, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), mentions,
+			if err := e.add(data.EventTypePR, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), mentions,
 				getLabels(items[i].Labels), extra); err != nil {
 				return fmt.Errorf("error adding pr event: %s/%s: %w", e.owner, e.repo, err)
 			}
@@ -523,7 +517,7 @@ func (e *eventImporter) importPREvents(ctx context.Context) error {
 			}
 		}
 
-		e.state[EventTypePR].Page = opt.ListOptions.Page
+		e.state[data.EventTypePR].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -633,7 +627,7 @@ func (e *eventImporter) importPRReviews(ctx context.Context, prNumber int) error
 				Number:    &n,
 				CreatedAt: timestampStr(reviews[i].SubmittedAt),
 			}
-			if err := e.add(EventTypePRReview, *reviews[i].HTMLURL, reviews[i].User,
+			if err := e.add(data.EventTypePRReview, *reviews[i].HTMLURL, reviews[i].User,
 				timestampToTime(reviews[i].SubmittedAt), nil, nil, extra); err != nil {
 				return fmt.Errorf("error adding PR review event: %w", err)
 			}
@@ -649,16 +643,16 @@ func (e *eventImporter) importPRReviews(ctx context.Context, prNumber int) error
 }
 
 func (e *eventImporter) importIssueEvents(ctx context.Context) error {
-	slog.Debug("starting issue event import", "page", e.state[EventTypeIssue].Page, "since", e.state[EventTypeIssue].Since.Format("2006-01-02"))
+	slog.Debug("starting issue event import", "page", e.state[data.EventTypeIssue].Page, "since", e.state[data.EventTypeIssue].Since.Format("2006-01-02"))
 
 	opt := &github.IssueListByRepoOptions{
 		State:     "all",
 		Sort:      sortField,
 		Direction: sortDirection,
-		Since:     e.state[EventTypeIssue].Since,
+		Since:     e.state[data.EventTypeIssue].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypeIssue].Page,
+			Page:    e.state[data.EventTypeIssue].Page,
 		},
 	}
 
@@ -689,13 +683,13 @@ func (e *eventImporter) importIssueEvents(ctx context.Context) error {
 				ClosedAt:  timestampStr(items[i].ClosedAt),
 				Title:     items[i].GetTitle(),
 			}
-			if err := e.add(EventTypeIssue, *items[i].HTMLURL, items[i].User,
+			if err := e.add(data.EventTypeIssue, *items[i].HTMLURL, items[i].User,
 				timestampToTime(items[i].UpdatedAt), mentions, getLabels(items[i].Labels), extra); err != nil {
 				return fmt.Errorf("error adding issue event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
-		e.state[EventTypeIssue].Page = opt.ListOptions.Page
+		e.state[data.EventTypeIssue].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -715,15 +709,15 @@ func getStrPtr(s string) *string {
 }
 
 func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
-	slog.Debug("starting issue comment event import", "page", e.state[EventTypeIssueComment].Page, "since", e.state[EventTypeIssueComment].Since.Format("2006-01-02"))
+	slog.Debug("starting issue comment event import", "page", e.state[data.EventTypeIssueComment].Page, "since", e.state[data.EventTypeIssueComment].Since.Format("2006-01-02"))
 
 	opt := &github.IssueListCommentsOptions{
 		Sort:      getStrPtr(sortField),
 		Direction: getStrPtr(sortCommentField),
-		Since:     &e.state[EventTypeIssueComment].Since,
+		Since:     &e.state[data.EventTypeIssueComment].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypeIssueComment].Page,
+			Page:    e.state[data.EventTypeIssueComment].Page,
 		},
 	}
 
@@ -744,12 +738,12 @@ func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(EventTypeIssueComment, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, nil); err != nil {
+			if err := e.add(data.EventTypeIssueComment, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, nil); err != nil {
 				return fmt.Errorf("error adding issue comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
-		e.state[EventTypeIssueComment].Page = opt.ListOptions.Page
+		e.state[data.EventTypeIssueComment].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -762,15 +756,15 @@ func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
 }
 
 func (e *eventImporter) importPRReviewEvents(ctx context.Context) error {
-	slog.Debug("starting pr review event import", "page", e.state[EventTypePRReview].Page, "since", e.state[EventTypePRReview].Since.Format("2006-01-02"))
+	slog.Debug("starting pr review event import", "page", e.state[data.EventTypePRReview].Page, "since", e.state[data.EventTypePRReview].Since.Format("2006-01-02"))
 
 	opt := &github.PullRequestListCommentsOptions{
 		Sort:      sortField,
 		Direction: sortCommentField,
-		Since:     e.state[EventTypePRReview].Since,
+		Since:     e.state[data.EventTypePRReview].Since,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypePRReview].Page,
+			Page:    e.state[data.EventTypePRReview].Page,
 		},
 	}
 
@@ -799,12 +793,12 @@ func (e *eventImporter) importPRReviewEvents(ctx context.Context) error {
 					extra.Number = &n
 				}
 			}
-			if err := e.add(EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, extra); err != nil {
+			if err := e.add(data.EventTypePRReview, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), parseUsers(items[i].Body), nil, extra); err != nil {
 				return fmt.Errorf("error adding PR comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
-		e.state[EventTypePRReview].Page = opt.ListOptions.Page
+		e.state[data.EventTypePRReview].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
@@ -817,13 +811,13 @@ func (e *eventImporter) importPRReviewEvents(ctx context.Context) error {
 }
 
 func (e *eventImporter) importForkEvents(ctx context.Context) error {
-	slog.Debug("starting fork event import", "page", e.state[EventTypeFork].Page, "since", e.state[EventTypeFork].Since.Format("2006-01-02"))
+	slog.Debug("starting fork event import", "page", e.state[data.EventTypeFork].Page, "since", e.state[data.EventTypeFork].Since.Format("2006-01-02"))
 
 	opt := &github.RepositoryListForksOptions{
 		Sort: sortForkField,
 		ListOptions: github.ListOptions{
 			PerPage: pageSizeDefault,
-			Page:    e.state[EventTypeFork].Page,
+			Page:    e.state[data.EventTypeFork].Page,
 		},
 	}
 
@@ -844,12 +838,12 @@ func (e *eventImporter) importForkEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(EventTypeFork, *items[i].HTMLURL, items[i].Owner, &items[i].UpdatedAt.Time, nil, items[i].Topics, nil); err != nil {
+			if err := e.add(data.EventTypeFork, *items[i].HTMLURL, items[i].Owner, &items[i].UpdatedAt.Time, nil, items[i].Topics, nil); err != nil {
 				return fmt.Errorf("error adding fork event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
 
-		e.state[EventTypeFork].Page = opt.ListOptions.Page
+		e.state[data.EventTypeFork].Page = opt.ListOptions.Page
 
 		if resp.NextPage == 0 {
 			break
