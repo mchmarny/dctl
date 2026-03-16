@@ -9,11 +9,12 @@ import (
 	"strings"
 
 	_ "github.com/lib/pq"
+
+	"github.com/mchmarny/devpulse/pkg/data"
 )
 
 // Compile-time check that Store implements data.Store.
-// Uncomment once all interface methods are implemented:
-// var _ data.Store = (*Store)(nil)
+var _ data.Store = (*Store)(nil)
 
 //go:embed sql/migrations/*.sql
 var migrationsFS embed.FS

@@ -1,0 +1,216 @@
+package postgres
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/mchmarny/devpulse/pkg/data"
+)
+
+const (
+	selectMinEventDateSQL = `SELECT COALESCE(MIN(date), '') FROM event
+		WHERE org = COALESCE($1, org)
+		  AND repo = COALESCE($2, repo)
+	`
+
+	// Postgres version: use generate_series instead of recursive CTE,
+	// SUBSTRING instead of substr, and numbered placeholders.
+	selectEventTypesSinceSQL = `SELECT
+			date,
+			SUM(prs) as prs,
+			SUM(pr_review) as pr_review,
+			SUM(issues) as issues,
+			SUM(issue_comments) as issue_comments,
+			SUM(forks) as forks
+		FROM (
+			SELECT
+				SUBSTRING(dates.d::text, 1, 7) as date,
+				CASE WHEN e.type = $3 THEN 1 ELSE 0 END as prs,
+				CASE WHEN e.type = $4 THEN 1 ELSE 0 END as pr_review,
+				CASE WHEN e.type = $5 THEN 1 ELSE 0 END as issues,
+				CASE WHEN e.type = $6 THEN 1 ELSE 0 END as issue_comments,
+				CASE WHEN e.type = $7 THEN 1 ELSE 0 END as forks
+			FROM generate_series($1::date, $2::date, '1 day'::interval) AS dates(d)
+			LEFT JOIN event e ON dates.d::date = e.date::date
+			JOIN developer d ON e.username = d.username
+			AND e.org = COALESCE($8, e.org)
+			AND e.repo = COALESCE($9, e.repo)
+			AND d.entity = COALESCE($10, d.entity)
+			` + botExcludeSQL + `
+		) dt
+		GROUP BY date
+		ORDER BY 1
+	`
+
+	selectEventSQL = `SELECT
+			e.org,
+			e.repo,
+			e.date,
+			e.type,
+			e.url,
+			e.mentions,
+			e.labels,
+			e.state,
+			e.number,
+			e.created_at,
+			e.closed_at,
+			e.merged_at,
+			e.additions,
+			e.deletions,
+			e.changed_files,
+			e.commits,
+			d.username,
+			d.email,
+			d.full_name,
+			d.avatar,
+			d.url,
+			d.entity
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.date >= COALESCE($1, e.date)
+		AND e.date <= COALESCE($2, e.date)
+		AND e.type = COALESCE($3, e.type)
+		AND e.org = COALESCE($4, e.org)
+		AND e.repo = COALESCE($5, e.repo)
+		AND e.username = COALESCE($6, e.username)
+		AND e.mentions LIKE COALESCE($7, e.mentions)
+		AND e.labels LIKE COALESCE($8, e.labels)
+		AND d.entity = COALESCE($9, d.entity)
+		` + botExcludeSQL + `
+		ORDER BY 1 DESC, 2, 3
+		LIMIT $10 OFFSET $11
+	`
+)
+
+func optionalLike(s *string) *string {
+	if s == nil || *s == "" {
+		return nil
+	}
+	v := fmt.Sprintf("%%%s%%", *s)
+	return &v
+}
+
+func (s *Store) SearchEvents(q *data.EventSearchCriteria) ([]*data.EventDetails, error) {
+	if s.db == nil {
+		return nil, data.ErrDBNotInitialized
+	}
+
+	stmt, err := s.db.Prepare(selectEventSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare event search statement: %w", err)
+	}
+	defer stmt.Close()
+
+	offset := (q.Page - 1) * q.PageSize
+	rows, err := stmt.Query(q.FromDate, q.ToDate, q.Type, q.Org, q.Repo, q.Username, optionalLike(q.Mention), optionalLike(q.Label), q.Entity, q.PageSize, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute event search statement: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]*data.EventDetails, 0)
+
+	for rows.Next() {
+		e := &data.EventDetails{
+			Event:     &data.Event{},
+			Developer: &data.Developer{},
+		}
+		if err := rows.Scan(&e.Event.Org, &e.Event.Repo, &e.Event.Date, &e.Event.Type, &e.Event.URL,
+			&e.Event.Mentions, &e.Event.Labels,
+			&e.Event.State, &e.Event.Number, &e.Event.CreatedAt, &e.Event.ClosedAt, &e.Event.MergedAt,
+			&e.Event.Additions, &e.Event.Deletions, &e.Event.ChangedFiles, &e.Event.Commits,
+			&e.Developer.Username, &e.Developer.Email, &e.Developer.FullName,
+			&e.Developer.AvatarURL, &e.Developer.ProfileURL, &e.Developer.Entity); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		list = append(list, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return list, nil
+}
+
+func (s *Store) GetMinEventDate(org, repo *string) (string, error) {
+	if s.db == nil {
+		return "", data.ErrDBNotInitialized
+	}
+
+	var minDate string
+	if err := s.db.QueryRow(selectMinEventDateSQL, org, repo).Scan(&minDate); err != nil {
+		return "", fmt.Errorf("failed to query min event date: %w", err)
+	}
+
+	return minDate, nil
+}
+
+func (s *Store) GetEventTypeSeries(org, repo, entity *string, months int) (*data.EventTypeSeries, error) {
+	if s.db == nil {
+		return nil, data.ErrDBNotInitialized
+	}
+
+	stmt, err := s.db.Prepare(selectEventTypesSinceSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare repo events statement: %w", err)
+	}
+	defer stmt.Close()
+
+	since := sinceDate(months)
+	to := time.Now().UTC().Format("2006-01-02")
+
+	rows, err := stmt.Query(since, to,
+		data.EventTypePR, data.EventTypePRReview, data.EventTypeIssue, data.EventTypeIssueComment, data.EventTypeFork,
+		org, repo, entity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute series select statement: %w", err)
+	}
+	defer rows.Close()
+
+	series := &data.EventTypeSeries{
+		Dates:         make([]string, 0),
+		PRs:           make([]int, 0),
+		PRReviews:     make([]int, 0),
+		Issues:        make([]int, 0),
+		IssueComments: make([]int, 0),
+		Forks:         make([]int, 0),
+		Total:         make([]int, 0),
+		Trend:         make([]float32, 0),
+	}
+
+	for rows.Next() {
+		var date string
+		var prs, prComments, issues, issueComments, forks int
+		if err := rows.Scan(&date, &prs, &prComments, &issues, &issueComments, &forks); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		series.Dates = append(series.Dates, date)
+		series.PRs = append(series.PRs, prs)
+		series.PRReviews = append(series.PRReviews, prComments)
+		series.Issues = append(series.Issues, issues)
+		series.IssueComments = append(series.IssueComments, issueComments)
+		series.Forks = append(series.Forks, forks)
+		series.Total = append(series.Total, prs+prComments+issues+issueComments+forks)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	// 3-month moving average trend line
+	const window = 3
+	for i := range series.Total {
+		start := i - window + 1
+		if start < 0 {
+			start = 0
+		}
+		var sum float32
+		for j := start; j <= i; j++ {
+			sum += float32(series.Total[j])
+		}
+		series.Trend = append(series.Trend, sum/float32(i-start+1))
+	}
+
+	return series, nil
+}
