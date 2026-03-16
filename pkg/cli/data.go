@@ -530,6 +530,43 @@ func insightsContributorFunnelAPIHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func insightsContributorProfileAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		username := r.URL.Query().Get("u")
+		if username == "" {
+			writeError(w, http.StatusBadRequest, "username parameter (u) is required")
+			return
+		}
+		res, err := data.GetContributorProfile(db, username, p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get contributor profile", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying contributor profile")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func developerSearchAPIHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		q := r.URL.Query().Get("q")
+		if q == "" {
+			writeError(w, http.StatusBadRequest, "query parameter (q) is required")
+			return
+		}
+		res, err := data.SearchDeveloperUsernames(db, q, p.org, p.repo, p.months, 10)
+		if err != nil {
+			slog.Error("failed to search developers", "error", err)
+			writeError(w, http.StatusInternalServerError, "error searching developers")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsForksAndActivityAPIHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)

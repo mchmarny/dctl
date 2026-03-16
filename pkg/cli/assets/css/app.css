@@ -1094,3 +1094,78 @@ a.link {
 
 /* CHART animation */
 @keyframes chartjs-render-animation{from{opacity:.99}to{opacity:1}}.chartjs-render-monitor{animation:chartjs-render-animation 1ms}.chartjs-size-monitor,.chartjs-size-monitor-expand,.chartjs-size-monitor-shrink{position:absolute;direction:ltr;left:0;top:0;right:0;bottom:0;overflow:hidden;pointer-events:none;visibility:hidden;z-index:-1}.chartjs-size-monitor-expand>div{position:absolute;width:1000000px;height:1000000px;left:0;top:0}.chartjs-size-monitor-shrink>div{position:absolute;width:200%;height:200%;left:0;top:0}
+
+/* Contributor search typeahead */
+.contributor-search-wrap {
+    position: relative;
+    padding: 0.5rem 1rem;
+}
+
+.contributor-search {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--light-color);
+    color: var(--dark-color);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.contributor-search::placeholder {
+    color: var(--gray);
+}
+
+.contributor-search:hover {
+    border-color: var(--gray);
+    background: var(--white);
+}
+
+.contributor-search:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--white);
+    box-shadow: var(--focus-ring);
+}
+
+.contributor-suggestions {
+    display: none;
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    top: 100%;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: 0 8px 24px rgba(31,35,40,0.12);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.contributor-suggestions.visible {
+    display: block;
+}
+
+.contributor-suggestions li {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--dark-color);
+    border-bottom: 1px solid var(--light-color);
+}
+
+.contributor-suggestions li:last-child {
+    border-bottom: none;
+}
+
+.contributor-suggestions li:hover,
+.contributor-suggestions li.active {
+    background: var(--light-color);
+    color: var(--accent);
+}

@@ -89,3 +89,32 @@ func TestGetEntityPercentages(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, results)
 }
+
+func TestSearchDeveloperUsernames_NilDB(t *testing.T) {
+	_, err := SearchDeveloperUsernames(nil, "dev", nil, nil, 6, 10)
+	assert.Error(t, err)
+}
+
+func TestSearchDeveloperUsernames_EmptyQuery(t *testing.T) {
+	db := setupTestDB(t)
+	_, err := SearchDeveloperUsernames(db, "", nil, nil, 6, 10)
+	assert.Error(t, err)
+}
+
+func TestSearchDeveloperUsernames_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	results, err := SearchDeveloperUsernames(db, "dev", nil, nil, 6, 10)
+	require.NoError(t, err)
+	assert.Empty(t, results)
+}
+
+func TestSearchDeveloperUsernames_WithData(t *testing.T) {
+	db := setupTestDB(t)
+	seedTestData(t, db)
+	results, err := SearchDeveloperUsernames(db, "dev", nil, nil, 12, 10)
+	require.NoError(t, err)
+	assert.NotEmpty(t, results)
+	for _, r := range results {
+		assert.Contains(t, r, "dev")
+	}
+}

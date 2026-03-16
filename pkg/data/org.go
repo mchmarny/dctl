@@ -63,6 +63,18 @@ const (
 	`
 
 	selectAllOrgRepos = `SELECT DISTINCT org, repo FROM event ORDER BY 1, 2`
+
+	selectDeveloperSearch = `SELECT DISTINCT d.username
+		FROM developer d
+		JOIN event e ON d.username = e.username
+		WHERE d.username LIKE ?
+		  AND e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND d.username NOT LIKE '%[bot]'
+		  AND e.date >= ?
+		ORDER BY d.username
+		LIMIT ?
+	`
 )
 
 type Org struct {
@@ -171,6 +183,41 @@ func GetDeveloperPercentages(db *sql.DB, entity, org, repo *string, ex []string,
 // GetEntityPercentages returns a list of entity percentages for the given repository.
 func GetEntityPercentages(db *sql.DB, entity, org, repo *string, ex []string, months int) ([]*CountedItem, error) {
 	return getPercentages(db, selectOrgEntityPercent, entity, org, repo, ex, months)
+}
+
+// SearchDeveloperUsernames returns a list of developer usernames matching the given query.
+func SearchDeveloperUsernames(db *sql.DB, query string, org, repo *string, months, limit int) ([]string, error) {
+	if db == nil {
+		return nil, errDBNotInitialized
+	}
+
+	if query == "" {
+		return nil, fmt.Errorf("query is required")
+	}
+
+	since := sinceDate(months)
+	pattern := fmt.Sprintf("%%%s%%", query)
+
+	rows, err := db.Query(selectDeveloperSearch, pattern, org, repo, since, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search developers: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]string, 0)
+	for rows.Next() {
+		var username string
+		if err := rows.Scan(&username); err != nil {
+			return nil, fmt.Errorf("failed to scan developer row: %w", err)
+		}
+		list = append(list, username)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return list, nil
 }
 
 // GetOrgLike returns a list of orgs and repos that match the given pattern.

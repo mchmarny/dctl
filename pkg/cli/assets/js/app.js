@@ -119,6 +119,7 @@ let reviewLatencyChart;
 let prSizeChart;
 let contributorFunnelChart;
 let contributorMomentumChart;
+let contributorProfileChart;
 let containerActivityChart;
 let healthActivitySparkline;
 let repoMetaSparkline;
@@ -301,6 +302,7 @@ function loadTabCharts(tab, months, org, repo, entity) {
                 };
                 loadRightChart('/data/developer?' + q, onRightChartSelect, onRightExclude);
             })();
+            initContributorSearch(q);
             break;
         case 'events':
             break;
@@ -1755,6 +1757,147 @@ function loadContributorFunnelChart(url) {
                 }
             }
         });
+    });
+}
+
+function loadContributorProfileChart(url) {
+    $.get(url, function (data) {
+        if (contributorProfileChart) contributorProfileChart.destroy();
+        if (!data || !data.metrics) return;
+
+        var barColor = colors[0];
+        var avgColor = barColor.replace('rgb', 'rgba').replace(')', ', 0.35)');
+        if (barColor.startsWith('#')) {
+            var r = parseInt(barColor.slice(1,3), 16);
+            var g = parseInt(barColor.slice(3,5), 16);
+            var b = parseInt(barColor.slice(5,7), 16);
+            avgColor = 'rgba(' + r + ',' + g + ',' + b + ',0.35)';
+            barColor = 'rgba(' + r + ',' + g + ',' + b + ',1)';
+        }
+
+        contributorProfileChart = new Chart($("#contributor-profile-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.metrics,
+                datasets: [
+                    {
+                        label: 'Contributor',
+                        data: data.values,
+                        backgroundColor: barColor,
+                        borderRadius: 3
+                    },
+                    {
+                        label: 'Average',
+                        data: data.averages.map(function(v) { return Math.round(v * 10) / 10; }),
+                        backgroundColor: avgColor,
+                        borderRadius: 3
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    x: { beginAtZero: true, grid: { display: false } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    });
+}
+
+function initContributorSearch(q) {
+    var $input = $("#contributor-search");
+    var $suggestions = $("#contributor-suggestions");
+    var knownUsers = [];
+    var debounceTimer;
+
+    // Pre-populate from already-loaded developer data
+    $.get('/data/developer?' + q, function(data) {
+        if (data && data.labels) {
+            knownUsers = data.labels.filter(function(l) { return l !== 'ALL OTHERS'; });
+        }
+    });
+
+    function showSuggestions(list) {
+        $suggestions.empty();
+        if (!list.length) {
+            $suggestions.removeClass('visible');
+            return;
+        }
+        list.forEach(function(name) {
+            $suggestions.append($('<li>').text(name));
+        });
+        $suggestions.addClass('visible');
+    }
+
+    function selectUser(username) {
+        $input.val(username);
+        $suggestions.removeClass('visible');
+        loadContributorProfileChart('/data/insights/contributor-profile?u=' + encodeURIComponent(username) + '&' + q);
+    }
+
+    $input.on('input', function() {
+        var val = $input.val().trim().toLowerCase();
+        if (val.length < 2) {
+            $suggestions.removeClass('visible');
+            return;
+        }
+
+        var local = knownUsers.filter(function(u) {
+            return u.toLowerCase().indexOf(val) !== -1;
+        });
+
+        if (local.length > 0) {
+            showSuggestions(local.slice(0, 10));
+        }
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() {
+            $.get('/data/developer/search?q=' + encodeURIComponent(val) + '&' + q, function(results) {
+                if (!results || !results.length) {
+                    if (!local.length) $suggestions.removeClass('visible');
+                    return;
+                }
+                var merged = local.slice();
+                results.forEach(function(u) {
+                    if (merged.indexOf(u) === -1) merged.push(u);
+                });
+                showSuggestions(merged.slice(0, 10));
+            });
+        }, 250);
+    });
+
+    $suggestions.on('click', 'li', function() {
+        selectUser($(this).text());
+    });
+
+    $input.on('keydown', function(e) {
+        var $items = $suggestions.find('li');
+        var $active = $items.filter('.active');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!$active.length) { $items.first().addClass('active'); }
+            else { $active.removeClass('active').next().addClass('active'); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if ($active.length) { $active.removeClass('active').prev().addClass('active'); }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if ($active.length) { selectUser($active.text()); }
+        } else if (e.key === 'Escape') {
+            $suggestions.removeClass('visible');
+        }
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.contributor-search-wrap').length) {
+            $suggestions.removeClass('visible');
+        }
     });
 }
 

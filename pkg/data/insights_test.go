@@ -483,6 +483,80 @@ func TestGetContributorFunnel_WithData(t *testing.T) {
 	assert.True(t, found, "expected 2025-01 in results")
 }
 
+func TestGetContributorProfile_NilDB(t *testing.T) {
+	_, err := GetContributorProfile(nil, "alice", nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetContributorProfile_EmptyUsername(t *testing.T) {
+	db := setupTestDB(t)
+	_, err := GetContributorProfile(db, "", nil, nil, nil, 6)
+	assert.Error(t, err)
+}
+
+func TestGetContributorProfile_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name, entity) VALUES ('alice', 'Alice', 'ACME')`)
+	require.NoError(t, err)
+
+	series, err := GetContributorProfile(db, "alice", nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Len(t, series.Metrics, 9)
+	assert.Len(t, series.Values, 9)
+	assert.Len(t, series.Averages, 9)
+	for _, v := range series.Values {
+		assert.Equal(t, 0, v)
+	}
+}
+
+func TestGetContributorProfile_WithData(t *testing.T) {
+	db := setupTestDB(t)
+
+	_, err := db.Exec(`INSERT INTO developer (username, full_name, entity) VALUES
+		('alice', 'Alice', 'ACME'),
+		('bob', 'Bob', 'ACME')`)
+	require.NoError(t, err)
+
+	// alice: 3 PRs (open), 1 merged PR, 2 issues
+	for i := 0; i < 3; i++ {
+		_, err = db.Exec(`INSERT OR IGNORE INTO event (org, repo, username, type, date, url, mentions, labels, state)
+			VALUES ('org1', 'repo1', 'alice', 'pr', ?, 'http://a', '', '', 'open')`,
+			"2026-01-"+padDay(i))
+		require.NoError(t, err)
+	}
+	_, err = db.Exec(`INSERT OR IGNORE INTO event (org, repo, username, type, date, url, mentions, labels, state)
+		VALUES ('org1', 'repo1', 'alice', 'pr', '2026-01-20', 'http://a2', '', '', 'merged')`)
+	require.NoError(t, err)
+	for i := 0; i < 2; i++ {
+		_, err = db.Exec(`INSERT OR IGNORE INTO event (org, repo, username, type, date, url, mentions, labels)
+			VALUES ('org1', 'repo1', 'alice', 'issue', ?, 'http://a3', '', '')`,
+			"2026-02-"+padDay(i))
+		require.NoError(t, err)
+	}
+	// bob: 1 PR, 1 issue_comment
+	_, err = db.Exec(`INSERT OR IGNORE INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'bob', 'pr', '2026-01-10', 'http://b', '', '')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT OR IGNORE INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'bob', 'issue_comment', '2026-01-11', 'http://b2', '', '')`)
+	require.NoError(t, err)
+
+	series, err := GetContributorProfile(db, "alice", nil, nil, nil, 24)
+	require.NoError(t, err)
+	assert.Len(t, series.Metrics, 9)
+	// alice: PRs opened = 4 (3 open + 1 merged)
+	assert.Equal(t, 4, series.Values[0])
+	// alice: PRs merged = 1
+	assert.Equal(t, 1, series.Values[1])
+	// alice: Issues opened = 2
+	assert.Equal(t, 2, series.Values[3])
+	// alice: PR Size S = 4 (all PRs have 0 additions+deletions < 50)
+	assert.Equal(t, 4, series.Values[5])
+	// Averages > 0
+	assert.Greater(t, series.Averages[0], float64(0))
+}
+
 func padDay(i int) string {
 	return fmt.Sprintf("%02d", (i%28)+1)
 }

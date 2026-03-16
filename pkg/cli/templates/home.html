@@ -353,7 +353,7 @@
                     </div>
                 </div>
             </article>
-            <article class="grid-full-width">
+            <article>
                 <div class="tbl">
                     <div class="tbl-header">
                          <div class="content-header">
@@ -364,6 +364,21 @@
                         <canvas class="chart" id="right-chart"></canvas>
                     </div>
                     <span class="insight-desc">Ranked by total event count (PRs, issues, reviews, comments) in the selected period. Click a slice to view GitHub profile.</span>
+                </div>
+            </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Contributor Profile
+                    </div>
+                    <div class="contributor-search-wrap">
+                        <input type="text" id="contributor-search" class="contributor-search" placeholder="Search username..." autocomplete="off" />
+                        <ul id="contributor-suggestions" class="contributor-suggestions"></ul>
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="contributor-profile-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Per-contributor metrics vs. average across all contributors in the selected period.</span>
                 </div>
             </article>
         </section>
