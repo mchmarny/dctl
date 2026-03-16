@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/urfave/cli/v3"
 )
 
@@ -101,7 +101,7 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("invalid base path: %w", err)
 	}
 
-	mux := makeRouter(cfg.DB, basePath)
+	mux := makeRouter(cfg.Store, basePath)
 
 	var handler http.Handler = mux
 	if basePath != "" {
@@ -143,7 +143,7 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func makeRouter(db *sql.DB, basePath string) *http.ServeMux {
+func makeRouter(store data.Store, basePath string) *http.ServeMux {
 	tmpl := template.Must(template.New("").ParseFS(embedFS, "templates/*.html"))
 
 	mux := http.NewServeMux()
@@ -156,37 +156,37 @@ func makeRouter(db *sql.DB, basePath string) *http.ServeMux {
 	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl, basePath))
 
 	// Data API
-	mux.HandleFunc("GET /data/min-date", minDateAPIHandler(db))
-	mux.HandleFunc("GET /data/query", queryAPIHandler(db))
-	mux.HandleFunc("GET /data/type", eventDataAPIHandler(db))
-	mux.HandleFunc("GET /data/entity", entityDataAPIHandler(db))
-	mux.HandleFunc("GET /data/developer", developerDataAPIHandler(db))
-	mux.HandleFunc("POST /data/search", eventSearchAPIHandler(db))
-	mux.HandleFunc("GET /data/entity/developers", entityDevelopersAPIHandler(db))
+	mux.HandleFunc("GET /data/min-date", minDateAPIHandler(store))
+	mux.HandleFunc("GET /data/query", queryAPIHandler(store))
+	mux.HandleFunc("GET /data/type", eventDataAPIHandler(store))
+	mux.HandleFunc("GET /data/entity", entityDataAPIHandler(store))
+	mux.HandleFunc("GET /data/developer", developerDataAPIHandler(store))
+	mux.HandleFunc("POST /data/search", eventSearchAPIHandler(store))
+	mux.HandleFunc("GET /data/entity/developers", entityDevelopersAPIHandler(store))
 
 	// Insights API
-	mux.HandleFunc("GET /data/insights/summary", insightsSummaryAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/daily-activity", insightsDailyActivityAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/retention", insightsRetentionAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/pr-ratio", insightsPRRatioAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/time-to-merge", insightsTimeToMergeAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/time-to-close", insightsTimeToCloseAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/time-to-restore", insightsTimeToRestoreAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/review-latency", insightsReviewLatencyAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/forks-and-activity", insightsForksAndActivityAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/repo-meta", insightsRepoMetaAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/repo-metric-history", insightsRepoMetricHistoryAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/change-failure-rate", insightsChangeFailureRateAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/pr-size", insightsPRSizeAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/contributor-momentum", insightsContributorMomentumAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/contributor-funnel", insightsContributorFunnelAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/contributor-profile", insightsContributorProfileAPIHandler(db))
-	mux.HandleFunc("GET /data/developer/search", developerSearchAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/release-cadence", insightsReleaseCadenceAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/release-downloads", insightsReleaseDownloadsAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/release-downloads-by-tag", insightsReleaseDownloadsByTagAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/container-activity", insightsContainerActivityAPIHandler(db))
-	mux.HandleFunc("GET /data/insights/reputation", insightsReputationAPIHandler(db))
+	mux.HandleFunc("GET /data/insights/summary", insightsSummaryAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/daily-activity", insightsDailyActivityAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/retention", insightsRetentionAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/pr-ratio", insightsPRRatioAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/time-to-merge", insightsTimeToMergeAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/time-to-close", insightsTimeToCloseAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/time-to-restore", insightsTimeToRestoreAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/review-latency", insightsReviewLatencyAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/forks-and-activity", insightsForksAndActivityAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/repo-meta", insightsRepoMetaAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/repo-metric-history", insightsRepoMetricHistoryAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/change-failure-rate", insightsChangeFailureRateAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/pr-size", insightsPRSizeAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/contributor-momentum", insightsContributorMomentumAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/contributor-funnel", insightsContributorFunnelAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/contributor-profile", insightsContributorProfileAPIHandler(store))
+	mux.HandleFunc("GET /data/developer/search", developerSearchAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/release-cadence", insightsReleaseCadenceAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/release-downloads", insightsReleaseDownloadsAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/release-downloads-by-tag", insightsReleaseDownloadsByTagAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/container-activity", insightsContainerActivityAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/reputation", insightsReputationAPIHandler(store))
 
 	return mux
 }

@@ -2,11 +2,11 @@ package cli
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/urfave/cli/v3"
 )
@@ -207,7 +207,7 @@ func cmdQueryEntity(_ context.Context, cmd *cli.Command) error {
 
 	cfg := getConfig(cmd)
 
-	ent, err := data.GetEntity(cfg.DB, val)
+	ent, err := cfg.Store.GetEntity(val)
 	if err != nil {
 		return fmt.Errorf("failed to query entity: %w", err)
 	}
@@ -266,7 +266,7 @@ func cmdQueryEvents(_ context.Context, cmd *cli.Command) error {
 
 	cfg := getConfig(cmd)
 
-	list, err := data.SearchEvents(cfg.DB, q)
+	list, err := cfg.Store.SearchEvents(q)
 	if err != nil {
 		return fmt.Errorf("error searching events: %w", err)
 	}
@@ -278,21 +278,19 @@ func cmdQueryEvents(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func cmdQueryList[T any](cmd *cli.Command, flag *cli.StringFlag, fn func(*sql.DB, string, int) ([]*T, error)) error {
+func cmdQueryList[T any](cmd *cli.Command, flag *cli.StringFlag, fn func(string, int) ([]*T, error)) error {
 	applyFlags(cmd)
 	val := cmd.String(flag.Name)
 	if val == "" {
 		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cfg := getConfig(cmd)
-
 	limit := cmd.Int(queryLimitFlag.Name)
 	if limit == 0 || limit > queryResultLimitDefault {
 		limit = queryResultLimitDefault
 	}
 
-	list, err := fn(cfg.DB, val, limit)
+	list, err := fn(val, limit)
 	if err != nil {
 		return fmt.Errorf("error searching: %w", err)
 	}
@@ -301,7 +299,8 @@ func cmdQueryList[T any](cmd *cli.Command, flag *cli.StringFlag, fn func(*sql.DB
 }
 
 func cmdQueryEntities(_ context.Context, cmd *cli.Command) error {
-	return cmdQueryList(cmd, entityLikeQueryFlag, data.QueryEntities)
+	cfg := getConfig(cmd)
+	return cmdQueryList(cmd, entityLikeQueryFlag, cfg.Store.QueryEntities)
 }
 
 func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
@@ -318,7 +317,7 @@ func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
 
 	cfg := getConfig(cmd)
 
-	dev, err := data.GetDeveloper(cfg.DB, val)
+	dev, err := cfg.Store.GetDeveloper(val)
 	if err != nil {
 		return fmt.Errorf("failed to query developer: %w", err)
 	}
@@ -327,7 +326,7 @@ func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	client := net.GetOAuthClient(ctx, token)
-	dev.Organizations, err = data.GetUserOrgs(ctx, client, val, 0)
+	dev.Organizations, err = sqlite.GetUserOrgs(ctx, client, val, 0)
 	if err != nil {
 		slog.Warn("failed to get user orgs", "error", err)
 	}
@@ -340,7 +339,8 @@ func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
 }
 
 func cmdQueryDevelopers(_ context.Context, cmd *cli.Command) error {
-	return cmdQueryList(cmd, developerLikeQueryFlag, data.SearchDevelopers)
+	cfg := getConfig(cmd)
+	return cmdQueryList(cmd, developerLikeQueryFlag, cfg.Store.SearchDevelopers)
 }
 
 func cmdQueryOrgRepos(ctx context.Context, cmd *cli.Command) error {
@@ -356,7 +356,7 @@ func cmdQueryOrgRepos(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	client := net.GetOAuthClient(ctx, token)
-	list, err := data.GetOrgRepos(ctx, client, org)
+	list, err := sqlite.GetOrgRepos(ctx, client, org)
 	if err != nil {
 		return fmt.Errorf("failed to list org repos: %w", err)
 	}

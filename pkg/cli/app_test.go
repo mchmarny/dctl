@@ -3,9 +3,10 @@ package cli
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 )
 
 const (
@@ -14,12 +15,18 @@ const (
 
 func TestMain(m *testing.M) {
 	os.RemoveAll(testDir)
+	if err := os.MkdirAll(testDir, 0o700); err != nil {
+		slog.Error("creating test dir", "error", err)
+		os.Exit(1)
+	}
 	initLogging(false)
 
-	if err := data.Init(testDir); err != nil {
+	store, err := sqlite.New(filepath.Join(testDir, "data.db"))
+	if err != nil {
 		slog.Error("fatal error", "error", err)
 		os.Exit(1)
 	}
+	defer store.Close()
 
 	code := m.Run()
 	os.Exit(code)

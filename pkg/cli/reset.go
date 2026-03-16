@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/urfave/cli/v3"
 )
 
@@ -23,7 +22,7 @@ func cmdReset(_ context.Context, cmd *cli.Command) error {
 	cfg := getConfig(cmd)
 
 	if !cmd.Bool(forceFlag.Name) {
-		fmt.Printf("This will permanently delete all data in %s\n", cfg.DBPath)
+		fmt.Printf("This will permanently delete all data in %s\n", cfg.DSN)
 		confirmed, err := confirmAction("Are you sure? [y/N]: ")
 		if err != nil {
 			return err
@@ -34,24 +33,26 @@ func cmdReset(_ context.Context, cmd *cli.Command) error {
 		}
 	}
 
-	// close the DB before deleting the file
-	if cfg.DB != nil {
-		cfg.DB.Close()
-		cfg.DB = nil
+	// close the store before deleting the file
+	if cfg.Store != nil {
+		cfg.Store.Close()
+		cfg.Store = nil
 	}
 
-	if err := os.Remove(cfg.DBPath); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(cfg.DSN); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("deleting database: %w", err)
 	}
 
-	slog.Info("database deleted", "path", cfg.DBPath)
+	slog.Info("database deleted", "path", cfg.DSN)
 
-	// re-initialize empty database
-	if err := data.Init(cfg.DBPath); err != nil {
-		return fmt.Errorf("re-initializing database: %w", err)
+	// re-initialize empty database via openStore
+	store, err := openStore(cfg.DSN)
+	if err != nil {
+		return fmt.Errorf("re-initializing store: %w", err)
 	}
+	cfg.Store = store
 
-	slog.Info("database re-initialized", "path", cfg.DBPath)
+	slog.Info("database re-initialized", "path", cfg.DSN)
 	fmt.Println("Reset complete.")
 	return nil
 }

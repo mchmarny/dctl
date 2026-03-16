@@ -60,7 +60,7 @@ func cmdSubstitutes(_ context.Context, cmd *cli.Command) error {
 
 	cfg := getConfig(cmd)
 
-	res, err := data.SaveAndApplyDeveloperSub(cfg.DB, sub, old, new)
+	res, err := cfg.Store.SaveAndApplyDeveloperSub(sub, old, new)
 	if err != nil {
 		return fmt.Errorf("failed to apply substitution: %w", err)
 	}

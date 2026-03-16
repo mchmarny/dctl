@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/urfave/cli/v3"
 )
@@ -125,7 +125,7 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 	// 0. clear state if fresh
 	if cmd.Bool(freshFlag.Name) {
 		for _, r := range repos {
-			if clearErr := data.ClearState(cfg.DB, org, r); clearErr != nil {
+			if clearErr := cfg.Store.ClearState(org, r); clearErr != nil {
 				slog.Error("failed to clear state", "org", org, "repo", r, "error", clearErr)
 			}
 		}
@@ -134,7 +134,7 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 
 	// 1. events
 	for _, r := range repos {
-		m, summary, importErr := data.ImportEvents(ctx, cfg.DBPath, token, org, r, months)
+		m, summary, importErr := cfg.Store.ImportEvents(ctx, token, org, r, months)
 		if importErr != nil {
 			slog.Error("failed to import events", "org", org, "repo", r, "error", importErr)
 			continue
@@ -149,7 +149,7 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 
 	// 2. affiliations
 	slog.Info("updating affiliations")
-	a, err := importAffiliations(ctx, cfg.DB)
+	a, err := importAffiliations(ctx, cfg.Store)
 	if err != nil {
 		slog.Error("affiliations failed", "error", err)
 	} else {
@@ -158,7 +158,7 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 
 	// 3. substitutions
 	slog.Info("applying substitutions")
-	sub, err := data.ApplySubstitutions(cfg.DB)
+	sub, err := cfg.Store.ApplySubstitutions()
 	if err != nil {
 		slog.Error("substitutions failed", "error", err)
 	} else {
@@ -166,12 +166,12 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// 4. metadata + releases
-	importRepoExtras(ctx, cfg.DBPath, token, org, repos)
+	importRepoExtras(ctx, cfg.Store, token, org, repos)
 
 	// 5. reputation (shallow — local DB only, no API calls)
 	orgPtr := &org
 	slog.Info("computing reputation")
-	repResult, repErr := data.ImportReputation(cfg.DB, orgPtr, nil)
+	repResult, repErr := cfg.Store.ImportReputation(orgPtr, nil)
 	if repErr != nil {
 		slog.Error("reputation failed", "error", repErr)
 	} else {
@@ -190,45 +190,45 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 func cmdUpdate(ctx context.Context, cfg *appConfig, token string, concurrency int, start time.Time) error {
 	slog.Info("updating all previously imported data", "concurrency", concurrency)
 
-	m, err := data.UpdateEvents(ctx, cfg.DBPath, token, concurrency)
+	m, err := cfg.Store.UpdateEvents(ctx, token, concurrency)
 	if err != nil {
 		return fmt.Errorf("failed to import events: %w", err)
 	}
 
 	slog.Info("updating affiliations")
-	a, err := importAffiliations(ctx, cfg.DB)
+	a, err := importAffiliations(ctx, cfg.Store)
 	if err != nil {
 		slog.Error("affiliations failed", "error", err)
 	}
 
 	slog.Info("applying substitutions")
-	sub, err := data.ApplySubstitutions(cfg.DB)
+	sub, err := cfg.Store.ApplySubstitutions()
 	if err != nil {
 		slog.Error("substitutions failed", "error", err)
 	}
 
 	slog.Info("updating metadata")
-	if metaErr := data.ImportAllRepoMeta(ctx, cfg.DBPath, token); metaErr != nil {
+	if metaErr := cfg.Store.ImportAllRepoMeta(ctx, token); metaErr != nil {
 		slog.Error("metadata failed", "error", metaErr)
 	}
 
 	slog.Info("updating releases")
-	if relErr := data.ImportAllReleases(ctx, cfg.DBPath, token); relErr != nil {
+	if relErr := cfg.Store.ImportAllReleases(ctx, token); relErr != nil {
 		slog.Error("releases failed", "error", relErr)
 	}
 
 	slog.Info("updating metric history")
-	if histErr := data.ImportAllRepoMetricHistory(ctx, cfg.DBPath, token); histErr != nil {
+	if histErr := cfg.Store.ImportAllRepoMetricHistory(ctx, token); histErr != nil {
 		slog.Error("metric history failed", "error", histErr)
 	}
 
 	slog.Info("updating container versions")
-	if cvErr := data.ImportAllContainerVersions(ctx, cfg.DBPath, token); cvErr != nil {
+	if cvErr := cfg.Store.ImportAllContainerVersions(ctx, token); cvErr != nil {
 		slog.Error("container versions failed", "error", cvErr)
 	}
 
 	slog.Info("computing reputation")
-	repResult, repErr := data.ImportReputation(cfg.DB, nil, nil)
+	repResult, repErr := cfg.Store.ImportReputation(nil, nil)
 	if repErr != nil {
 		slog.Error("reputation failed", "error", repErr)
 	}
@@ -248,26 +248,26 @@ func cmdUpdate(ctx context.Context, cfg *appConfig, token string, concurrency in
 	return nil
 }
 
-func importRepoExtras(ctx context.Context, dbPath, token, org string, repos []string) {
+func importRepoExtras(ctx context.Context, store data.Store, token, org string, repos []string) {
 	for _, r := range repos {
 		slog.Info("updating extras", "repo", org+"/"+r)
 
-		if err := data.ImportRepoMeta(ctx, dbPath, token, org, r); err != nil {
+		if err := store.ImportRepoMeta(ctx, token, org, r); err != nil {
 			slog.Error("failed to import repo metadata", "org", org, "repo", r, "error", err)
 		}
-		if err := data.ImportReleases(ctx, dbPath, token, org, r); err != nil {
+		if err := store.ImportReleases(ctx, token, org, r); err != nil {
 			slog.Error("failed to import releases", "org", org, "repo", r, "error", err)
 		}
-		if err := data.ImportRepoMetricHistory(ctx, dbPath, token, org, r); err != nil {
+		if err := store.ImportRepoMetricHistory(ctx, token, org, r); err != nil {
 			slog.Error("failed to import metric history", "org", org, "repo", r, "error", err)
 		}
-		if err := data.ImportContainerVersions(ctx, dbPath, token, org, r); err != nil {
+		if err := store.ImportContainerVersions(ctx, token, org, r); err != nil {
 			slog.Error("failed to import container versions", "org", org, "repo", r, "error", err)
 		}
 	}
 }
 
-func importAffiliations(ctx context.Context, db *sql.DB) (*data.AffiliationImportResult, error) {
+func importAffiliations(ctx context.Context, store data.Store) (*data.AffiliationImportResult, error) {
 	token, err := getGitHubToken()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get GitHub token: %w", err)
@@ -279,7 +279,7 @@ func importAffiliations(ctx context.Context, db *sql.DB) (*data.AffiliationImpor
 
 	client := net.GetOAuthClient(ctx, token)
 
-	res, err := data.UpdateDevelopersWithCNCFEntityAffiliations(ctx, db, client)
+	res, err := sqlite.UpdateDevelopersWithCNCFEntityAffiliations(ctx, store, store, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import affiliations: %w", err)
 	}

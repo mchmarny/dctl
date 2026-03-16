@@ -3,7 +3,6 @@ package cli
 import (
 	"bufio"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/logging"
 	urfave "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
@@ -41,7 +41,7 @@ var (
 
 	dbFilePathFlag = &urfave.StringFlag{
 		Name:    "db",
-		Usage:   "Path to the Sqlite database file",
+		Usage:   "SQLite file path or postgres:// connection URI",
 		Value:   filepath.Join(getHomeDir(), data.DataFileName),
 		Sources: urfave.EnvVars("DEVPULSE_DB"),
 	}
@@ -72,9 +72,9 @@ func Execute() {
 }
 
 type appConfig struct {
-	DBPath string
-	Debug  bool
-	DB     *sql.DB
+	DSN   string
+	Debug bool
+	Store data.Store
 }
 
 func getConfig(cmd *urfave.Command) *appConfig {
@@ -106,34 +106,36 @@ func newApp() *urfave.Command {
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
 			applyFlags(cmd)
 
-			dbPath := cmd.String(dbFilePathFlag.Name)
-
-			if err := data.Init(dbPath); err != nil {
-				return ctx, fmt.Errorf("initializing database: %w", err)
-			}
-
-			db, err := data.GetDB(dbPath)
+			dsn := cmd.String(dbFilePathFlag.Name)
+			store, err := openStore(dsn)
 			if err != nil {
-				return ctx, fmt.Errorf("opening database: %w", err)
+				return ctx, fmt.Errorf("initializing store: %w", err)
 			}
 
 			cmd.Root().Metadata[appConfigKey] = &appConfig{
-				DBPath: dbPath,
-				Debug:  cmd.Bool(debugFlag.Name),
-				DB:     db,
+				DSN:   dsn,
+				Debug: cmd.Bool(debugFlag.Name),
+				Store: store,
 			}
 			return ctx, nil
 		},
 		After: func(ctx context.Context, cmd *urfave.Command) error {
-			if cfg, ok := cmd.Root().Metadata[appConfigKey].(*appConfig); ok && cfg.DB != nil {
-				if err := cfg.DB.Close(); err != nil {
-					slog.Error("error closing database", "error", err)
+			if cfg, ok := cmd.Root().Metadata[appConfigKey].(*appConfig); ok && cfg.Store != nil {
+				if err := cfg.Store.Close(); err != nil {
+					slog.Error("error closing store", "error", err)
 				}
 			}
 			return nil
 		},
 		Metadata: map[string]any{},
 	}
+}
+
+func openStore(dsn string) (data.Store, error) {
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		return nil, fmt.Errorf("postgres support not yet implemented")
+	}
+	return sqlite.New(dsn)
 }
 
 func initLogging(debug bool) {

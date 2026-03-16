@@ -54,7 +54,7 @@ func cmdDelete(_ context.Context, cmd *cli.Command) error {
 
 	if len(repos) == 0 {
 		// Find all repos for this org from existing data
-		items, err := data.GetAllOrgRepos(cfg.DB)
+		items, err := cfg.Store.GetAllOrgRepos()
 		if err != nil {
 			return fmt.Errorf("listing repos for org %s: %w", org, err)
 		}
@@ -92,7 +92,7 @@ func cmdDelete(_ context.Context, cmd *cli.Command) error {
 
 	for _, r := range repos {
 		slog.Info("deleting", "org", org, "repo", r)
-		dr, err := data.DeleteRepoData(cfg.DB, org, r)
+		dr, err := cfg.Store.DeleteRepoData(org, r)
 		if err != nil {
 			slog.Error("failed to delete repo data", "org", org, "repo", r, "error", err)
 			continue
