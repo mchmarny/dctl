@@ -139,6 +139,16 @@ function parseSearchInput(raw) {
 }
 
 $(function () {
+    // Prepend base path to all relative AJAX URLs for reverse proxy support.
+    var basePath = $("#base_path").val() || "";
+    if (basePath) {
+        $.ajaxPrefilter(function (options) {
+            if (options.url && options.url.charAt(0) === '/') {
+                options.url = basePath + options.url;
+            }
+        });
+    }
+
     $(window).resize(function () {
         const scrollWidth = $('.tbl-content').width() - $('.tbl-content table').width();
         $('.tbl-header').css({ 'padding-right': scrollWidth });

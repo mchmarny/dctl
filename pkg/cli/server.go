@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,6 +45,20 @@ var (
 		Sources: cli.EnvVars("DEVPULSE_NO_BROWSER"),
 	}
 
+	basePathFlag = &cli.StringFlag{
+		Name:    "base-path",
+		Usage:   "Base URL path when hosted behind a reverse proxy (e.g. /devpulse)",
+		Sources: cli.EnvVars("DEVPULSE_BASE_PATH"),
+	}
+
+	addressFlag = &cli.StringFlag{
+		Name:    "address",
+		Aliases: []string{"addr"},
+		Usage:   "Bind address (e.g. 0.0.0.0 for all interfaces)",
+		Value:   "127.0.0.1",
+		Sources: cli.EnvVars("DEVPULSE_ADDRESS"),
+	}
+
 	serverCmd = &cli.Command{
 		Name:    "server",
 		Aliases: []string{"view"},
@@ -51,22 +66,51 @@ var (
 		Action:  cmdStartServer,
 		Flags: []cli.Flag{
 			portFlag,
+			addressFlag,
 			noBrowserFlag,
+			basePathFlag,
 			debugFlag,
 		},
 	}
 )
 
+var errInvalidBasePath = errors.New("base path must not contain '..' or '://'")
+
+func normalizeBasePath(raw string) (string, error) {
+	bp := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if bp == "" {
+		return "", nil
+	}
+	if strings.Contains(bp, "..") || strings.Contains(bp, "://") {
+		return "", errInvalidBasePath
+	}
+	if !strings.HasPrefix(bp, "/") {
+		bp = "/" + bp
+	}
+	return bp, nil
+}
+
 func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	cfg := getConfig(cmd)
 	port := cmd.Int(portFlag.Name)
-	address := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := cmd.String(addressFlag.Name)
+	address := fmt.Sprintf("%s:%d", addr, port)
+	basePath, err := normalizeBasePath(cmd.String(basePathFlag.Name))
+	if err != nil {
+		return fmt.Errorf("invalid base path: %w", err)
+	}
 
-	mux := makeRouter(cfg.DB)
+	mux := makeRouter(cfg.DB, basePath)
+
+	var handler http.Handler = mux
+	if basePath != "" {
+		handler = http.StripPrefix(basePath, mux)
+	}
+
 	s := &http.Server{
 		Addr:           address,
-		Handler:        mux,
+		Handler:        handler,
 		ReadTimeout:    serverTimeoutSeconds * time.Second,
 		WriteTimeout:   serverTimeoutSeconds * time.Second,
 		MaxHeaderBytes: 1 << serverMaxHeaderBytes,
@@ -81,7 +125,7 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 		}
 	}()
 
-	url := fmt.Sprintf("http://%s", address)
+	url := fmt.Sprintf("http://%s%s", address, basePath)
 	slog.Info("started", "address", url)
 
 	if !cmd.Bool(noBrowserFlag.Name) {
@@ -99,7 +143,7 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func makeRouter(db *sql.DB) *http.ServeMux {
+func makeRouter(db *sql.DB, basePath string) *http.ServeMux {
 	tmpl := template.Must(template.New("").ParseFS(embedFS, "templates/*.html"))
 
 	mux := http.NewServeMux()
@@ -109,7 +153,7 @@ func makeRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /favicon.ico", faviconHandler())
 
 	// Views
-	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl))
+	mux.HandleFunc("GET /{$}", homeViewHandler(tmpl, basePath))
 
 	// Data API
 	mux.HandleFunc("GET /data/min-date", minDateAPIHandler(db))
