@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`devpulse` is a Go CLI that imports GitHub contribution data into a local SQLite database and serves a browser-based analytics dashboard. No external services, no Kubernetes, no cloud dependencies at runtime.
+`devpulse` is a Go CLI that imports GitHub contribution data into a SQLite or PostgreSQL database and serves a browser-based analytics dashboard. Backend is selected by the `--db` flag: file path → SQLite (default), `postgres://` URI → PostgreSQL.
 
 ## Build & Test
 
@@ -60,6 +60,7 @@ Tool versions and quality thresholds are centralized in `.settings.yaml` (single
 - CLI via `github.com/urfave/cli/v3`
 - Testing via `github.com/stretchr/testify` (assert + require)
 - SQLite via `modernc.org/sqlite` (pure Go, no CGO)
+- PostgreSQL via `github.com/lib/pq`
 
 **Testing:**
 - `setupTestDB(t)` helper creates temp DB with all migrations
@@ -99,17 +100,20 @@ When choosing between approaches, prioritize in this order:
 ## Architecture
 
 ```
-cmd/devpulse/     Main entrypoint (thin wrapper)
-pkg/cli/          CLI commands, HTTP handlers, templates, static assets
-pkg/data/         Data layer: SQLite queries, GitHub importers, migrations
-pkg/auth/         GitHub OAuth token management (OS keychain)
-pkg/net/          HTTP client utilities
-tools/            Dev scripts (version bump, shared helpers)
+cmd/devpulse/       Main entrypoint (thin wrapper)
+pkg/cli/            CLI commands, HTTP handlers, templates, static assets
+pkg/data/           Store interface, shared types, helpers
+pkg/data/sqlite/    SQLite Store implementation + migrations
+pkg/data/postgres/  PostgreSQL Store implementation + migrations
+pkg/data/ghutil/    Shared GitHub API helpers (rate limiting, user mapping)
+pkg/auth/           GitHub OAuth token management (OS keychain)
+pkg/net/            HTTP client utilities
+tools/              Dev scripts (version bump, shared helpers)
 ```
 
 CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `reset`
 
-Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite → HTTP API → Chart.js dashboard
+Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite/PostgreSQL → HTTP API → Chart.js dashboard
 
 Dashboard is full-width with a summary banner and six lazy-loaded tabs (Health, Activity, Velocity, Quality, Community, Events). Top bar has search, period selector, and theme toggle on one line. Search supports `org:` and `repo:` prefix syntax.
 

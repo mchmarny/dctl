@@ -210,9 +210,33 @@ Entity names are normalized automatically. Use `devpulse substitute` to correct 
 devpulse substitute --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new "IBM"
 ```
 
+## Database
+
+By default, data is stored locally in [SQLite](https://www.sqlite.org/) (`~/.devpulse/data.db`). No external services required.
+
+### PostgreSQL
+
+To use PostgreSQL instead, pass a `postgres://` connection URI via `--db` or `DEVPULSE_DB`:
+
+```shell
+devpulse --db "postgres://user:pass@host:5432/dbname?sslmode=disable" import --org <org> --repo <repo>
+devpulse --db "postgres://user:pass@host:5432/dbname?sslmode=disable" server
+```
+
+Or via environment variable:
+
+```shell
+export DEVPULSE_DB="postgres://user:pass@host:5432/dbname?sslmode=disable"
+devpulse import --org <org> --repo <repo>
+```
+
+Migrations run automatically on first connection. Special characters in the password must be URL-encoded (e.g., `/` → `%2F`, `@` → `%40`).
+
+For Google Cloud AlloyDB, connect through the [AlloyDB Auth Proxy](https://cloud.google.com/alloydb/docs/auth-proxy/overview) with `--public-ip` and use `127.0.0.1` as the host.
+
 ## Architecture
 
-All data is stored locally in a [SQLite](https://www.sqlite.org/) database (default: `~/data.db`). No data leaves your machine. The database path can be changed with `--db` or `DEVPULSE_DB`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ## Verification
 
