@@ -90,6 +90,82 @@ gcloud scheduler jobs create http devpulse-sync-schedule \
     --oauth-service-account-email $SERVICE_ACCOUNT
 ```
 
+## Log-Based Metrics
+
+Counter metrics (via `gcloud`):
+
+```shell
+gcloud logging metrics create sync_completions \
+    --description="Count of sync job completions" \
+    --log-filter='resource.type="cloud_run_job" jsonPayload.message="sync_summary"'
+
+gcloud logging metrics create sync_errors \
+    --description="Count of sync job errors" \
+    --log-filter='resource.type="cloud_run_job" severity="ERROR"'
+
+gcloud logging metrics create sync_rate_limit_pauses \
+    --description="Count of GitHub API rate limit pauses" \
+    --log-filter='resource.type="cloud_run_job" jsonPayload.message=~"rate limit"'
+```
+
+Distribution metrics require the REST API (`gcloud` doesn't support value extractors):
+
+```shell
+# Total sync duration
+curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "sync_total_duration",
+      "description": "Total sync job duration in seconds",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=\"sync_summary\"",
+      "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
+      "valueExtractor": "EXTRACT(jsonPayload.total_sec)",
+      "bucketOptions": { "explicitBuckets": { "bounds": [10, 30, 60, 120, 300, 600] } }
+    }'
+
+# Import phase duration
+curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "sync_import_duration",
+      "description": "Event import phase duration in seconds",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=\"sync_summary\"",
+      "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
+      "valueExtractor": "EXTRACT(jsonPayload.import_sec)",
+      "bucketOptions": { "explicitBuckets": { "bounds": [10, 30, 60, 120, 300, 600] } }
+    }'
+
+# Scoring phase duration
+curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "sync_scoring_duration",
+      "description": "Deep scoring phase duration in seconds",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=\"sync_summary\"",
+      "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
+      "valueExtractor": "EXTRACT(jsonPayload.scoring_sec)",
+      "bucketOptions": { "explicitBuckets": { "bounds": [10, 30, 60, 120, 300, 600] } }
+    }'
+
+# Rate limit wait duration
+curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "sync_rate_limit_wait",
+      "description": "Rate limit wait duration in seconds",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=~\"rate limit\"",
+      "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
+      "valueExtractor": "EXTRACT(jsonPayload.wait_sec)",
+      "bucketOptions": { "explicitBuckets": { "bounds": [5, 15, 30, 60, 120, 300, 600] } }
+    }'
+```
+
+Metrics appear in Cloud Monitoring as `logging/user/<metric_name>`.
+
 ## Terraform
 
 State is stored in `gs://<your-bucket-name>/devpulse/`. To plan and apply:
