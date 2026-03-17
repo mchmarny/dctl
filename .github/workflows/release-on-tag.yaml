@@ -110,6 +110,15 @@ jobs:
           crane copy "${SOURCE_IMAGE}:latest" "${ARTIFACT_REGISTRY}/devpulse:latest"
           echo "Image copied successfully"
 
+      - name: Deploy to Cloud Run
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          gcloud run services update devpulse \
+            --image "${ARTIFACT_REGISTRY}/devpulse:${TAG}" \
+            --region us-west1
+
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 5
