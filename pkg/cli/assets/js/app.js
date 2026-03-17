@@ -195,6 +195,24 @@ $(function () {
         initSearchFilters();
         initPeriodSelector();
         initTabs();
+        var params = new URLSearchParams(window.location.search);
+        var paramOrg = params.get("o") || "";
+        var paramRepo = params.get("r") || "";
+        if (paramRepo && paramOrg) {
+            $("#search-bar").val("repo:" + paramRepo);
+            searchCriteria.org = paramOrg;
+            applySelection("repo", { value: paramRepo, type: "repo" });
+            return;
+        } else if (paramOrg) {
+            $("#search-bar").val("org:" + paramOrg);
+            applySelection("org", { value: paramOrg, type: "org" });
+            return;
+        } else if (paramRepo) {
+            $("#search-bar").val("repo:" + paramRepo);
+            applySelection("repo", { value: paramRepo, type: "repo" });
+            return;
+        }
+
         updatePeriodOptions("", "", function () {
             var months = $("#period_months").val();
             loadSummaryBanner(months, "", "", "");
