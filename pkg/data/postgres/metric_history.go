@@ -22,19 +22,21 @@ const (
 			stars = $6, forks = $7
 	`
 
-	// selectRepoMetricHistorySQL: $1=org, $2=repo
+	// selectRepoMetricHistorySQL: $1=org, $2=repo, $3=since
 	selectRepoMetricHistorySQL = `SELECT org, repo, date, stars, forks
 		FROM repo_metric_history
 		WHERE org = COALESCE($1, org)
 		  AND repo = COALESCE($2, repo)
+		  AND date >= $3
 		ORDER BY org, repo, date
 	`
 
-	// selectRepoMetricHistoryAggSQL: $1=org (label), $2=org (filter)
+	// selectRepoMetricHistoryAggSQL: $1=org (label), $2=org (filter), $3=since
 	selectRepoMetricHistoryAggSQL = `SELECT COALESCE($1, '') AS org, '' AS repo, date,
 			SUM(stars) AS stars, SUM(forks) AS forks
 		FROM repo_metric_history
 		WHERE org = COALESCE($2, org)
+		  AND date >= $3
 		GROUP BY date
 		ORDER BY date
 	`
@@ -42,17 +44,19 @@ const (
 	backfillDays = 30
 )
 
-func (s *Store) GetRepoMetricHistory(org, repo *string) ([]*data.RepoMetricHistory, error) {
+func (s *Store) GetRepoMetricHistory(org, repo *string, months int) ([]*data.RepoMetricHistory, error) {
 	if s.db == nil {
 		return nil, data.ErrDBNotInitialized
 	}
 
+	since := sinceDate(months)
+
 	var rows *sql.Rows
 	var err error
 	if repo == nil {
-		rows, err = s.db.Query(selectRepoMetricHistoryAggSQL, org, org)
+		rows, err = s.db.Query(selectRepoMetricHistoryAggSQL, org, org, since)
 	} else {
-		rows, err = s.db.Query(selectRepoMetricHistorySQL, org, repo)
+		rows, err = s.db.Query(selectRepoMetricHistorySQL, org, repo, since)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query repo metric history: %w", err)

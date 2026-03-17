@@ -25,6 +25,7 @@ const (
 		FROM repo_metric_history
 		WHERE org = COALESCE(?, org)
 		  AND repo = COALESCE(?, repo)
+		  AND date >= ?
 		ORDER BY org, repo, date
 	`
 
@@ -32,6 +33,7 @@ const (
 			SUM(stars) AS stars, SUM(forks) AS forks
 		FROM repo_metric_history
 		WHERE org = COALESCE(?, org)
+		  AND date >= ?
 		GROUP BY date
 		ORDER BY date
 	`
@@ -39,17 +41,19 @@ const (
 	backfillDays = 30
 )
 
-func (s *Store) GetRepoMetricHistory(org, repo *string) ([]*data.RepoMetricHistory, error) {
+func (s *Store) GetRepoMetricHistory(org, repo *string, months int) ([]*data.RepoMetricHistory, error) {
 	if s.db == nil {
 		return nil, data.ErrDBNotInitialized
 	}
 
+	since := sinceDate(months)
+
 	var rows *sql.Rows
 	var err error
 	if repo == nil {
-		rows, err = s.db.Query(selectRepoMetricHistoryAggSQL, org, org)
+		rows, err = s.db.Query(selectRepoMetricHistoryAggSQL, org, org, since)
 	} else {
-		rows, err = s.db.Query(selectRepoMetricHistorySQL, org, repo)
+		rows, err = s.db.Query(selectRepoMetricHistorySQL, org, repo, since)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query repo metric history: %w", err)

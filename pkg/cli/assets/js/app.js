@@ -278,8 +278,8 @@ function loadTabCharts(tab, months, org, repo, entity) {
             loadInsightsSummary('/data/insights/summary?' + q);
             loadHealthActivitySparkline('/data/insights/daily-activity?' + q);
             loadRepoMeta('/data/insights/repo-meta?o=' + org + '&r=' + repo);
-            loadStarsTrendChart('/data/insights/repo-metric-history?o=' + org + '&r=' + repo);
-            loadForksTrendChart('/data/insights/repo-metric-history?o=' + org + '&r=' + repo);
+            loadStarsTrendChart('/data/insights/repo-metric-history?' + q);
+            loadForksTrendChart('/data/insights/repo-metric-history?' + q);
             break;
         case 'activity':
             loadTimeSeriesChart('/data/type?' + q, onTimeSeriesChartSelect);
@@ -1160,7 +1160,8 @@ function loadRepoMeta(url) {
         });
 
         // Sparkline for stars/forks trend.
-        $.get(`/data/insights/repo-metric-history?o=${new URLSearchParams(url.split('?')[1]).get('o') || ''}&r=${new URLSearchParams(url.split('?')[1]).get('r') || ''}`, function (hist) {
+        var mhParams = 'm=' + ($("#period_months").val() || '6') + '&o=' + (new URLSearchParams(url.split('?')[1]).get('o') || '') + '&r=' + (new URLSearchParams(url.split('?')[1]).get('r') || '');
+        $.get('/data/insights/repo-metric-history?' + mhParams, function (hist) {
             if (!hist || hist.length === 0) return;
             var sLabels = [], sStars = [], sForks = [];
             $.each(hist, function (i, d) {

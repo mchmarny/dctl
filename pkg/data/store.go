@@ -121,7 +121,7 @@ type RepoMetaStore interface {
 type MetricHistoryStore interface {
 	ImportRepoMetricHistory(ctx context.Context, token, owner, repo string) error
 	ImportAllRepoMetricHistory(ctx context.Context, token string) error
-	GetRepoMetricHistory(org, repo *string) ([]*RepoMetricHistory, error)
+	GetRepoMetricHistory(org, repo *string, months int) ([]*RepoMetricHistory, error)
 }
 
 // ReputationStore manages reputation scoring.

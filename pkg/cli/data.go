@@ -354,7 +354,7 @@ func insightsRepoMetaAPIHandler(store data.Store) http.HandlerFunc {
 func insightsRepoMetricHistoryAPIHandler(store data.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
-		res, err := store.GetRepoMetricHistory(p.org, p.repo)
+		res, err := store.GetRepoMetricHistory(p.org, p.repo, p.months)
 		if err != nil {
 			slog.Error("failed to get repo metric history", "error", err)
 			writeError(w, http.StatusInternalServerError, "error querying repo metric history")
