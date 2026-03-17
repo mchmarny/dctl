@@ -50,10 +50,34 @@ func TestGetRepoMetricHistory_WithFilter(t *testing.T) {
 	require.NoError(t, err)
 
 	org := "org1"
-	list, err := store.GetRepoMetricHistory(&org, nil)
+	repo := "repo1"
+	list, err := store.GetRepoMetricHistory(&org, &repo)
 	require.NoError(t, err)
 	require.Len(t, list, 1)
 	assert.Equal(t, "org1", list[0].Org)
+}
+
+func TestGetRepoMetricHistory_AggregateByDate(t *testing.T) {
+	store := setupTestDB(t)
+
+	_, err := store.db.Exec(`INSERT INTO repo_metric_history (org, repo, date, stars, forks)
+		VALUES
+		('org1', 'repo1', '2026-03-10', 100, 50),
+		('org1', 'repo1', '2026-03-11', 105, 52),
+		('org1', 'repo2', '2026-03-10', 200, 80),
+		('org1', 'repo2', '2026-03-11', 210, 85)`)
+	require.NoError(t, err)
+
+	org := "org1"
+	list, err := store.GetRepoMetricHistory(&org, nil)
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	assert.Equal(t, "2026-03-10", list[0].Date)
+	assert.Equal(t, 300, list[0].Stars)
+	assert.Equal(t, 130, list[0].Forks)
+	assert.Equal(t, "2026-03-11", list[1].Date)
+	assert.Equal(t, 315, list[1].Stars)
+	assert.Equal(t, 137, list[1].Forks)
 }
 
 func TestBuildDailyTotals(t *testing.T) {

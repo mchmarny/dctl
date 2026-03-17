@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -29,6 +30,15 @@ const (
 		ORDER BY org, repo, date
 	`
 
+	// selectRepoMetricHistoryAggSQL: $1=org (label), $2=org (filter)
+	selectRepoMetricHistoryAggSQL = `SELECT COALESCE($1, '') AS org, '' AS repo, date,
+			SUM(stars) AS stars, SUM(forks) AS forks
+		FROM repo_metric_history
+		WHERE org = COALESCE($2, org)
+		GROUP BY date
+		ORDER BY date
+	`
+
 	backfillDays = 30
 )
 
@@ -37,7 +47,13 @@ func (s *Store) GetRepoMetricHistory(org, repo *string) ([]*data.RepoMetricHisto
 		return nil, data.ErrDBNotInitialized
 	}
 
-	rows, err := s.db.Query(selectRepoMetricHistorySQL, org, repo)
+	var rows *sql.Rows
+	var err error
+	if repo == nil {
+		rows, err = s.db.Query(selectRepoMetricHistoryAggSQL, org, org)
+	} else {
+		rows, err = s.db.Query(selectRepoMetricHistorySQL, org, repo)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query repo metric history: %w", err)
 	}
