@@ -2,7 +2,13 @@ sources:
   - org: NVIDIA
     repos:
       - aicr
-      - skyhook
+      - DCGM
+      - dcgm-exporter
+      - gpu-operator
+      - k8s-device-plugin
+      - kubevirt-gpu-device-plugin
+      - nvidia-container-toolkit
       - NVSentinel
+      - skyhook
 score:
   count: 999
