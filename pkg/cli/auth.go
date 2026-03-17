@@ -88,6 +88,17 @@ func saveGitHubToken(token string) error {
 	return nil
 }
 
+func requireGitHubToken() (string, error) {
+	token, err := getGitHubToken()
+	if err != nil {
+		return "", fmt.Errorf("no GitHub token found, run 'devpulse auth' first: %w", err)
+	}
+	if token == "" {
+		return "", fmt.Errorf("no GitHub token found, run 'devpulse auth' or set GITHUB_TOKEN")
+	}
+	return token, nil
+}
+
 func getGitHubToken() (string, error) {
 	// Environment variable takes highest precedence
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {

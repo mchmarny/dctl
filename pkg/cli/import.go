@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"errors"
-
 	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/net"
@@ -90,13 +88,9 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 	repos := cmd.StringSlice(repoNameFlag.Name)
 	months := cmd.Int(monthsFlag.Name)
 
-	token, err := getGitHubToken()
+	token, err := requireGitHubToken()
 	if err != nil {
-		return fmt.Errorf("no GitHub token found, run 'devpulse auth' first: %w", err)
-	}
-
-	if token == "" {
-		return fmt.Errorf("no GitHub token found, run 'devpulse auth' or set GITHUB_TOKEN")
+		return err
 	}
 
 	cfg := getConfig(cmd)
@@ -268,13 +262,9 @@ func importRepoExtras(ctx context.Context, store data.Store, token, org string, 
 }
 
 func importAffiliations(ctx context.Context, store data.Store) (*data.AffiliationImportResult, error) {
-	token, err := getGitHubToken()
+	token, err := requireGitHubToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if token == "" {
-		return nil, errors.New("no GitHub token")
+		return nil, err
 	}
 
 	client := net.GetOAuthClient(ctx, token)

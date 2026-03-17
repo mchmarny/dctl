@@ -57,12 +57,9 @@ func cmdScore(ctx context.Context, cmd *cli.Command) error {
 		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	token, err := getGitHubToken()
+	token, err := requireGitHubToken()
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-	if token == "" {
-		return fmt.Errorf("GitHub token required for deep scoring")
+		return err
 	}
 
 	cfg := getConfig(cmd)

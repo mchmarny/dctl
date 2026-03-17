@@ -47,7 +47,11 @@ func (s *Store) DeleteRepoData(org, repo string) (*data.DeleteResult, error) {
 			_ = tx.Rollback()
 			return nil, fmt.Errorf("deleting from %s/%s: %w", org, repo, execErr)
 		}
-		n, _ := res.RowsAffected()
+		n, raErr := res.RowsAffected()
+		if raErr != nil {
+			_ = tx.Rollback()
+			return nil, fmt.Errorf("getting rows affected: %w", raErr)
+		}
 		*d.field = n
 	}
 

@@ -135,12 +135,9 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		)
 	}
 
-	tokenStr, err := getGitHubToken()
+	tokenStr, err := requireGitHubToken()
 	if err != nil {
-		return fmt.Errorf("no GitHub token found, run 'devpulse auth' first: %w", err)
-	}
-	if tokenStr == "" {
-		return fmt.Errorf("no GitHub token found, run 'devpulse auth' or set GITHUB_TOKEN")
+		return err
 	}
 
 	pool := ghutil.NewTokenPool(tokenStr)

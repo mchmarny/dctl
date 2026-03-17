@@ -306,13 +306,12 @@ func cmdQueryEntities(_ context.Context, cmd *cli.Command) error {
 func cmdQueryDeveloper(ctx context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	val := cmd.String(ghUserNameQueryFlag.Name)
-	token, err := getGitHubToken()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if val == "" || token == "" {
+	if val == "" {
 		return cli.ShowSubcommandHelp(cmd)
+	}
+	token, err := requireGitHubToken()
+	if err != nil {
+		return err
 	}
 
 	cfg := getConfig(cmd)
@@ -346,13 +345,12 @@ func cmdQueryDevelopers(_ context.Context, cmd *cli.Command) error {
 func cmdQueryOrgRepos(ctx context.Context, cmd *cli.Command) error {
 	applyFlags(cmd)
 	org := cmd.String(orgNameFlag.Name)
-	token, err := getGitHubToken()
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub token: %w", err)
-	}
-
-	if org == "" || token == "" {
+	if org == "" {
 		return cli.ShowSubcommandHelp(cmd)
+	}
+	token, err := requireGitHubToken()
+	if err != nil {
+		return err
 	}
 
 	client := net.GetOAuthClient(ctx, token)
