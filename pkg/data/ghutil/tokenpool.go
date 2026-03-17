@@ -51,10 +51,9 @@ func (p *TokenPool) Token() string {
 		return p.entries[0].token
 	}
 
-	now := time.Now()
 	best := 0
 	for i := 1; i < len(p.entries); i++ {
-		if p.better(i, best, now) {
+		if p.better(i, best) {
 			best = i
 		}
 	}
@@ -83,7 +82,7 @@ func (p *TokenPool) Size() int {
 }
 
 // better returns true if entry i is a better choice than entry j.
-func (p *TokenPool) better(i, j int, now time.Time) bool {
+func (p *TokenPool) better(i, j int) bool {
 	ei, ej := p.entries[i], p.entries[j]
 
 	// If both have quota, pick the one with more remaining.
