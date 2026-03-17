@@ -32,13 +32,13 @@ func CheckRateLimit(resp *github.Response) {
 	if resp.Rate.Remaining == 0 {
 		slog.Warn("rate limit reached, pausing until reset",
 			"reset_at", resetAt.Format(time.RFC3339),
-			"wait", total.String(),
+			"wait_sec", total.Seconds(),
 		)
 	} else {
 		slog.Warn("rate limit approaching, pausing until reset",
 			"remaining", resp.Rate.Remaining,
 			"reset_at", resetAt.Format(time.RFC3339),
-			"wait", total.String(),
+			"wait_sec", total.Seconds(),
 		)
 	}
 

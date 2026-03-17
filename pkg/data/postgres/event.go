@@ -412,7 +412,7 @@ func (e *eventImporter) flush() error {
 		"batch", len(events),
 		"total", e.flushed,
 		"developers", len(users),
-		"duration", time.Since(start).String())
+		"duration_sec", time.Since(start).Seconds())
 
 	return nil
 }

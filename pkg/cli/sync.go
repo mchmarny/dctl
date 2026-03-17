@@ -136,49 +136,95 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 
 	cfg := getConfig(cmd)
 
+	var (
+		errors     int
+		eventCount int
+		devCount   int
+		scored     int
+	)
+
 	// Import
+	phaseStart := time.Now()
 	slog.Info("importing events", "org", target.Org, "repo", target.Repo)
-	events, summary, importErr := cfg.Store.ImportEvents(ctx, token, target.Org, target.Repo, data.EventAgeMonthsDefault)
+	_, summary, importErr := cfg.Store.ImportEvents(ctx, token, target.Org, target.Repo, data.EventAgeMonthsDefault)
+	importSec := time.Since(phaseStart).Seconds()
 	if importErr != nil {
+		errors++
 		slog.Error("failed to import events", "org", target.Org, "repo", target.Repo, "error", importErr)
-	} else {
-		slog.Info("import complete", "events", events, "summary", summary)
+	} else if summary != nil {
+		eventCount = summary.Events
+		devCount = summary.Developers
+		slog.Info("import complete", "events", eventCount, "developers", devCount, "duration_sec", importSec)
 	}
 
 	// Affiliations
+	phaseStart = time.Now()
 	slog.Info("updating affiliations")
 	if _, affErr := importAffiliations(ctx, cfg.Store); affErr != nil {
+		errors++
 		slog.Error("affiliations failed", "error", affErr)
 	}
+	affiliationsSec := time.Since(phaseStart).Seconds()
 
 	// Substitutions
+	phaseStart = time.Now()
 	slog.Info("applying substitutions")
 	if _, subErr := cfg.Store.ApplySubstitutions(); subErr != nil {
+		errors++
 		slog.Error("substitutions failed", "error", subErr)
 	}
+	substitutionsSec := time.Since(phaseStart).Seconds()
 
 	// Extras (metadata, releases, etc.)
+	phaseStart = time.Now()
 	importRepoExtras(ctx, cfg.Store, token, target.Org, []string{target.Repo})
+	extrasSec := time.Since(phaseStart).Seconds()
 
 	// Reputation (local, no API calls)
+	phaseStart = time.Now()
 	org := target.Org
 	slog.Info("computing reputation")
 	if _, repErr := cfg.Store.ImportReputation(&org, nil); repErr != nil {
+		errors++
 		slog.Error("reputation failed", "error", repErr)
 	}
+	reputationSec := time.Since(phaseStart).Seconds()
 
 	// Score
+	phaseStart = time.Now()
 	count := 999
 	if sc != nil && sc.Score.Count > 0 {
 		count = sc.Score.Count
 	}
 	repo := target.Repo
 	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", count)
-	if _, scoreErr := cfg.Store.ImportDeepReputation(ctx, token, count, &org, &repo); scoreErr != nil {
+	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, token, count, &org, &repo)
+	if scoreErr != nil {
+		errors++
 		slog.Error("deep scoring failed", "error", scoreErr)
+	} else if deepResult != nil {
+		scored = deepResult.Scored
+		errors += deepResult.Errors
 	}
+	scoringSec := time.Since(phaseStart).Seconds()
 
-	slog.Info("sync complete", "org", target.Org, "repo", target.Repo, "duration", time.Since(start).String())
+	totalSec := time.Since(start).Seconds()
+
+	slog.Info("sync_summary",
+		"org", target.Org,
+		"repo", target.Repo,
+		"events", eventCount,
+		"developers", devCount,
+		"scored", scored,
+		"errors", errors,
+		"total_sec", totalSec,
+		"import_sec", importSec,
+		"affiliations_sec", affiliationsSec,
+		"substitutions_sec", substitutionsSec,
+		"extras_sec", extrasSec,
+		"reputation_sec", reputationSec,
+		"scoring_sec", scoringSec,
+	)
 
 	return nil
 }
