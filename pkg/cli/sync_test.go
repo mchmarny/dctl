@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	urfave "github.com/urfave/cli/v3"
 )
 
 func TestFlattenTargets(t *testing.T) {
@@ -87,6 +88,59 @@ score:
 func TestLoadSyncConfigFileNotFound(t *testing.T) {
 	_, err := loadSyncConfig(t.Context(), "/nonexistent/sync.yaml")
 	require.Error(t, err)
+}
+
+func TestCmdSyncOrgRepoValidation(t *testing.T) {
+	yaml := `sources:
+  - org: NVIDIA
+    repos:
+      - aicr
+score:
+  count: 999
+`
+	f := t.TempDir() + "/sync.yaml"
+	require.NoError(t, writeTestFile(f, yaml))
+
+	tests := []struct {
+		name    string
+		org     string
+		repo    string
+		wantErr string
+	}{
+		{"org without repo", "NVIDIA", "", "--org and --repo must be specified together"},
+		{"repo without org", "", "aicr", "--org and --repo must be specified together"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &urfave.Command{
+				Commands: []*urfave.Command{
+					{
+						Name:   "sync",
+						Action: cmdSync,
+						Flags: []urfave.Flag{
+							syncConfigFlag,
+							syncOrgFlag,
+							syncRepoFlag,
+							debugFlag,
+						},
+					},
+				},
+			}
+
+			args := []string{"test", "sync", "--config", f}
+			if tt.org != "" {
+				args = append(args, "--org", tt.org)
+			}
+			if tt.repo != "" {
+				args = append(args, "--repo", tt.repo)
+			}
+
+			err := app.Run(t.Context(), args)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
 }
 
 func writeTestFile(path, content string) error {

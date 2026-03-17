@@ -151,6 +151,9 @@ For automated, scheduled imports, `sync` reads a config file and imports + score
 ```shell
 devpulse sync --config sync.yaml
 devpulse sync --config https://raw.githubusercontent.com/org/repo/main/config/sync.yaml
+
+# Override round-robin to sync a specific repo
+devpulse sync --config sync.yaml --org NVIDIA --repo DCGM
 ```
 
 Config format:

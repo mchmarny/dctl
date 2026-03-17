@@ -24,18 +24,31 @@ var (
 		Sources: urfave.EnvVars("DEVPULSE_SYNC_CONFIG"),
 	}
 
+	syncOrgFlag = &urfave.StringFlag{
+		Name:  "org",
+		Usage: "Override target org (requires --repo)",
+	}
+
+	syncRepoFlag = &urfave.StringFlag{
+		Name:  "repo",
+		Usage: "Override target repo (requires --org)",
+	}
+
 	syncCmd = &urfave.Command{
 		Name:            "sync",
 		HideHelpCommand: true,
 		Usage:           "Import and score one repo from a config file (round-robin by hour)",
-		UsageText: `devpulse sync --config <path-or-url>
+		UsageText: `devpulse sync --config <path-or-url> [--org <org> --repo <repo>]
 
 Examples:
   devpulse sync --config sync.yaml
-  devpulse sync --config https://raw.githubusercontent.com/org/repo/main/sync.yaml`,
+  devpulse sync --config https://raw.githubusercontent.com/org/repo/main/sync.yaml
+  devpulse sync --config sync.yaml --org NVIDIA --repo DCGM`,
 		Action: cmdSync,
 		Flags: []urfave.Flag{
 			syncConfigFlag,
+			syncOrgFlag,
+			syncRepoFlag,
 			debugFlag,
 		},
 	}
@@ -76,18 +89,30 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		return fmt.Errorf("loading sync config: %w", err)
 	}
 
-	targets := flattenTargets(sc.Sources)
-	if len(targets) == 0 {
-		return fmt.Errorf("no repos found in sync config")
+	orgOverride := cmd.String(syncOrgFlag.Name)
+	repoOverride := cmd.String(syncRepoFlag.Name)
+
+	if (orgOverride == "") != (repoOverride == "") {
+		return fmt.Errorf("--org and --repo must be specified together")
 	}
 
-	target := pickTarget(targets, time.Now())
-	slog.Info("sync target selected",
-		"org", target.Org,
-		"repo", target.Repo,
-		"index", time.Now().UTC().Hour()%len(targets),
-		"total", len(targets),
-	)
+	var target syncTarget
+	if orgOverride != "" {
+		target = syncTarget{Org: orgOverride, Repo: repoOverride}
+		slog.Info("sync target override", "org", target.Org, "repo", target.Repo)
+	} else {
+		targets := flattenTargets(sc.Sources)
+		if len(targets) == 0 {
+			return fmt.Errorf("no repos found in sync config")
+		}
+		target = pickTarget(targets, time.Now())
+		slog.Info("sync target selected",
+			"org", target.Org,
+			"repo", target.Repo,
+			"index", time.Now().UTC().Hour()%len(targets),
+			"total", len(targets),
+		)
+	}
 
 	token, err := getGitHubToken()
 	if err != nil {
