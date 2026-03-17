@@ -157,10 +157,10 @@ Config format:
 
 ```yaml
 sources:
-  - org: NVIDIA
+  - org: myorg
     repos:
-      - aicr
-      - skyhook
+      - repo1
+      - repo2
   - org: mchmarny
     repos:
       - devpulse
@@ -186,7 +186,7 @@ Use the search bar with prefix syntax to scope the dashboard:
 
 | Prefix | Example | Scope |
 |--------|---------|-------|
-| `org:` | `org:nvidia` | All repos in an organization |
+| `org:` | `org:myorg` | All repos in an organization |
 | `repo:` | `repo:skyhook` | Single repository |
 
 No prefix defaults to org search.

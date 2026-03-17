@@ -555,7 +555,7 @@ Expected: Still works with default SQLite DB.
 Requires AlloyDB proxy running:
 ```bash
 make build
-dist/devpulse_darwin_arm64_v8.0/devpulse --db "postgres://devpulse:PASSWORD@127.0.0.1:5432/devpulse" imp --org NVIDIA --repo aicr
+dist/devpulse_darwin_arm64_v8.0/devpulse --db "postgres://devpulse:PASSWORD@127.0.0.1:5432/devpulse" imp --org myorg --repo myrepo
 ```
 
 **Step 4: Commit any fixes**

@@ -29,7 +29,7 @@ The search bar uses prefix syntax to scope the dashboard:
 
 | Prefix | Example | Scope |
 |--------|---------|-------|
-| `org:` | `org:nvidia` | All repos in an organization |
+| `org:` | `org:myorg` | All repos in an organization |
 | `repo:` | `repo:skyhook` | Single repository |
 
 Typing without a prefix defaults to org search. Clearing the search bar resets to the all-data view.
