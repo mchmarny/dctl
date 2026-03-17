@@ -35,3 +35,12 @@ resource "google_artifact_registry_repository_iam_member" "cloudrun_reader" {
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:${google_service_account.cloudrun.email}"
 }
+
+# Grant the GitHub Actions SA permission to read images during Cloud Run deploys
+# (the control plane validates the image using the caller's credentials)
+resource "google_artifact_registry_repository_iam_member" "github_actions_reader" {
+  repository = google_artifact_registry_repository.default.name
+  location   = google_artifact_registry_repository.default.location
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.github_actions_user.email}"
+}
