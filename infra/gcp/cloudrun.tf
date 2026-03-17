@@ -10,6 +10,7 @@ locals {
     "roles/alloydb.client",              # Connect to AlloyDB instances
     "roles/logging.logWriter",           # Write structured logs
     "roles/monitoring.metricWriter",     # Write custom metrics
+    "roles/run.invoker",                  # Cloud Scheduler triggers job executions
     "roles/secretmanager.secretAccessor", # Read connection string secret
   ])
 }
