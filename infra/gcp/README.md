@@ -90,6 +90,23 @@ gcloud scheduler jobs create http devpulse-sync-schedule \
     --oauth-service-account-email $SERVICE_ACCOUNT
 ```
 
+## Monitoring
+
+List recent job executions:
+
+```shell
+gcloud run jobs executions list --job devpulse-sync --region $REGION --limit 5
+```
+
+Read recent sync job logs:
+
+```shell
+gcloud logging read 'resource.type="cloud_run_job" resource.labels.job_name="devpulse-sync"' \
+    --limit 20 \
+    --format='table(timestamp, textPayload)' \
+    --freshness=1h
+```
+
 ## Log-Based Metrics
 
 Counter metrics (via `gcloud`):
