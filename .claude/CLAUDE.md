@@ -108,10 +108,12 @@ pkg/data/postgres/  PostgreSQL Store implementation + migrations
 pkg/data/ghutil/    Shared GitHub API helpers (rate limiting, user mapping)
 pkg/auth/           GitHub OAuth token management (OS keychain)
 pkg/net/            HTTP client utilities
+config/             Sync config files (YAML, org/repo lists)
+infra/gcp/          Terraform for GCP infrastructure
 tools/              Dev scripts (version bump, shared helpers)
 ```
 
-CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `reset`
+CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync`, `reset`
 
 Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite/PostgreSQL → HTTP API → Chart.js dashboard
 
@@ -125,7 +127,7 @@ GitHub Actions workflows in `.github/workflows/`:
 |----------|---------|---------|
 | `test-on-push.yaml` | push to main, PRs | Calls reusable test workflow |
 | `test-on-call.yaml` | reusable (workflow_call) | tidy, lint, test with race detector |
-| `image-on-tag.yaml` | version tags (`v*.*.*`) | goreleaser build, cosign signing, SBOM, attestations, Homebrew tap |
+| `release-on-tag.yaml` | version tags (`v*.*.*`) | goreleaser build, cosign signing, SBOM, attestations, Homebrew tap, AR copy, Cloud Run deploy |
 | `codeql-analysis.yml` | schedule, push | CodeQL security analysis (Go + JavaScript) |
 
 ## Release Process

@@ -144,7 +144,33 @@ devpulse score --org <org> --count 20           # deep-score 20 lowest
 
 Run incrementally — each invocation scores the next batch of lowest-reputation contributors. See [docs/SCORE.md](docs/SCORE.md) for details.
 
-### 4. Dashboard view
+### 4. Scheduled sync
+
+For automated, scheduled imports, `sync` reads a config file and imports + scores one repo per run using hour-based round-robin rotation:
+
+```shell
+devpulse sync --config sync.yaml
+devpulse sync --config https://raw.githubusercontent.com/org/repo/main/config/sync.yaml
+```
+
+Config format:
+
+```yaml
+sources:
+  - org: NVIDIA
+    repos:
+      - aicr
+      - skyhook
+  - org: mchmarny
+    repos:
+      - devpulse
+score:
+  count: 999
+```
+
+The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the flattened list based on `UTC hour % total repos`, runs a full import, then deep-scores all contributors. With 3 repos on an hourly schedule, each repo is imported ~8 times per day while staying within GitHub's 5,000 requests/hour API rate limit.
+
+### 5. Dashboard view
 
 ```shell
 devpulse server
@@ -165,7 +191,7 @@ Use the search bar with prefix syntax to scope the dashboard:
 
 No prefix defaults to org search.
 
-### 5. Programmatic query
+### 6. Programmatic query
 
 `devpulse` also exposes data as JSON for scripting:
 
@@ -177,7 +203,7 @@ devpulse query entity detail --name GOOGLE
 
 See [docs/QUERY.md](docs/QUERY.md) for all query options.
 
-### 6. Data deletion
+### 7. Data deletion
 
 Remove imported data for a specific org or repo:
 
@@ -187,7 +213,7 @@ devpulse delete --org <org> --repo <repo>            # delete data for specific 
 devpulse delete --org <org> --repo <repo> --force    # skip confirmation prompt
 ```
 
-### 7. Full reset
+### 8. Full reset
 
 Delete all imported data and start fresh:
 
