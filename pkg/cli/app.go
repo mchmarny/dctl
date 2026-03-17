@@ -102,6 +102,7 @@ func newApp() *urfave.Command {
 			substituteCmd,
 			queryCmd,
 			serverCmd,
+			syncCmd,
 			resetCmd,
 		},
 		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
