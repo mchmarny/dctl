@@ -118,6 +118,9 @@ jobs:
           gcloud run services update devpulse \
             --image "${ARTIFACT_REGISTRY}/devpulse:${TAG}" \
             --region us-west1
+          gcloud run jobs update devpulse-sync \
+            --image "${ARTIFACT_REGISTRY}/devpulse:${TAG}" \
+            --region us-west1
 
   publish:
     runs-on: ubuntu-latest
