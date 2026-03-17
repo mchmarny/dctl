@@ -35,11 +35,11 @@ var (
 		Usage: "Override target repo (requires --org)",
 	}
 
-	syncStaleFlag = &urfave.IntFlag{
+	syncStaleFlag = &urfave.StringFlag{
 		Name:    "stale",
-		Usage:   "Hours before a reputation score is considered stale (default: 72)",
-		Value:   72,
-		Sources: urfave.EnvVars("DEVPULSE_STALE_HOURS"),
+		Usage:   "Duration before a reputation score is considered stale (e.g. 72h, 3d, 1w)",
+		Value:   "3d",
+		Sources: urfave.EnvVars("DEVPULSE_STALE"),
 	}
 
 	syncCmd = &urfave.Command{
@@ -210,8 +210,11 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	}
 	repo := target.Repo
 	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", count)
-	staleHours := cmd.Int(syncStaleFlag.Name)
-	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, count, int(staleHours), &org, &repo)
+	staleHours, parseErr := parseDurationHours(cmd.String(syncStaleFlag.Name))
+	if parseErr != nil {
+		return fmt.Errorf("invalid --stale value: %w", parseErr)
+	}
+	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, count, staleHours, &org, &repo)
 	if scoreErr != nil {
 		errors++
 		slog.Error("deep scoring failed", "error", scoreErr)
@@ -297,4 +300,36 @@ func flattenTargets(sources []syncSource) []syncTarget {
 func pickTarget(targets []syncTarget, now time.Time) syncTarget {
 	idx := now.UTC().Hour() % len(targets)
 	return targets[idx]
+}
+
+// parseDurationHours parses a duration string into whole hours.
+// Supports Go duration syntax (e.g. "72h") plus shorthand "d" (days) and "w" (weeks).
+func parseDurationHours(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+
+	// Handle shorthand suffixes not supported by time.ParseDuration.
+	switch {
+	case strings.HasSuffix(s, "d"):
+		s = strings.TrimSuffix(s, "d")
+		var days int
+		if _, err := fmt.Sscanf(s, "%d", &days); err != nil {
+			return 0, fmt.Errorf("invalid day duration %q: %w", s+"d", err)
+		}
+		return days * 24, nil
+	case strings.HasSuffix(s, "w"):
+		s = strings.TrimSuffix(s, "w")
+		var weeks int
+		if _, err := fmt.Sscanf(s, "%d", &weeks); err != nil {
+			return 0, fmt.Errorf("invalid week duration %q: %w", s+"w", err)
+		}
+		return weeks * 7 * 24, nil
+	}
+
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, err
+	}
+	return int(d.Hours()), nil
 }

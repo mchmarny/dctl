@@ -148,6 +148,37 @@ score:
 	}
 }
 
+func TestParseDurationHours(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    int
+		wantErr bool
+	}{
+		{"72h", 72, false},
+		{"3d", 72, false},
+		{"1w", 168, false},
+		{"2w", 336, false},
+		{"1d", 24, false},
+		{"30m", 0, false},
+		{"", 0, false},
+		{"bogus", 0, true},
+		{"xd", 0, true},
+		{"xw", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseDurationHours(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
 func writeTestFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o600)
 }
