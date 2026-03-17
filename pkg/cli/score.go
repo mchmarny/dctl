@@ -81,7 +81,7 @@ func cmdScore(ctx context.Context, cmd *cli.Command) error {
 	count := cmd.Int(countFlag.Name)
 
 	slog.Info("deep scoring", "org", org, "repo", repo, "count", count)
-	result, err := cfg.Store.ImportDeepReputation(ctx, func() string { return token }, count, orgPtr, repoPtr)
+	result, err := cfg.Store.ImportDeepReputation(ctx, func() string { return token }, count, 0, orgPtr, repoPtr)
 	if err != nil {
 		return fmt.Errorf("failed to compute deep reputation scores: %w", err)
 	}

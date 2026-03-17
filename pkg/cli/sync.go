@@ -35,6 +35,13 @@ var (
 		Usage: "Override target repo (requires --org)",
 	}
 
+	syncStaleFlag = &urfave.IntFlag{
+		Name:    "stale",
+		Usage:   "Hours before a reputation score is considered stale (default: 72)",
+		Value:   72,
+		Sources: urfave.EnvVars("DEVPULSE_STALE_HOURS"),
+	}
+
 	syncCmd = &urfave.Command{
 		Name:            "sync",
 		HideHelpCommand: true,
@@ -52,6 +59,7 @@ Examples:
 			syncConfigFlag,
 			syncOrgFlag,
 			syncRepoFlag,
+			syncStaleFlag,
 			debugFlag,
 		},
 	}
@@ -202,7 +210,8 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	}
 	repo := target.Repo
 	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", count)
-	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, count, &org, &repo)
+	staleHours := cmd.Int(syncStaleFlag.Name)
+	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, count, int(staleHours), &org, &repo)
 	if scoreErr != nil {
 		errors++
 		slog.Error("deep scoring failed", "error", scoreErr)

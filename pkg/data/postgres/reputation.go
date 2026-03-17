@@ -179,7 +179,7 @@ func (s *Store) ImportReputation(org, repo *string) (*data.ReputationResult, err
 	return res, nil
 }
 
-func (s *Store) ImportDeepReputation(ctx context.Context, tokenFn data.TokenFunc, limit int, org, repo *string) (*data.DeepReputationResult, error) {
+func (s *Store) ImportDeepReputation(ctx context.Context, tokenFn data.TokenFunc, limit, staleHours int, org, repo *string) (*data.DeepReputationResult, error) {
 	if s.db == nil {
 		return nil, data.ErrDBNotInitialized
 	}
@@ -192,7 +192,11 @@ func (s *Store) ImportDeepReputation(ctx context.Context, tokenFn data.TokenFunc
 		return &data.DeepReputationResult{}, nil
 	}
 
-	threshold := time.Now().UTC().Add(-reputationStaleHours * time.Hour).Format("2006-01-02T15:04:05Z")
+	if staleHours <= 0 {
+		staleHours = reputationStaleHours
+	}
+
+	threshold := time.Now().UTC().Add(-time.Duration(staleHours) * time.Hour).Format("2006-01-02T15:04:05Z")
 
 	usernames, err := s.getLowestReputationUsernames(org, repo, threshold, limit)
 	if err != nil {
