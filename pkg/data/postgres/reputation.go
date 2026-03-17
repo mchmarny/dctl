@@ -179,12 +179,12 @@ func (s *Store) ImportReputation(org, repo *string) (*data.ReputationResult, err
 	return res, nil
 }
 
-func (s *Store) ImportDeepReputation(ctx context.Context, token string, limit int, org, repo *string) (*data.DeepReputationResult, error) {
+func (s *Store) ImportDeepReputation(ctx context.Context, tokenFn data.TokenFunc, limit int, org, repo *string) (*data.DeepReputationResult, error) {
 	if s.db == nil {
 		return nil, data.ErrDBNotInitialized
 	}
 
-	if token == "" {
+	if tokenFn == nil || tokenFn() == "" {
 		return nil, errors.New("token is required for deep reputation scoring")
 	}
 
@@ -211,7 +211,7 @@ func (s *Store) ImportDeepReputation(ctx context.Context, token string, limit in
 	for i, username := range usernames {
 		slog.Info("reputation", "user", username, "progress", fmt.Sprintf("%d/%d", i+1, len(usernames)))
 
-		if _, deepErr := s.ComputeDeepReputation(ctx, token, username); deepErr != nil {
+		if _, deepErr := s.ComputeDeepReputation(ctx, tokenFn(), username); deepErr != nil {
 			slog.Error("deep reputation failed", "username", username, "error", deepErr)
 			res.Errors++
 			continue

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	pnet "github.com/mchmarny/devpulse/pkg/net"
 	urfave "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
@@ -126,13 +127,16 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		)
 	}
 
-	token, err := getGitHubToken()
+	tokenStr, err := getGitHubToken()
 	if err != nil {
 		return fmt.Errorf("no GitHub token found, run 'devpulse auth' first: %w", err)
 	}
-	if token == "" {
+	if tokenStr == "" {
 		return fmt.Errorf("no GitHub token found, run 'devpulse auth' or set GITHUB_TOKEN")
 	}
+
+	pool := ghutil.NewTokenPool(tokenStr)
+	slog.Info("token pool initialized", "tokens", pool.Size())
 
 	cfg := getConfig(cmd)
 
@@ -146,7 +150,7 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	// Import
 	phaseStart := time.Now()
 	slog.Info("importing events", "org", target.Org, "repo", target.Repo)
-	_, summary, importErr := cfg.Store.ImportEvents(ctx, token, target.Org, target.Repo, data.EventAgeMonthsDefault)
+	_, summary, importErr := cfg.Store.ImportEvents(ctx, pool.Token(), target.Org, target.Repo, data.EventAgeMonthsDefault)
 	importSec := time.Since(phaseStart).Seconds()
 	if importErr != nil {
 		errors++
@@ -177,7 +181,7 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 
 	// Extras (metadata, releases, etc.)
 	phaseStart = time.Now()
-	importRepoExtras(ctx, cfg.Store, token, target.Org, []string{target.Repo})
+	importRepoExtras(ctx, cfg.Store, pool.Token(), target.Org, []string{target.Repo})
 	extrasSec := time.Since(phaseStart).Seconds()
 
 	// Reputation (local, no API calls)
@@ -198,7 +202,7 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	}
 	repo := target.Repo
 	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", count)
-	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, token, count, &org, &repo)
+	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, count, &org, &repo)
 	if scoreErr != nil {
 		errors++
 		slog.Error("deep scoring failed", "error", scoreErr)

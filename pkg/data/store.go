@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// TokenFunc returns a GitHub API token. Used by methods that make many API
+// calls in a loop so they can rotate tokens from a pool on each iteration.
+type TokenFunc func() string
+
 // StateStore manages import state tracking.
 type StateStore interface {
 	GetState(query, org, repo string, min time.Time) (*State, error)
@@ -123,7 +127,7 @@ type MetricHistoryStore interface {
 // ReputationStore manages reputation scoring.
 type ReputationStore interface {
 	ImportReputation(org, repo *string) (*ReputationResult, error)
-	ImportDeepReputation(ctx context.Context, token string, limit int, org, repo *string) (*DeepReputationResult, error)
+	ImportDeepReputation(ctx context.Context, tokenFn TokenFunc, limit int, org, repo *string) (*DeepReputationResult, error)
 	GetOrComputeDeepReputation(ctx context.Context, token, username string) (*UserReputation, error)
 	ComputeDeepReputation(ctx context.Context, token, username string) (*UserReputation, error)
 	GetReputationDistribution(org, repo, entity *string, months int) (*ReputationDistribution, error)

@@ -302,26 +302,26 @@ func TestGetLowestReputationUsernames_SkipsBots(t *testing.T) {
 
 func TestImportDeepReputation_NilDB(t *testing.T) {
 	s := &Store{db: nil}
-	_, err := s.ImportDeepReputation(context.Background(), "token", 5, nil, nil)
+	_, err := s.ImportDeepReputation(context.Background(), func() string { return "token" }, 5, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportDeepReputation_EmptyToken(t *testing.T) {
 	store := setupTestDB(t)
-	_, err := store.ImportDeepReputation(context.Background(), "", 5, nil, nil)
+	_, err := store.ImportDeepReputation(context.Background(), nil, 5, nil, nil)
 	assert.Error(t, err)
 }
 
 func TestImportDeepReputation_ZeroLimit(t *testing.T) {
 	store := setupTestDB(t)
-	res, err := store.ImportDeepReputation(context.Background(), "token", 0, nil, nil)
+	res, err := store.ImportDeepReputation(context.Background(), func() string { return "token" }, 0, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Scored)
 }
 
 func TestImportDeepReputation_NoCandidates(t *testing.T) {
 	store := setupTestDB(t)
-	res, err := store.ImportDeepReputation(context.Background(), "token", 5, nil, nil)
+	res, err := store.ImportDeepReputation(context.Background(), func() string { return "token" }, 5, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Scored)
 }
