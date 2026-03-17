@@ -39,11 +39,13 @@ var (
 		HideHelpCommand: true,
 		Usage:           "Import and score one repo from a config file (round-robin by hour)",
 		UsageText: `devpulse sync --config <path-or-url> [--org <org> --repo <repo>]
+  devpulse sync --org <org> --repo <repo>
 
 Examples:
   devpulse sync --config sync.yaml
   devpulse sync --config https://raw.githubusercontent.com/org/repo/main/sync.yaml
-  devpulse sync --config sync.yaml --org NVIDIA --repo DCGM`,
+  devpulse sync --config sync.yaml --org NVIDIA --repo DCGM
+  devpulse sync --org NVIDIA --repo DCGM`,
 		Action: cmdSync,
 		Flags: []urfave.Flag{
 			syncConfigFlag,
@@ -80,15 +82,6 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	applyFlags(cmd)
 
 	configPath := cmd.String(syncConfigFlag.Name)
-	if configPath == "" {
-		return fmt.Errorf("--config is required")
-	}
-
-	sc, err := loadSyncConfig(ctx, configPath)
-	if err != nil {
-		return fmt.Errorf("loading sync config: %w", err)
-	}
-
 	orgOverride := cmd.String(syncOrgFlag.Name)
 	repoOverride := cmd.String(syncRepoFlag.Name)
 
@@ -96,11 +89,30 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		return fmt.Errorf("--org and --repo must be specified together")
 	}
 
-	var target syncTarget
+	var (
+		target syncTarget
+		sc     *syncConfig
+	)
+
 	if orgOverride != "" {
 		target = syncTarget{Org: orgOverride, Repo: repoOverride}
+		if configPath != "" {
+			var err error
+			sc, err = loadSyncConfig(ctx, configPath)
+			if err != nil {
+				return fmt.Errorf("loading sync config: %w", err)
+			}
+		}
 		slog.Info("sync target override", "org", target.Org, "repo", target.Repo)
 	} else {
+		if configPath == "" {
+			return fmt.Errorf("--config is required when --org/--repo are not set")
+		}
+		var err error
+		sc, err = loadSyncConfig(ctx, configPath)
+		if err != nil {
+			return fmt.Errorf("loading sync config: %w", err)
+		}
 		targets := flattenTargets(sc.Sources)
 		if len(targets) == 0 {
 			return fmt.Errorf("no repos found in sync config")
@@ -156,9 +168,9 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	}
 
 	// Score
-	count := sc.Score.Count
-	if count <= 0 {
-		count = 999
+	count := 999
+	if sc != nil && sc.Score.Count > 0 {
+		count = sc.Score.Count
 	}
 	repo := target.Repo
 	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", count)

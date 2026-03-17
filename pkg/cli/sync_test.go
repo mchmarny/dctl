@@ -103,12 +103,14 @@ score:
 
 	tests := []struct {
 		name    string
+		config  string
 		org     string
 		repo    string
 		wantErr string
 	}{
-		{"org without repo", "NVIDIA", "", "--org and --repo must be specified together"},
-		{"repo without org", "", "aicr", "--org and --repo must be specified together"},
+		{"org without repo", f, "NVIDIA", "", "--org and --repo must be specified together"},
+		{"repo without org", f, "", "aicr", "--org and --repo must be specified together"},
+		{"no config no override", "", "", "", "--config is required"},
 	}
 
 	for _, tt := range tests {
@@ -128,7 +130,10 @@ score:
 				},
 			}
 
-			args := []string{"test", "sync", "--config", f}
+			args := []string{"test", "sync"}
+			if tt.config != "" {
+				args = append(args, "--config", tt.config)
+			}
 			if tt.org != "" {
 				args = append(args, "--org", tt.org)
 			}
