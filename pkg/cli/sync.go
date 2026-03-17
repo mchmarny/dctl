@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	pnet "github.com/mchmarny/devpulse/pkg/net"
 	urfave "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )
@@ -148,11 +149,15 @@ func loadSyncConfig(ctx context.Context, path string) (*syncConfig, error) {
 	var r io.ReadCloser
 
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		client, err := pnet.GetHTTPClient()
+		if err != nil {
+			return nil, fmt.Errorf("creating HTTP client: %w", err)
+		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
 		if err != nil {
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("fetching config from %s: %w", path, err)
 		}
