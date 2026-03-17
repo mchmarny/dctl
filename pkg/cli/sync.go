@@ -162,7 +162,7 @@ func loadSyncConfig(ctx context.Context, path string) (*syncConfig, error) {
 		if err != nil {
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
-		resp, err := client.Do(req)
+		resp, err := client.Do(req) //nolint:gosec,nolintlint // G704: URL from trusted --config flag
 		if err != nil {
 			return nil, fmt.Errorf("fetching config from %s: %w", path, err)
 		}
