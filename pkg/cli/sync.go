@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -149,11 +150,15 @@ func loadSyncConfig(ctx context.Context, path string) (*syncConfig, error) {
 	var r io.ReadCloser
 
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		parsed, err := url.Parse(path)
+		if err != nil {
+			return nil, fmt.Errorf("parsing config URL: %w", err)
+		}
 		client, err := pnet.GetHTTPClient()
 		if err != nil {
 			return nil, fmt.Errorf("creating HTTP client: %w", err)
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
 		if err != nil {
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
