@@ -5,9 +5,7 @@ locals {
     "roles/iam.serviceAccountUser",
     "roles/logging.logWriter",
     "roles/monitoring.metricWriter",
-    "roles/run.invoker",
-    "roles/run.admin",
-    "roles/secretmanager.secretAccessor",
+    "roles/run.developer",
     "roles/storage.objectAdmin",
     "roles/storage.objectViewer",
   ])

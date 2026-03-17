@@ -1,6 +1,7 @@
 # List of GCP APIs to enable in this project
 locals {
   services = [
+  "alloydb.googleapis.com",
   "artifactregistry.googleapis.com",
   "cloudbuild.googleapis.com",
   "cloudresourcemanager.googleapis.com",
