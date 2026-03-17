@@ -1,0 +1,8 @@
+sources:
+  - org: NVIDIA
+    repos:
+      - aicr
+      - skyhook
+      - NVSentinel
+score:
+  count: 999
