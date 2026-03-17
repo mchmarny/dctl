@@ -1,17 +1,12 @@
 locals {
-  # List of roles that will be assigned to the publisher service account
+  # List of roles that will be assigned to the GitHub Actions service account
   publisher_roles = toset([
-    "roles/artifactregistry.writer",
-    "roles/iam.serviceAccountUser",
-    "roles/logging.logWriter",
-    "roles/monitoring.metricWriter",
-    "roles/run.developer",
-    "roles/storage.objectAdmin",
-    "roles/storage.objectViewer",
+    "roles/iam.serviceAccountUser", # Act as Cloud Run runtime SA during deploys
+    "roles/run.developer",          # Update Cloud Run services and jobs
   ])
 }
 
-# Service account to be used for federated auth to publish to GCR
+# Service account used by GitHub Actions for federated auth to deploy to Cloud Run
 resource "google_service_account" "github_actions_user" {
   account_id   = "github-actions-${var.prefix}"
   display_name = "Service Account impersonated in GitHub Actions"
@@ -54,10 +49,4 @@ resource "google_service_account_iam_member" "pool_impersonation" {
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/${var.git_repo}"
 }
 
-# Allow github-actions-user to use the Compute Engine default service account for GKE
-resource "google_service_account_iam_member" "compute_service_account_user" {
-  service_account_id = "projects/${var.project_id}/serviceAccounts/${data.google_project.project.number}-compute@developer.gserviceaccount.com"
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${google_service_account.github_actions_user.email}"
-}
 
