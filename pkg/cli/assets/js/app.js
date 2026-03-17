@@ -1220,6 +1220,7 @@ function loadStarsTrendChart(url) {
             labels.push(d.date);
             stars.push(d.stars);
         });
+        $("#stars-trend-desc").text("Daily star count from " + labels[0] + " to " + labels[labels.length - 1] + ".");
         if (starsTrendChart) starsTrendChart.destroy();
         starsTrendChart = new Chart($("#stars-trend-chart")[0].getContext("2d"), {
             type: 'line',
@@ -1256,6 +1257,7 @@ function loadForksTrendChart(url) {
             labels.push(d.date);
             forks.push(d.forks);
         });
+        $("#forks-trend-desc").text("Daily fork count from " + labels[0] + " to " + labels[labels.length - 1] + ".");
         if (forksTrendChart) forksTrendChart.destroy();
         forksTrendChart = new Chart($("#forks-trend-chart")[0].getContext("2d"), {
             type: 'line',
