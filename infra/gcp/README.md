@@ -24,6 +24,14 @@ echo -n "<alloydb-connection-string>" | gcloud secrets create devpulse-db \
     --data-file=-
 ```
 
+To use multiple GitHub tokens for higher API rate limits (5,000 req/hour per token), store them comma-separated. Tokens need no scopes — they only increase the rate limit:
+
+```shell
+echo -n "<token1>,<token2>" | gcloud secrets versions add devpulse-github-token \
+    --project $PROJECT_ID \
+    --data-file=-
+```
+
 ## AlloyDB Auth Proxy
 
 Cloud Run uses the [AlloyDB Auth Proxy](https://cloud.google.com/alloydb/docs/auth-proxy/overview) sidecar to connect to the database. The proxy is configured as a Cloud Run sidecar container when creating the service (see below).
