@@ -351,6 +351,19 @@ func insightsRepoMetaAPIHandler(store data.Store) http.HandlerFunc {
 	}
 }
 
+func insightsRepoOverviewAPIHandler(store data.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := store.GetRepoOverview(p.org, p.months)
+		if err != nil {
+			slog.Error("failed to get repo overview", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying repo overview")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsRepoMetricHistoryAPIHandler(store data.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)

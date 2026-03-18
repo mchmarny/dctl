@@ -449,3 +449,17 @@ type RepoMeta struct {
 	Archived   bool   `json:"archived" yaml:"archived"`
 	UpdatedAt  string `json:"updated_at" yaml:"updatedAt"`
 }
+
+type RepoOverview struct {
+	Org          string `json:"org"`
+	Repo         string `json:"repo"`
+	Stars        int    `json:"stars"`
+	Forks        int    `json:"forks"`
+	OpenIssues   int    `json:"open_issues"`
+	Events       int    `json:"events"`
+	Contributors int    `json:"contributors"`
+	Language     string `json:"language"`
+	License      string `json:"license"`
+	Archived     bool   `json:"archived"`
+	LastImport   string `json:"last_import"`
+}

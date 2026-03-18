@@ -115,6 +115,7 @@ type RepoMetaStore interface {
 	ImportRepoMeta(ctx context.Context, token, owner, repo string) error
 	ImportAllRepoMeta(ctx context.Context, token string) error
 	GetRepoMetas(org, repo *string) ([]*RepoMeta, error)
+	GetRepoOverview(org *string, months int) ([]*RepoOverview, error)
 }
 
 // MetricHistoryStore manages repository metric history imports and queries.

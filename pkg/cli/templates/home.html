@@ -113,7 +113,7 @@
                     <span class="insight-desc">Snapshot from GitHub API at last import. Stars, forks, and issues may lag.</span>
                 </div>
             </article>
-            <article>
+            <article id="stars-trend-panel">
                 <div class="tbl">
                     <div class="content-header">
                         Stars Trend
@@ -124,7 +124,7 @@
                     <span class="insight-desc" id="stars-trend-desc">Daily star count.</span>
                 </div>
             </article>
-            <article>
+            <article id="forks-trend-panel">
                 <div class="tbl">
                     <div class="content-header">
                         Forks Trend
@@ -133,6 +133,32 @@
                         <canvas class="chart" id="forks-trend-chart"></canvas>
                     </div>
                     <span class="insight-desc" id="forks-trend-desc">Daily fork count.</span>
+                </div>
+            </article>
+            <article id="repo-overview-panel" class="grid-full-width" style="display:none">
+                <div class="tbl">
+                    <div class="content-header">
+                        Repository Overview
+                    </div>
+                    <div class="tbl-chart">
+                        <table id="repo-overview-table">
+                            <thead>
+                                <tr>
+                                    <th>Repository</th>
+                                    <th class="num">Stars</th>
+                                    <th class="num">Forks</th>
+                                    <th class="num">Issues</th>
+                                    <th class="num">Events</th>
+                                    <th class="num">Contributors</th>
+                                    <th>Language</th>
+                                    <th>License</th>
+                                    <th>Last Import</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <span class="insight-desc">Overview of all repositories in the selected scope and period.</span>
                 </div>
             </article>
         </section>

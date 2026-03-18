@@ -32,6 +32,18 @@ const (
 		  AND repo = COALESCE(?, repo)
 		ORDER BY org, repo
 	`
+
+	selectRepoOverviewSQL = `SELECT
+			rm.org, rm.repo, rm.stars, rm.forks, rm.open_issues,
+			COUNT(e.type), COUNT(DISTINCT e.username),
+			rm.language, rm.license, rm.archived,
+			COALESCE(MAX(e.date), rm.updated_at)
+		FROM repo_meta rm
+		LEFT JOIN event e ON rm.org = e.org AND rm.repo = e.repo AND e.date >= ?
+		WHERE rm.org = COALESCE(?, rm.org)
+		GROUP BY rm.org, rm.repo
+		ORDER BY rm.org, rm.repo
+	`
 )
 
 func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) error {
@@ -130,6 +142,39 @@ func (s *Store) GetRepoMetas(org, repo *string) ([]*data.RepoMeta, error) {
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return list, nil
+}
+
+func (s *Store) GetRepoOverview(org *string, months int) ([]*data.RepoOverview, error) {
+	if s.db == nil {
+		return nil, data.ErrDBNotInitialized
+	}
+
+	since := sinceDate(months)
+
+	rows, err := s.db.Query(selectRepoOverviewSQL, since, org)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query repo overview: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]*data.RepoOverview, 0)
+	for rows.Next() {
+		r := &data.RepoOverview{}
+		var archived int
+		if err := rows.Scan(&r.Org, &r.Repo, &r.Stars, &r.Forks, &r.OpenIssues,
+			&r.Events, &r.Contributors,
+			&r.Language, &r.License, &archived, &r.LastImport); err != nil {
+			return nil, fmt.Errorf("failed to scan repo overview row: %w", err)
+		}
+		r.Archived = archived != 0
+		list = append(list, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating repo overview rows: %w", err)
 	}
 
 	return list, nil

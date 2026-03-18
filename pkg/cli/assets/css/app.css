@@ -469,6 +469,49 @@ fieldset {
   grid-column: 1 / -1;
 }
 
+#repo-overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+#repo-overview-table th {
+  text-align: left;
+  font-weight: 600;
+  background-color: var(--table-header);
+  color: var(--dark-color);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+#repo-overview-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+#repo-overview-table tr:nth-child(odd) {
+  background: var(--table-row-odd);
+}
+
+#repo-overview-table tr:nth-child(even) {
+  background: var(--white);
+}
+
+#repo-overview-table td.num,
+#repo-overview-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#repo-overview-table a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+#repo-overview-table a:hover {
+  text-decoration: underline;
+}
+
 .text-wrapper {
   font-size: 14px;
   padding: 15px;

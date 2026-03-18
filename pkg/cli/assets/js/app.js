@@ -278,8 +278,18 @@ function loadTabCharts(tab, months, org, repo, entity) {
             loadInsightsSummary('/data/insights/summary?' + q);
             loadHealthActivitySparkline('/data/insights/daily-activity?' + q);
             loadRepoMeta('/data/insights/repo-meta?o=' + org + '&r=' + repo);
-            loadStarsTrendChart('/data/insights/repo-metric-history?' + q);
-            loadForksTrendChart('/data/insights/repo-metric-history?' + q);
+            if (repo) {
+                $("#stars-trend-panel").show();
+                $("#forks-trend-panel").show();
+                $("#repo-overview-panel").hide();
+                loadStarsTrendChart('/data/insights/repo-metric-history?' + q);
+                loadForksTrendChart('/data/insights/repo-metric-history?' + q);
+            } else {
+                $("#stars-trend-panel").hide();
+                $("#forks-trend-panel").hide();
+                $("#repo-overview-panel").show();
+                loadRepoOverview('/data/insights/repo-overview?' + q);
+            }
             break;
         case 'activity':
             loadTimeSeriesChart('/data/type?' + q, onTimeSeriesChartSelect);
@@ -1281,6 +1291,35 @@ function loadForksTrendChart(url) {
                     y: { beginAtZero: false, ticks: { precision: 0 } }
                 }
             }
+        });
+    });
+}
+
+function loadRepoOverview(url) {
+    $.get(url, function (data) {
+        var $tbody = $("#repo-overview-table tbody");
+        $tbody.empty();
+        if (!data || data.length === 0) {
+            $tbody.append('<tr><td colspan="9" style="text-align:center">No repository data available</td></tr>');
+            return;
+        }
+        $.each(data, function (i, r) {
+            var name = r.org + '/' + r.repo;
+            var $link = $('<a href="#"></a>').text(name).on('click', function (e) {
+                e.preventDefault();
+                applySelection('repo', { value: name, label: name });
+            });
+            var $row = $('<tr></tr>');
+            $row.append($('<td></td>').append($link));
+            $row.append($('<td class="num"></td>').text(r.stars.toLocaleString()));
+            $row.append($('<td class="num"></td>').text(r.forks.toLocaleString()));
+            $row.append($('<td class="num"></td>').text(r.open_issues.toLocaleString()));
+            $row.append($('<td class="num"></td>').text(r.events.toLocaleString()));
+            $row.append($('<td class="num"></td>').text(r.contributors.toLocaleString()));
+            $row.append($('<td></td>').text(r.language || '—'));
+            $row.append($('<td></td>').text(r.license || '—'));
+            $row.append($('<td></td>').text(r.last_import || '—'));
+            $tbody.append($row);
         });
     });
 }
