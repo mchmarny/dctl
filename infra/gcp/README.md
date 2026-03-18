@@ -197,9 +197,12 @@ Metrics appear in Cloud Monitoring as `logging/user/<metric_name>`.
 
 ## Terraform
 
-State is stored in `gs://<your-bucket-name>/devpulse/`. To plan and apply:
+State is stored in `gs://<your-bucket-name>/devpulse/`. 
+
+To plan and apply:
 
 ```shell
+cd iac
 terraform init
 terraform plan
 terraform apply
