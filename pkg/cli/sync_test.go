@@ -125,6 +125,7 @@ score:
 							syncOrgFlag,
 							syncRepoFlag,
 							debugFlag,
+							logJSONFlag,
 						},
 					},
 				},

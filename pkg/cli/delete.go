@@ -29,6 +29,7 @@ Examples:
 		forceFlag,
 		formatFlag,
 		debugFlag,
+		logJSONFlag,
 	},
 }
 

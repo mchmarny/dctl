@@ -36,6 +36,7 @@ Examples:
 			countFlag,
 			formatFlag,
 			debugFlag,
+			logJSONFlag,
 		},
 	}
 )

@@ -31,7 +31,7 @@ var (
 		Name:            "auth",
 		HideHelpCommand: true,
 		Usage:           "Authenticate to GitHub to obtain an access token",
-		Flags:           []cli.Flag{publicFlag, debugFlag},
+		Flags:           []cli.Flag{publicFlag, debugFlag, logJSONFlag},
 		Action:          cmdInitAuthFlow,
 	}
 )

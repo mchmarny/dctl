@@ -147,6 +147,9 @@ make server
 
 # Directly
 go run ./cmd/devpulse --debug serve
+
+# JSON format (useful for cloud environments or log aggregators)
+go run ./cmd/devpulse --debug --log-json serve
 ```
 
 ## Related Documentation

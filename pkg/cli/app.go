@@ -40,6 +40,12 @@ var (
 		Sources: urfave.EnvVars("DEVPULSE_DEBUG"),
 	}
 
+	logJSONFlag = &urfave.BoolFlag{
+		Name:    "log-json",
+		Usage:   "Output logs in JSON format (optional, default: false)",
+		Sources: urfave.EnvVars("DEVPULSE_LOG_JSON"),
+	}
+
 	dbFilePathFlag = &urfave.StringFlag{
 		Name:    "db",
 		Usage:   "SQLite file path or postgres:// connection URI",
@@ -63,7 +69,7 @@ var (
 
 // Execute creates and runs the CLI application.
 func Execute() {
-	initLogging(false)
+	initLogging(false, false)
 
 	cmd := newApp()
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
@@ -73,9 +79,10 @@ func Execute() {
 }
 
 type appConfig struct {
-	DSN   string
-	Debug bool
-	Store data.Store
+	DSN     string
+	Debug   bool
+	LogJSON bool
+	Store   data.Store
 }
 
 func getConfig(cmd *urfave.Command) *appConfig {
@@ -91,6 +98,7 @@ func newApp() *urfave.Command {
 		Usage:                 "CLI for quick insight into the GitHub org/repo activity",
 		Flags: []urfave.Flag{
 			debugFlag,
+			logJSONFlag,
 			dbFilePathFlag,
 			formatFlag,
 		},
@@ -115,9 +123,10 @@ func newApp() *urfave.Command {
 			}
 
 			cmd.Root().Metadata[appConfigKey] = &appConfig{
-				DSN:   dsn,
-				Debug: cmd.Bool(debugFlag.Name),
-				Store: store,
+				DSN:     dsn,
+				Debug:   cmd.Bool(debugFlag.Name),
+				LogJSON: cmd.Bool(logJSONFlag.Name),
+				Store:   store,
 			}
 			return ctx, nil
 		},
@@ -140,12 +149,16 @@ func openStore(dsn string) (data.Store, error) {
 	return sqlite.New(dsn)
 }
 
-func initLogging(debug bool) {
+func initLogging(debug, jsonFormat bool) {
 	level := "info"
 	if debug {
 		level = "debug"
 	}
-	logging.SetDefaultCLILogger(level)
+	if jsonFormat {
+		logging.SetDefaultJSONLogger(level)
+	} else {
+		logging.SetDefaultCLILogger(level)
+	}
 }
 
 func getHomeDir() string {
@@ -170,8 +183,10 @@ func getHomeDir() string {
 }
 
 func applyFlags(cmd *urfave.Command) {
-	if cmd.Bool(debugFlag.Name) {
-		initLogging(true)
+	debug := cmd.Bool(debugFlag.Name)
+	jsonLog := cmd.Bool(logJSONFlag.Name)
+	if debug || jsonLog {
+		initLogging(debug, jsonLog)
 	}
 	f := cmd.String(formatFlag.Name)
 	if f == formatYAML || f == "yml" {

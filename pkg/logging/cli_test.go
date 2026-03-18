@@ -167,6 +167,44 @@ func TestSetDefaultCLILogger(t *testing.T) {
 	defaultLogger.Info("test message from default CLI logger")
 }
 
+func TestSetDefaultJSONLogger(t *testing.T) {
+	originalLogger := slog.Default()
+	defer slog.SetDefault(originalLogger)
+
+	SetDefaultJSONLogger("debug")
+
+	defaultLogger := slog.Default()
+	require.NotNil(t, defaultLogger)
+
+	// Verify JSON handler is active by checking it implements the expected interface.
+	handler := defaultLogger.Handler()
+	assert.IsType(t, &slog.JSONHandler{}, handler)
+}
+
+func TestSetDefaultJSONLoggerLevels(t *testing.T) {
+	originalLogger := slog.Default()
+	defer slog.SetDefault(originalLogger)
+
+	tests := []struct {
+		name  string
+		level string
+	}{
+		{"info level", "info"},
+		{"debug level", "debug"},
+		{"warn level", "warn"},
+		{"error level", "error"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetDefaultJSONLogger(tt.level)
+			logger := slog.Default()
+			require.NotNil(t, logger)
+			logger.Info("test json message", "key", "value")
+		})
+	}
+}
+
 func TestParseLogLevel(t *testing.T) {
 	tests := []struct {
 		input string

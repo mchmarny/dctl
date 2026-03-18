@@ -95,6 +95,12 @@ func SetDefaultCLILogger(level string) {
 	slog.SetDefault(NewCLILogger(level))
 }
 
+func SetDefaultJSONLogger(level string) {
+	lev := ParseLogLevel(level)
+	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: lev})
+	slog.SetDefault(slog.New(handler))
+}
+
 // ParseLogLevel converts a string log level to slog.Level.
 // Defaults to slog.LevelInfo for unrecognized strings.
 func ParseLogLevel(level string) slog.Level {

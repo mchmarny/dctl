@@ -13,7 +13,7 @@ var resetCmd = &cli.Command{
 	Name:            "reset",
 	Usage:           "Delete all imported data and start fresh",
 	HideHelpCommand: true,
-	Flags:           []cli.Flag{debugFlag, forceFlag},
+	Flags:           []cli.Flag{debugFlag, logJSONFlag, forceFlag},
 	Action:          cmdReset,
 }
 

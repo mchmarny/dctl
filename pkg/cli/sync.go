@@ -61,6 +61,7 @@ Examples:
 			syncRepoFlag,
 			syncStaleFlag,
 			debugFlag,
+			logJSONFlag,
 		},
 	}
 )

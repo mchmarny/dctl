@@ -70,6 +70,7 @@ var (
 			noBrowserFlag,
 			basePathFlag,
 			debugFlag,
+			logJSONFlag,
 		},
 	}
 )

@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 		slog.Error("creating test dir", "error", err)
 		os.Exit(1)
 	}
-	initLogging(false)
+	initLogging(false, false)
 
 	store, err := sqlite.New(filepath.Join(testDir, "data.db"))
 	if err != nil {

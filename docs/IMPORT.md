@@ -76,6 +76,7 @@ Subsequent imports are faster than the first run:
 | `--concurrency` | Number of repos to import in parallel | 3 |
 | `--format` | Output format: `json` or `yaml` | json |
 | `--debug` | Enable verbose logging | false |
+| `--log-json` | Output logs in JSON format | false |
 
 ## Debug output
 
@@ -83,4 +84,10 @@ Add `--debug` to any command for verbose logging:
 
 ```shell
 devpulse --debug import --org <org>
+```
+
+For structured JSON log output (useful in cloud environments), add `--log-json`:
+
+```shell
+devpulse --debug --log-json import --org <org>
 ```

@@ -44,6 +44,7 @@ var (
 			newValFlag,
 			formatFlag,
 			debugFlag,
+			logJSONFlag,
 		},
 	}
 )

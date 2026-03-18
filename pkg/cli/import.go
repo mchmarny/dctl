@@ -66,6 +66,7 @@ Examples:
 			concurrencyFlag,
 			formatFlag,
 			debugFlag,
+			logJSONFlag,
 		},
 	}
 )

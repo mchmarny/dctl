@@ -74,7 +74,7 @@ gcloud run deploy devpulse \
 gcloud run jobs create devpulse-sync \
     --image us-docker.pkg.dev/${PROJECT_ID}/devpulse-remote/mchmarny/devpulse:latest \
     --command /ko-app/devpulse \
-    --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/<config-name>.yaml,--stale,3d,--debug" \
+    --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/<config-name>.yaml,--stale,3d,--debug,--log-json" \
     --service-account $SERVICE_ACCOUNT \
     --set-secrets DEVPULSE_DB=devpulse-db:latest,GITHUB_TOKEN=devpulse-github-token:latest \
     --network devpulse \

@@ -35,3 +35,4 @@ Deep scoring makes multiple GitHub API calls per user. Run incrementally to stay
 | `--count` | Number of lowest-reputation contributors to deep-score | 5 |
 | `--format` | Output format: `json` or `yaml` | json |
 | `--debug` | Enable verbose logging | false |
+| `--log-json` | Output logs in JSON format | false |
