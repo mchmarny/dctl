@@ -18,6 +18,7 @@ const (
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
 			  ` + botExcludeSQL + `
+			  ` + forkExcludeSQL + `
 			GROUP BY e.username
 			ORDER BY cnt DESC
 		),
@@ -39,6 +40,7 @@ const (
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
 			  AND d.entity IS NOT NULL AND d.entity != ''
+			  ` + forkExcludeSQL + `
 			GROUP BY d.entity
 			ORDER BY cnt DESC
 		),
@@ -60,6 +62,7 @@ const (
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
 			  ` + botExcludeSQL + `
+			  ` + forkExcludeSQL + `
 			GROUP BY e.username
 		),
 		monthly AS (
@@ -71,6 +74,7 @@ const (
 			  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 			  AND e.date >= ?
 			  ` + botExcludeSQL + `
+			  ` + forkExcludeSQL + `
 		)
 		SELECT m.month,
 			SUM(CASE WHEN f.first_month = m.month THEN 1 ELSE 0 END) AS new_contributors,
@@ -278,6 +282,7 @@ const (
 	  AND e.repo = COALESCE(?, e.repo)
 	  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 	  ` + botExcludeSQL + `
+	  ` + forkExcludeSQL + `
 	GROUP BY m.month
 	ORDER BY m.month
 	`
@@ -385,6 +390,8 @@ const (
 	  AND e.repo = COALESCE(?, e.repo)
 	  AND IFNULL((SELECT d.entity FROM developer d WHERE d.username = e.username), '') = COALESCE(?, IFNULL((SELECT d.entity FROM developer d WHERE d.username = e.username), ''))
 	  AND e.date >= ?
+	  ` + botExcludeSQL + `
+	  ` + forkExcludeSQL + `
 	`
 
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
@@ -395,6 +402,7 @@ const (
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
 		  ` + botExcludeSQL + `
+		  ` + forkExcludeSQL + `
 		GROUP BY e.date
 		ORDER BY e.date
 	`

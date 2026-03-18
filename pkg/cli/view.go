@@ -24,6 +24,7 @@ func faviconHandler() http.HandlerFunc {
 
 func homeViewHandler(tmpl *template.Template, basePath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
 		d := map[string]any{
 			"version":       version,
 			"commit":        commit,

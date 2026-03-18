@@ -140,6 +140,9 @@ function parseSearchInput(raw) {
 }
 
 $(function () {
+    // Disable AJAX caching globally so browsers always fetch fresh data.
+    $.ajaxSetup({ cache: false });
+
     // Prepend base path to all relative AJAX URLs for reverse proxy support.
     var basePath = $("#base_path").val() || "";
     if (basePath) {

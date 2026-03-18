@@ -19,6 +19,7 @@ const (
 			  AND COALESCE(d.entity, '') = COALESCE($3, COALESCE(d.entity, ''))
 			  AND e.date >= $4
 			  ` + botExcludeSQL + `
+			  ` + forkExcludeSQL + `
 			GROUP BY e.username
 			ORDER BY cnt DESC
 		),
@@ -41,6 +42,7 @@ const (
 			  AND COALESCE(d.entity, '') = COALESCE($3, COALESCE(d.entity, ''))
 			  AND e.date >= $4
 			  AND d.entity IS NOT NULL AND d.entity != ''
+			  ` + forkExcludeSQL + `
 			GROUP BY d.entity
 			ORDER BY cnt DESC
 		),
@@ -63,6 +65,7 @@ const (
 			  AND COALESCE(d.entity, '') = COALESCE($3, COALESCE(d.entity, ''))
 			  AND e.date >= $4
 			  ` + botExcludeSQL + `
+			  ` + forkExcludeSQL + `
 			GROUP BY e.username
 		),
 		monthly AS (
@@ -74,6 +77,7 @@ const (
 			  AND COALESCE(d.entity, '') = COALESCE($7, COALESCE(d.entity, ''))
 			  AND e.date >= $8
 			  ` + botExcludeSQL + `
+			  ` + forkExcludeSQL + `
 		)
 		SELECT m.month,
 			SUM(CASE WHEN f.first_month = m.month THEN 1 ELSE 0 END) AS new_contributors,
@@ -291,6 +295,7 @@ const (
 	  AND e.repo = COALESCE($3, e.repo)
 	  AND COALESCE(d.entity, '') = COALESCE($4, COALESCE(d.entity, ''))
 	  ` + botExcludeSQL + `
+	  ` + forkExcludeSQL + `
 	GROUP BY m.month
 	ORDER BY m.month
 	`
@@ -405,6 +410,8 @@ const (
 	  AND e.repo = COALESCE($2, e.repo)
 	  AND COALESCE((SELECT d.entity FROM developer d WHERE d.username = e.username), '') = COALESCE($3, COALESCE((SELECT d.entity FROM developer d WHERE d.username = e.username), ''))
 	  AND e.date >= $4
+	  ` + botExcludeSQL + `
+	  ` + forkExcludeSQL + `
 	`
 
 	// selectDailyActivitySQL: $1=org, $2=repo, $3=entity, $4=since
@@ -416,6 +423,7 @@ const (
 		  AND COALESCE(d.entity, '') = COALESCE($3, COALESCE(d.entity, ''))
 		  AND e.date >= $4
 		  ` + botExcludeSQL + `
+		  ` + forkExcludeSQL + `
 		GROUP BY e.date
 		ORDER BY e.date
 	`

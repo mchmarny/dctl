@@ -24,6 +24,7 @@ const (
 			AND e.org = COALESCE(?, e.org)
 			AND e.repo = COALESCE(?, e.repo)
 			AND d.entity NOT IN (%s)
+			` + forkExcludeSQL + `
 			GROUP BY d.entity
 		) dt
 		ORDER BY 2 DESC
@@ -44,6 +45,7 @@ const (
 			AND e.repo = COALESCE(?, e.repo)
 			AND d.username NOT IN (%s)
 			AND d.username NOT LIKE '%%[bot]'
+			` + forkExcludeSQL + `
 			GROUP BY d.username
 		) dt
 		ORDER BY 2 DESC
@@ -67,6 +69,7 @@ const (
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND d.username NOT LIKE '%[bot]'
 		  AND e.date >= ?
+		  ` + forkExcludeSQL + `
 		ORDER BY d.username
 		LIMIT ?
 	`

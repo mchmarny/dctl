@@ -12,15 +12,15 @@ const (
 
 	// botExcludeSQL filters out bot accounts using the "e" table alias.
 	botExcludeSQL = `AND e.username NOT LIKE '%[bot]'
-		AND e.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
+		AND LOWER(e.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
 
-	// botExcludeDSQL filters out bot accounts using the "d" table alias (with LOWER).
+	// botExcludeDSQL filters out bot accounts using the "d" table alias.
 	botExcludeDSQL = `AND d.username NOT LIKE '%[bot]'
 		AND LOWER(d.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
 
 	// botExcludePrSQL filters out bot accounts using the "pr" table alias.
 	botExcludePrSQL = `AND pr.username NOT LIKE '%[bot]'
-		AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
+		AND LOWER(pr.username) NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
 
 	// forkExcludeSQL excludes fork events from the join so only code/comment
 	// activity (PR, PR review, issue, issue comment) counts toward reputation.
