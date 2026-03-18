@@ -62,7 +62,7 @@ gcloud run deploy devpulse \
     --image us-docker.pkg.dev/${PROJECT_ID}/devpulse-remote/mchmarny/devpulse:latest \
     --service-account $SERVICE_ACCOUNT \
     --set-secrets DEVPULSE_DB=devpulse-db:latest,GITHUB_TOKEN=devpulse-github-token:latest \
-    --set-env-vars DEVPULSE_LOG_JSON=true \
+    --set-env-vars DEVPULSE_DEBUG=true,DEVPULSE_LOG_JSON=true \
     --network devpulse \
     --subnet app \
     --vpc-egress private-ranges-only \
@@ -75,9 +75,10 @@ gcloud run deploy devpulse \
 gcloud run jobs create devpulse-sync \
     --image us-docker.pkg.dev/${PROJECT_ID}/devpulse-remote/mchmarny/devpulse:latest \
     --command /ko-app/devpulse \
-    --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/<config-name>.yaml,--stale,3d,--debug,--log-json" \
+    --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/<config-name>.yaml,--stale,3d" \
     --service-account $SERVICE_ACCOUNT \
     --set-secrets DEVPULSE_DB=devpulse-db:latest,GITHUB_TOKEN=devpulse-github-token:latest \
+    --set-env-vars DEVPULSE_DEBUG=true,DEVPULSE_LOG_JSON=true \
     --network devpulse \
     --subnet app \
     --vpc-egress private-ranges-only \
