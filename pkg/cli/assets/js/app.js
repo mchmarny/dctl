@@ -127,7 +127,6 @@ let searchItem;
 
 // Tab state
 var activeTab = 'health';
-var tabLoaded = {};
 
 const searchPrefixes = ['org', 'repo'];
 
@@ -254,7 +253,7 @@ function initTabs() {
     $(".tab-btn").on("click", function () {
         var tab = $(this).data("tab");
         activateTab(tab);
-        window.location.hash = tab;
+        history.replaceState(history.state, "", window.location.pathname + window.location.search + "#" + tab);
     });
 
     $(window).on("hashchange", function () {
@@ -286,6 +285,8 @@ function initTabs() {
     });
 }
 
+var lastTabKey = "";
+
 function activateTab(tab) {
     activeTab = tab;
 
@@ -295,14 +296,14 @@ function activateTab(tab) {
     $(".tab-content").removeClass("active");
     $('.tab-content[data-tab="' + tab + '"]').addClass("active");
 
-    if (!tabLoaded[tab]) {
-        var months = $("#period_months").val();
-        var org = searchCriteria.org || "";
-        var repo = searchCriteria.repo || "";
-        var entity = searchCriteria.entity || "";
-        loadTabCharts(tab, months, org, repo, entity);
-        tabLoaded[tab] = true;
-    }
+    var months = $("#period_months").val();
+    var org = searchCriteria.org || "";
+    var repo = searchCriteria.repo || "";
+    var entity = searchCriteria.entity || "";
+    var key = tab + "|" + months + "|" + org + "|" + repo + "|" + entity;
+    if (key === lastTabKey) return;
+    lastTabKey = key;
+    loadTabCharts(tab, months, org, repo, entity);
 }
 
 function loadSummaryBanner(months, org, repo, entity) {
@@ -382,13 +383,14 @@ function loadTabCharts(tab, months, org, repo, entity) {
 }
 
 function loadAllCharts(months, org, repo, entity) {
-    tabLoaded = {};
+    lastTabKey = "";
     loadSummaryBanner(months, org, repo, entity);
     activateTab(activeTab);
 }
 
 function applySelection(scope, item, skipPushState) {
     resetSearch();
+    lastTabKey = "";
     autocomplete_cache = {};
     leftChartExcludes = [];
     rightChartExcludes = [];
@@ -397,7 +399,6 @@ function applySelection(scope, item, skipPushState) {
     $(".header-term").html(item.value);
 
     resetCharts();
-    tabLoaded = {};
 
     const months = $("#period_months").val();
     let org = "", repo = "", entity = "";
