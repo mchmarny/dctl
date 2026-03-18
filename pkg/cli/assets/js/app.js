@@ -189,6 +189,22 @@ $(function () {
         submitSearch();
     });
 
+    $("#logo-home").click(function (e) {
+        e.preventDefault();
+        $("#search-bar").val("");
+        resetSearch();
+        resetCharts();
+        autocomplete_cache = {};
+        leftChartExcludes = [];
+        rightChartExcludes = [];
+        $(".header-term").html("All imported events");
+        var cleanURL = window.location.pathname + "#" + activeTab;
+        history.pushState(null, "", cleanURL);
+        updatePeriodOptions("", "", function () {
+            loadAllCharts($("#period_months").val(), "", "", "");
+        });
+    });
+
     if ($("#search-bar").length) {
         searchCriteria.init();
         initUnifiedSearch();
@@ -201,18 +217,22 @@ $(function () {
         if (paramRepo && paramOrg) {
             $("#search-bar").val("repo:" + paramRepo);
             searchCriteria.org = paramOrg;
-            applySelection("repo", { value: paramRepo, type: "repo" });
+            history.replaceState({ scope: "repo", item: { value: paramRepo, type: "repo" } }, "");
+            applySelection("repo", { value: paramRepo, type: "repo" }, true);
             return;
         } else if (paramOrg) {
             $("#search-bar").val("org:" + paramOrg);
-            applySelection("org", { value: paramOrg, type: "org" });
+            history.replaceState({ scope: "org", item: { value: paramOrg, type: "org" } }, "");
+            applySelection("org", { value: paramOrg, type: "org" }, true);
             return;
         } else if (paramRepo) {
             $("#search-bar").val("repo:" + paramRepo);
-            applySelection("repo", { value: paramRepo, type: "repo" });
+            history.replaceState({ scope: "repo", item: { value: paramRepo, type: "repo" } }, "");
+            applySelection("repo", { value: paramRepo, type: "repo" }, true);
             return;
         }
 
+        history.replaceState(null, "");
         updatePeriodOptions("", "", function () {
             var months = $("#period_months").val();
             loadSummaryBanner(months, "", "", "");
@@ -238,6 +258,27 @@ function initTabs() {
         var hash = window.location.hash.replace('#', '');
         if (hash && hash !== activeTab) {
             activateTab(hash);
+        }
+    });
+
+    $(window).on("popstate", function (e) {
+        var state = e.originalEvent.state;
+        if (state && state.scope && state.item) {
+            var scope = state.scope;
+            var item = state.item;
+            $("#search-bar").val(scope + ":" + item.value);
+            applySelection(scope, item, true);
+        } else {
+            $("#search-bar").val("");
+            resetSearch();
+            resetCharts();
+            autocomplete_cache = {};
+            leftChartExcludes = [];
+            rightChartExcludes = [];
+            $(".header-term").html("All imported events");
+            updatePeriodOptions("", "", function () {
+                loadAllCharts($("#period_months").val(), "", "", "");
+            });
         }
     });
 }
@@ -343,7 +384,7 @@ function loadAllCharts(months, org, repo, entity) {
     activateTab(activeTab);
 }
 
-function applySelection(scope, item) {
+function applySelection(scope, item, skipPushState) {
     resetSearch();
     autocomplete_cache = {};
     leftChartExcludes = [];
@@ -370,6 +411,18 @@ function applySelection(scope, item) {
             entity = item.value;
             searchCriteria.entity = item.value;
             break;
+    }
+
+    if (!skipPushState) {
+        var qs = new URLSearchParams(window.location.search);
+        if (org) qs.set("o", org); else qs.delete("o");
+        if (repo) {
+            var parts = repo.split("/");
+            if (parts.length === 2) { qs.set("o", parts[0]); qs.set("r", repo); }
+            else { qs.set("r", repo); }
+        } else { qs.delete("r"); }
+        var newURL = window.location.pathname + (qs.toString() ? "?" + qs.toString() : "") + window.location.hash;
+        history.pushState({ scope: scope, item: item }, "", newURL);
     }
 
     submitSearch();
@@ -441,6 +494,8 @@ function initUnifiedSearch() {
             leftChartExcludes = [];
             rightChartExcludes = [];
             $(".header-term").html("All imported events");
+            var cleanURL = window.location.pathname + window.location.hash;
+            history.pushState(null, "", cleanURL);
             updatePeriodOptions("", "", function () {
                 loadAllCharts($("#period_months").val(), "", "", "");
             });

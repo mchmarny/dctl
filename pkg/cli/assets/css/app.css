@@ -291,6 +291,23 @@ fieldset {
   color: var(--gray);
 }
 
+.logo-link {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--accent);
+  transition: color 0.15s;
+}
+
+.logo-link:hover {
+  color: var(--page-content-txtColor);
+}
+
+.logo-img {
+  height: 50px;
+  width: 50px;
+}
+
 .search-and-user form {
   position: relative;
   flex: 1;
@@ -599,6 +616,10 @@ fieldset {
 
   .page-content .grid {
     grid-gap: 10px;
+  }
+
+  .logo-img {
+    height: 35px;
   }
 
   .search-and-user [type="search"] {
