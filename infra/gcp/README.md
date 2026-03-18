@@ -122,7 +122,7 @@ Counter metrics (via `gcloud`):
 ```shell
 gcloud logging metrics create sync_completions \
     --description="Count of sync job completions" \
-    --log-filter='resource.type="cloud_run_job" jsonPayload.message="sync_summary"'
+    --log-filter='resource.type="cloud_run_job" jsonPayload.msg="sync_summary"'
 
 gcloud logging metrics create sync_errors \
     --description="Count of sync job errors" \
@@ -130,7 +130,7 @@ gcloud logging metrics create sync_errors \
 
 gcloud logging metrics create sync_rate_limit_pauses \
     --description="Count of GitHub API rate limit pauses" \
-    --log-filter='resource.type="cloud_run_job" jsonPayload.message=~"rate limit"'
+    --log-filter='resource.type="cloud_run_job" jsonPayload.msg=~"rate limit"'
 ```
 
 Distribution metrics require the REST API (`gcloud` doesn't support value extractors):
@@ -143,7 +143,7 @@ curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" 
     -d '{
       "name": "sync_total_duration",
       "description": "Total sync job duration in seconds",
-      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=\"sync_summary\"",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.msg=\"sync_summary\"",
       "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
       "valueExtractor": "EXTRACT(jsonPayload.total_sec)",
       "bucketOptions": { "explicitBuckets": { "bounds": [10, 30, 60, 120, 300, 600] } }
@@ -156,7 +156,7 @@ curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" 
     -d '{
       "name": "sync_import_duration",
       "description": "Event import phase duration in seconds",
-      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=\"sync_summary\"",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.msg=\"sync_summary\"",
       "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
       "valueExtractor": "EXTRACT(jsonPayload.import_sec)",
       "bucketOptions": { "explicitBuckets": { "bounds": [10, 30, 60, 120, 300, 600] } }
@@ -169,7 +169,7 @@ curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" 
     -d '{
       "name": "sync_scoring_duration",
       "description": "Deep scoring phase duration in seconds",
-      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=\"sync_summary\"",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.msg=\"sync_summary\"",
       "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
       "valueExtractor": "EXTRACT(jsonPayload.scoring_sec)",
       "bucketOptions": { "explicitBuckets": { "bounds": [10, 30, 60, 120, 300, 600] } }
@@ -182,7 +182,7 @@ curl -X POST "https://logging.googleapis.com/v2/projects/${PROJECT_ID}/metrics" 
     -d '{
       "name": "sync_rate_limit_wait",
       "description": "Rate limit wait duration in seconds",
-      "filter": "resource.type=\"cloud_run_job\" jsonPayload.message=~\"rate limit\"",
+      "filter": "resource.type=\"cloud_run_job\" jsonPayload.msg=~\"rate limit\"",
       "metricDescriptor": { "metricKind": "DELTA", "valueType": "DISTRIBUTION", "unit": "s" },
       "valueExtractor": "EXTRACT(jsonPayload.wait_sec)",
       "bucketOptions": { "explicitBuckets": { "bounds": [5, 15, 30, 60, 120, 300, 600] } }
