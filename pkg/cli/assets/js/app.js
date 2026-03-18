@@ -199,9 +199,11 @@ $(function () {
         autocomplete_cache = {};
         leftChartExcludes = [];
         rightChartExcludes = [];
+        searchItem = null;
+        activeTab = "health";
+        lastTabKey = "";
         $(".header-term").html("All imported events");
-        var cleanURL = window.location.pathname + "#" + activeTab;
-        history.pushState(null, "", cleanURL);
+        history.pushState(null, "", window.location.pathname);
         updatePeriodOptions("", "", function () {
             loadAllCharts($("#period_months").val(), "", "", "");
         });
