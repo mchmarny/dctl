@@ -117,6 +117,8 @@ gcloud logging read 'resource.type="cloud_run_job" resource.labels.job_name="dev
 
 ## Log-Based Metrics
 
+These metrics query `jsonPayload` fields, which requires the sync job to run with `--log-json` so that structured JSON is written to Cloud Logging (see the job args above).
+
 Counter metrics (via `gcloud`):
 
 ```shell
