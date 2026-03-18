@@ -62,6 +62,7 @@ gcloud run deploy devpulse \
     --image us-docker.pkg.dev/${PROJECT_ID}/devpulse-remote/mchmarny/devpulse:latest \
     --service-account $SERVICE_ACCOUNT \
     --set-secrets DEVPULSE_DB=devpulse-db:latest,GITHUB_TOKEN=devpulse-github-token:latest \
+    --set-env-vars DEVPULSE_LOG_JSON=true \
     --network devpulse \
     --subnet app \
     --vpc-egress private-ranges-only \
