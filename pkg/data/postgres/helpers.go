@@ -21,6 +21,10 @@ const (
 	// botExcludePrSQL filters out bot accounts using the "pr" table alias.
 	botExcludePrSQL = `AND pr.username NOT LIKE '%[bot]'
 		AND pr.username NOT IN ('copilot','github-copilot','claude','anthropic-claude')`
+
+	// forkExcludeSQL excludes fork events from the join so only code/comment
+	// activity (PR, PR review, issue, issue comment) counts toward reputation.
+	forkExcludeSQL = `AND e.type != 'fork'`
 )
 
 var (

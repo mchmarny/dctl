@@ -25,6 +25,7 @@ const (
 		JOIN event e ON d.username = e.username
 		WHERE 1=1
 		  ` + botExcludeDSQL + `
+		  ` + forkExcludeSQL + `
 		  AND e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND (d.reputation IS NULL
@@ -56,6 +57,7 @@ const (
 		  AND e.date >= ?
 		  AND d.reputation IS NOT NULL
 		  ` + botExcludeDSQL + `
+		  ` + forkExcludeSQL + `
 		GROUP BY d.username
 		ORDER BY d.reputation ASC
 		LIMIT 10
@@ -71,6 +73,7 @@ const (
 		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
 		  AND e.date >= ?
 		  ` + botExcludeDSQL + `
+		  ` + forkExcludeSQL + `
 	`
 
 	selectDistinctOrgsSQL = `SELECT DISTINCT org FROM event`
@@ -80,6 +83,7 @@ const (
 		JOIN event e ON d.username = e.username
 		WHERE d.reputation IS NOT NULL
 		  ` + botExcludeDSQL + `
+		  ` + forkExcludeSQL + `
 		  AND e.org = COALESCE(?, e.org)
 		  AND e.repo = COALESCE(?, e.repo)
 		  AND (d.reputation_deep IS NULL OR d.reputation_deep = 0
