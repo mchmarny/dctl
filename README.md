@@ -248,8 +248,8 @@ By default, data is stored locally in [SQLite](https://www.sqlite.org/) (`~/.dev
 To use PostgreSQL instead, pass a `postgres://` connection URI via `--db` or `DEVPULSE_DB`:
 
 ```shell
-devpulse --db "postgres://user:pass@host:5432/dbname?sslmode=disable" import --org <org> --repo <repo>
-devpulse --db "postgres://user:pass@host:5432/dbname?sslmode=disable" server
+devpulse import --db "postgres://user:pass@host:5432/dbname?sslmode=disable" --org <org> --repo <repo>
+devpulse server --db "postgres://user:pass@host:5432/dbname?sslmode=disable"
 ```
 
 Or via environment variable:

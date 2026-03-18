@@ -106,7 +106,7 @@ release: ## Runs the full release process with goreleaser
 
 .PHONY: server
 server: ## Starts local development server with debug logging
-	go run ./cmd/devpulse --debug serve
+	go run ./cmd/devpulse server --debug
 
 .PHONY: bump-major
 bump-major: ## Bumps major version (1.2.3 → 2.0.0)

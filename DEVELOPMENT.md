@@ -146,10 +146,10 @@ go tool cover -html=cover.out
 make server
 
 # Directly
-go run ./cmd/devpulse --debug serve
+go run ./cmd/devpulse server --debug
 
 # JSON format (useful for cloud environments or log aggregators)
-go run ./cmd/devpulse --debug --log-json serve
+go run ./cmd/devpulse server --debug --log-json
 ```
 
 ## Related Documentation

@@ -80,14 +80,14 @@ Subsequent imports are faster than the first run:
 
 ## Debug output
 
-Add `--debug` to any command for verbose logging:
+Add `--debug` to any subcommand for verbose logging:
 
 ```shell
-devpulse --debug import --org <org>
+devpulse import --debug --org <org>
 ```
 
 For structured JSON log output (useful in cloud environments), add `--log-json`:
 
 ```shell
-devpulse --debug --log-json import --org <org>
+devpulse import --debug --log-json --org <org>
 ```
