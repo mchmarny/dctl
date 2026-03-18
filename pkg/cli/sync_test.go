@@ -121,6 +121,7 @@ score:
 						Name:   "sync",
 						Action: cmdSync,
 						Flags: []urfave.Flag{
+							dbFilePathFlag,
 							syncConfigFlag,
 							syncOrgFlag,
 							syncRepoFlag,

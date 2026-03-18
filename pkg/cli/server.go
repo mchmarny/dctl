@@ -65,6 +65,7 @@ var (
 		Usage:   "Start local HTTP server",
 		Action:  cmdStartServer,
 		Flags: []cli.Flag{
+			dbFilePathFlag,
 			portFlag,
 			addressFlag,
 			noBrowserFlag,

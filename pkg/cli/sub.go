@@ -39,6 +39,7 @@ var (
 		HideHelpCommand: true,
 		Action:          cmdSubstitutes,
 		Flags: []cli.Flag{
+			dbFilePathFlag,
 			subTypeFlag,
 			oldValFlag,
 			newValFlag,

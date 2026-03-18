@@ -69,7 +69,7 @@ var (
 
 // Execute creates and runs the CLI application.
 func Execute() {
-	initLogging(false, false)
+	initLogging(envBool("DEVPULSE_DEBUG"), envBool("DEVPULSE_LOG_JSON"))
 
 	cmd := newApp()
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
@@ -79,14 +79,27 @@ func Execute() {
 }
 
 type appConfig struct {
-	DSN     string
-	Debug   bool
-	LogJSON bool
-	Store   data.Store
+	DSN   string
+	Store data.Store
 }
 
 func getConfig(cmd *urfave.Command) *appConfig {
-	return cmd.Root().Metadata[appConfigKey].(*appConfig)
+	if cfg, ok := cmd.Root().Metadata[appConfigKey].(*appConfig); ok {
+		return cfg
+	}
+
+	applyFlags(cmd)
+
+	dsn := cmd.String(dbFilePathFlag.Name)
+	store, err := openStore(dsn)
+	if err != nil {
+		slog.Error("initializing store", "error", err)
+		os.Exit(1)
+	}
+
+	cfg := &appConfig{DSN: dsn, Store: store}
+	cmd.Root().Metadata[appConfigKey] = cfg
+	return cfg
 }
 
 func newApp() *urfave.Command {
@@ -96,12 +109,6 @@ func newApp() *urfave.Command {
 		EnableShellCompletion: true,
 		HideHelpCommand:       true,
 		Usage:                 "CLI for quick insight into the GitHub org/repo activity",
-		Flags: []urfave.Flag{
-			debugFlag,
-			logJSONFlag,
-			dbFilePathFlag,
-			formatFlag,
-		},
 		Commands: []*urfave.Command{
 			authCmd,
 			importCmd,
@@ -112,23 +119,6 @@ func newApp() *urfave.Command {
 			serverCmd,
 			syncCmd,
 			resetCmd,
-		},
-		Before: func(ctx context.Context, cmd *urfave.Command) (context.Context, error) {
-			applyFlags(cmd)
-
-			dsn := cmd.String(dbFilePathFlag.Name)
-			store, err := openStore(dsn)
-			if err != nil {
-				return ctx, fmt.Errorf("initializing store: %w", err)
-			}
-
-			cmd.Root().Metadata[appConfigKey] = &appConfig{
-				DSN:     dsn,
-				Debug:   cmd.Bool(debugFlag.Name),
-				LogJSON: cmd.Bool(logJSONFlag.Name),
-				Store:   store,
-			}
-			return ctx, nil
 		},
 		After: func(ctx context.Context, cmd *urfave.Command) error {
 			if cfg, ok := cmd.Root().Metadata[appConfigKey].(*appConfig); ok && cfg.Store != nil {
@@ -192,6 +182,11 @@ func applyFlags(cmd *urfave.Command) {
 	if f == formatYAML || f == "yml" {
 		outputFormat = formatYAML
 	}
+}
+
+func envBool(key string) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	return v == "true" || v == "1"
 }
 
 func confirmAction(prompt string) (bool, error) {

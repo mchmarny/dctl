@@ -31,6 +31,7 @@ Examples:
   devpulse score --org myorg --repo repo1 --count 10  # scoped deep scoring`,
 		Action: cmdScore,
 		Flags: []cli.Flag{
+			dbFilePathFlag,
 			orgNameFlag,
 			repoNameFlag,
 			countFlag,

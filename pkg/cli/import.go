@@ -59,6 +59,7 @@ Examples:
   devpulse import                                              # update all previously imported data`,
 		Action: cmdImport,
 		Flags: []cli.Flag{
+			dbFilePathFlag,
 			orgNameFlag,
 			repoNameFlag,
 			monthsFlag,

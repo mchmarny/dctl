@@ -24,6 +24,7 @@ Examples:
   devpulse delete --org myorg --force                # skip confirmation`,
 	Action: cmdDelete,
 	Flags: []cli.Flag{
+		dbFilePathFlag,
 		orgNameFlag,
 		repoNameFlag,
 		forceFlag,

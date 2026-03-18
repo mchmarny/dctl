@@ -88,7 +88,7 @@ var (
 	}
 
 	// commonFlags are shared across all query subcommands.
-	commonFlags = []cli.Flag{formatFlag, debugFlag, logJSONFlag}
+	commonFlags = []cli.Flag{dbFilePathFlag, formatFlag, debugFlag, logJSONFlag}
 
 	queryCmd = &cli.Command{
 		Name:            "query",

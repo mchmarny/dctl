@@ -56,6 +56,7 @@ Examples:
   devpulse sync --org NVIDIA --repo DCGM`,
 		Action: cmdSync,
 		Flags: []urfave.Flag{
+			dbFilePathFlag,
 			syncConfigFlag,
 			syncOrgFlag,
 			syncRepoFlag,

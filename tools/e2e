@@ -65,6 +65,57 @@ else
 fi
 
 # --------------------------------------------------------------------------
+# Test: --debug flag enables debug logging (CLI handler)
+# --------------------------------------------------------------------------
+DB_DEBUG="$TMPDIR_E2E/debug.db"
+output=$("$BIN" query developer list --db "$DB_DEBUG" --debug --like test 2>&1) || true
+if echo "$output" | grep -q 'applied migration'; then
+  pass "--debug (cli handler)"
+else
+  echo "FAIL: --debug (cli handler)"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: DEVPULSE_DEBUG env var enables debug logging
+# --------------------------------------------------------------------------
+DB_ENVDEBUG="$TMPDIR_E2E/envdebug.db"
+output=$(DEVPULSE_DEBUG=true "$BIN" query developer list --db "$DB_ENVDEBUG" --like test 2>&1) || true
+if echo "$output" | grep -q 'applying migration'; then
+  pass "DEVPULSE_DEBUG env var (debug level)"
+else
+  echo "FAIL: DEVPULSE_DEBUG env var (debug level)"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: DEVPULSE_LOG_JSON env var enables JSON logging
+# --------------------------------------------------------------------------
+DB_ENV="$TMPDIR_E2E/env.db"
+output=$(DEVPULSE_LOG_JSON=true DEVPULSE_DEBUG=true "$BIN" query developer list --db "$DB_ENV" --like test 2>&1) || true
+if echo "$output" | grep -q '"level"'; then
+  pass "DEVPULSE_LOG_JSON env var (json handler)"
+else
+  echo "FAIL: DEVPULSE_LOG_JSON env var (json handler)"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: server --help (no DB required)
+# --------------------------------------------------------------------------
+if output=$("$BIN" server --help 2>&1) && echo "$output" | grep -q "server"; then
+  pass "server --help"
+else
+  echo "FAIL: server --help"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
+# Test: sync --help (no DB required)
+# --------------------------------------------------------------------------
+if output=$("$BIN" sync --help 2>&1) && echo "$output" | grep -q "sync"; then
+  pass "sync --help"
+else
+  echo "FAIL: sync --help"; FAILURES=$((FAILURES + 1))
+fi
+
+# --------------------------------------------------------------------------
 # Summary
 # --------------------------------------------------------------------------
 echo ""
