@@ -61,6 +61,18 @@ const (
 		LIMIT 10
 	`
 
+	selectReputationCountSQL = `SELECT
+		COUNT(DISTINCT e.username) AS total,
+		COUNT(DISTINCT CASE WHEN d.reputation IS NOT NULL THEN e.username END) AS scored
+		FROM event e
+		JOIN developer d ON e.username = d.username
+		WHERE e.org = COALESCE(?, e.org)
+		  AND e.repo = COALESCE(?, e.repo)
+		  AND IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))
+		  AND e.date >= ?
+		  ` + botExcludeDSQL + `
+	`
+
 	selectDistinctOrgsSQL = `SELECT DISTINCT org FROM event`
 
 	selectLowestReputationUsernamesSQL = `SELECT d.username
@@ -349,6 +361,10 @@ func (s *Store) GetReputationDistribution(org, repo, entity *string, months int)
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	if err := s.db.QueryRow(selectReputationCountSQL, org, repo, entity, since).Scan(&d.Total, &d.Scored); err != nil {
+		return nil, fmt.Errorf("failed to query reputation counts: %w", err)
 	}
 
 	return d, nil

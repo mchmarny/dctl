@@ -75,6 +75,9 @@ func TestGetRepoOverview_WithData(t *testing.T) {
 	_, err = store.db.Exec(`INSERT INTO developer (username, full_name) VALUES ('user1', 'User One'), ('user2', 'User Two')`)
 	require.NoError(t, err)
 
+	_, err = store.db.Exec(`UPDATE developer SET reputation = 0.75 WHERE username = 'user1'`)
+	require.NoError(t, err)
+
 	_, err = store.db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
 		VALUES
 		('org1', 'repo1', 'user1', 'push', '2026-03-01', '', '', ''),
@@ -90,6 +93,7 @@ func TestGetRepoOverview_WithData(t *testing.T) {
 	assert.Equal(t, 50, list[0].Forks)
 	assert.Equal(t, 2, list[0].Events)
 	assert.Equal(t, 2, list[0].Contributors)
+	assert.Equal(t, 1, list[0].Scored)
 	assert.Equal(t, "Go", list[0].Language)
 	assert.Equal(t, "2026-03-02", list[0].LastImport)
 }

@@ -151,6 +151,13 @@ func TestGetReputationDistribution_WithData(t *testing.T) {
 		('org1', 'repo1', 'lowscore', 'pr', '2025-01-10', 'http://example.com', '', '')`)
 	require.NoError(t, err)
 
+	// Add unscored developer
+	_, err = store.db.Exec(`INSERT INTO developer (username, full_name) VALUES ('noscorer', 'No Score')`)
+	require.NoError(t, err)
+	_, err = store.db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
+		VALUES ('org1', 'repo1', 'noscorer', 'pr', '2025-01-10', 'http://example.com', '', '')`)
+	require.NoError(t, err)
+
 	dist, err := store.GetReputationDistribution(nil, nil, nil, 24)
 	require.NoError(t, err)
 	require.Len(t, dist.Labels, 2)
@@ -159,6 +166,8 @@ func TestGetReputationDistribution_WithData(t *testing.T) {
 	assert.InDelta(t, 0.30, dist.Data[0], 0.001)
 	assert.Equal(t, "highscore", dist.Labels[1])
 	assert.InDelta(t, 0.95, dist.Data[1], 0.001)
+	assert.Equal(t, 2, dist.Scored) // highscore + lowscore
+	assert.Equal(t, 3, dist.Total)  // highscore + lowscore + noscorer
 }
 
 func TestImportReputation_NilDB(t *testing.T) {

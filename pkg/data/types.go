@@ -285,9 +285,10 @@ type ContributorFunnelSeries struct {
 }
 
 type ContributorProfileSeries struct {
-	Metrics  []string  `json:"metrics"`
-	Values   []int     `json:"values"`
-	Averages []float64 `json:"averages"`
+	Metrics    []string  `json:"metrics"`
+	Values     []int     `json:"values"`
+	Averages   []float64 `json:"averages"`
+	Reputation *float64  `json:"reputation,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -343,6 +344,8 @@ type DeepReputationResult struct {
 type ReputationDistribution struct {
 	Labels []string  `json:"labels" yaml:"labels"`
 	Data   []float64 `json:"data" yaml:"data"`
+	Scored int       `json:"scored" yaml:"scored"`
+	Total  int       `json:"total" yaml:"total"`
 }
 
 // UserReputation is returned by the on-demand deep score endpoint.
@@ -458,6 +461,7 @@ type RepoOverview struct {
 	OpenIssues   int    `json:"open_issues"`
 	Events       int    `json:"events"`
 	Contributors int    `json:"contributors"`
+	Scored       int    `json:"scored"`
 	Language     string `json:"language"`
 	License      string `json:"license"`
 	Archived     bool   `json:"archived"`

@@ -441,14 +441,14 @@ function initUnifiedSearch() {
     let currentScope = 'org';
 
     function showDropdown(items) {
-        currentItems = items;
+        currentItems = items || [];
         activeIndex = -1;
         dropdown.empty();
-        if (items.length === 0) {
+        if (currentItems.length === 0) {
             dropdown.removeClass("open");
             return;
         }
-        $.each(items, function (i, item) {
+        $.each(currentItems, function (i, item) {
             const label = item.type ? `<span class="ac-type">${item.type}</span> ` : '';
             $(`<div class="ac-item">${label}${item.text}</div>`)
                 .data("item", item)
@@ -621,6 +621,11 @@ function resetCharts() {
     if (contributorMomentumChart) {
         contributorMomentumChart.destroy();
     }
+    if (contributorProfileChart) {
+        contributorProfileChart.destroy();
+        contributorProfileChart = null;
+    }
+    $("#contributor-score").text('');
     if (healthActivitySparkline) {
         healthActivitySparkline.destroy();
     }
@@ -724,6 +729,7 @@ function showErrorModal(message) {
 
 function loadTimeSeriesChart(url, fn) {
     $.get(url, function (data) {
+        if (timeEventsChart) timeEventsChart.destroy();
         timeEventsChart = new Chart($("#time-series-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -843,6 +849,7 @@ function loadLeftChart(url, fn, cb) {
     }
 
     $.get(url, function (data) {
+        if (leftChart) leftChart.destroy();
         leftChart = new Chart($("#left-chart")[0].getContext("2d"), {
             type: 'polarArea',
             data: {
@@ -894,6 +901,7 @@ function loadRightChart(url, fn, cb) {
     }
 
     $.get(url, function (data) {
+        if (rightChart) rightChart.destroy();
         rightChart = new Chart($("#right-chart")[0].getContext("2d"), {
             type: 'pie',
             data: {
@@ -982,6 +990,7 @@ function loadHealthActivitySparkline(url) {
 
 function loadRetentionChart(url) {
     $.get(url, function (data) {
+        if (retentionChart) retentionChart.destroy();
         retentionChart = new Chart($("#retention-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1015,6 +1024,7 @@ function loadRetentionChart(url) {
 
 function loadPRRatioChart(url) {
     $.get(url, function (data) {
+        if (prRatioChart) prRatioChart.destroy();
         prRatioChart = new Chart($("#pr-ratio-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1063,6 +1073,7 @@ function loadPRRatioChart(url) {
 
 function loadTimeToCloseChart(closeURL, restoreURL) {
     $.when($.get(closeURL), $.get(restoreURL)).done(function (closeRes, restoreRes) {
+        if (timeToCloseChart) timeToCloseChart.destroy();
         const close = closeRes[0];
         const restore = restoreRes[0];
         timeToCloseChart = new Chart($("#time-to-close-chart")[0].getContext("2d"), {
@@ -1099,6 +1110,7 @@ function loadTimeToCloseChart(closeURL, restoreURL) {
 
 function loadVelocityChart(url, canvasId, key) {
     $.get(url, function (data) {
+        if (timeToMergeChart) timeToMergeChart.destroy();
         const chart = new Chart($(`#${canvasId}`)[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1145,6 +1157,7 @@ function loadVelocityChart(url, canvasId, key) {
 
 function loadForksAndActivityChart(url) {
     $.get(url, function (data) {
+        if (forksAndActivityChart) forksAndActivityChart.destroy();
         forksAndActivityChart = new Chart($("#forks-activity-chart")[0].getContext("2d"), {
             type: 'line',
             data: {
@@ -1355,7 +1368,7 @@ function loadRepoOverview(url) {
         var $tbody = $("#repo-overview-table tbody");
         $tbody.empty();
         if (!data || data.length === 0) {
-            $tbody.append('<tr><td colspan="9" style="text-align:center">No repository data available</td></tr>');
+            $tbody.append('<tr><td colspan="10" style="text-align:center">No repository data available</td></tr>');
             return;
         }
         $.each(data, function (i, r) {
@@ -1371,6 +1384,7 @@ function loadRepoOverview(url) {
             $row.append($('<td class="num"></td>').text(r.open_issues.toLocaleString()));
             $row.append($('<td class="num"></td>').text(r.events.toLocaleString()));
             $row.append($('<td class="num"></td>').text(r.contributors.toLocaleString()));
+            $row.append($('<td class="num"></td>').text(r.scored + '/' + r.contributors));
             $row.append($('<td></td>').text(r.language || '—'));
             $row.append($('<td></td>').text(r.license || '—'));
             $row.append($('<td></td>').text(r.last_import || '—'));
@@ -1381,6 +1395,7 @@ function loadRepoOverview(url) {
 
 function loadReleaseCadenceChart(url) {
     $.get(url, function (data) {
+        if (releaseCadenceChart) releaseCadenceChart.destroy();
         releaseCadenceChart = new Chart($("#release-cadence-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1424,6 +1439,7 @@ function loadReleaseCadenceChart(url) {
 
 function loadReleaseDownloadsChart(url) {
     $.get(url, function (data) {
+        if (releaseDownloadsChart) releaseDownloadsChart.destroy();
         releaseDownloadsChart = new Chart($("#release-downloads-chart")[0].getContext("2d"), {
             type: 'line',
             data: {
@@ -1456,6 +1472,7 @@ function loadReleaseDownloadsChart(url) {
 
 function loadReleaseDownloadsByTagChart(url) {
     $.get(url, function (data) {
+        if (releaseDownloadsByTagChart) releaseDownloadsByTagChart.destroy();
         releaseDownloadsByTagChart = new Chart($("#release-downloads-by-tag-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1495,6 +1512,7 @@ function loadContainerActivityChart(url) {
                 .text("No container images published via GitHub Packages (ghcr.io) for this scope.");
             return;
         }
+        if (containerActivityChart) containerActivityChart.destroy();
         containerActivityChart = new Chart($("#container-activity-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1535,6 +1553,12 @@ function reputationBarColors(values) {
 
 function loadReputationChart(url) {
     $.get(url, function (data) {
+        if (data.total > 0) {
+            $("#reputation-counts").text('Scored: ' + data.scored + ' / Total: ' + data.total);
+        } else {
+            $("#reputation-counts").text('');
+        }
+        if (reputationChart) reputationChart.destroy();
         if (!data.labels || data.labels.length === 0) {
             return;
         }
@@ -1731,6 +1755,7 @@ function showEntityDevelopers(entity) {
 
 function loadReviewLatencyChart(url) {
     $.get(url, function (data) {
+        if (reviewLatencyChart) reviewLatencyChart.destroy();
         reviewLatencyChart = new Chart($("#review-latency-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1773,6 +1798,7 @@ function loadReviewLatencyChart(url) {
 
 function loadChangeFailureRateChart(url) {
     $.get(url, function (data) {
+        if (changeFailureRateChart) changeFailureRateChart.destroy();
         changeFailureRateChart = new Chart($("#change-failure-rate-chart")[0].getContext("2d"), {
             type: 'line',
             data: {
@@ -1807,6 +1833,7 @@ function loadPRSizeChart(url) {
         if (!data.months || data.months.length === 0) {
             return;
         }
+        if (prSizeChart) prSizeChart.destroy();
         prSizeChart = new Chart($("#pr-size-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1844,6 +1871,7 @@ function loadPRSizeChart(url) {
 
 function loadContributorFunnelChart(url) {
     $.get(url, function (data) {
+        if (contributorFunnelChart) contributorFunnelChart.destroy();
         contributorFunnelChart = new Chart($("#contributor-funnel-chart")[0].getContext("2d"), {
             type: 'bar',
             data: {
@@ -1878,6 +1906,11 @@ function loadContributorFunnelChart(url) {
 function loadContributorProfileChart(url) {
     $.get(url, function (data) {
         if (contributorProfileChart) contributorProfileChart.destroy();
+        if (data && data.reputation != null) {
+            $("#contributor-score").text('Reputation Score: ' + data.reputation.toFixed(2));
+        } else {
+            $("#contributor-score").text('');
+        }
         if (!data || !data.metrics) return;
 
         var barColor = colors[0];
@@ -2004,6 +2037,10 @@ function initContributorSearch(q) {
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if ($active.length) { selectUser($active.text()); }
+            else if (!$input.val().trim()) {
+                if (contributorProfileChart) { contributorProfileChart.destroy(); contributorProfileChart = null; }
+                $("#contributor-score").text('');
+            }
         } else if (e.key === 'Escape') {
             $suggestions.removeClass('visible');
         }
@@ -2018,6 +2055,7 @@ function initContributorSearch(q) {
 
 function loadContributorMomentumChart(url) {
     $.get(url, function (data) {
+        if (contributorMomentumChart) contributorMomentumChart.destroy();
         contributorMomentumChart = new Chart($("#contributor-momentum-chart")[0].getContext("2d"), {
             type: 'line',
             data: {

@@ -36,10 +36,12 @@ const (
 	selectRepoOverviewSQL = `SELECT
 			rm.org, rm.repo, rm.stars, rm.forks, rm.open_issues,
 			COUNT(e.type), COUNT(DISTINCT e.username),
+			COUNT(DISTINCT CASE WHEN d.reputation IS NOT NULL THEN e.username END),
 			rm.language, rm.license, rm.archived,
 			COALESCE(MAX(e.date), rm.updated_at)
 		FROM repo_meta rm
 		LEFT JOIN event e ON rm.org = e.org AND rm.repo = e.repo AND e.date >= ?
+		LEFT JOIN developer d ON e.username = d.username
 		WHERE rm.org = COALESCE(?, rm.org)
 		GROUP BY rm.org, rm.repo
 		ORDER BY rm.org, rm.repo
@@ -165,7 +167,7 @@ func (s *Store) GetRepoOverview(org *string, months int) ([]*data.RepoOverview, 
 		r := &data.RepoOverview{}
 		var archived int
 		if err := rows.Scan(&r.Org, &r.Repo, &r.Stars, &r.Forks, &r.OpenIssues,
-			&r.Events, &r.Contributors,
+			&r.Events, &r.Contributors, &r.Scored,
 			&r.Language, &r.License, &archived, &r.LastImport); err != nil {
 			return nil, fmt.Errorf("failed to scan repo overview row: %w", err)
 		}

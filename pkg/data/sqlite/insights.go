@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"database/sql"
 	"fmt"
 	"sort"
 
@@ -903,10 +904,17 @@ func (s *Store) GetContributorProfile(username string, org, repo, entity *string
 		return nil, fmt.Errorf("failed to query contributor profile: %w", err)
 	}
 
-	return &data.ContributorProfileSeries{
+	result := &data.ContributorProfileSeries{
 		Metrics: []string{"PRs Opened", "PRs Merged", "PR Reviews", "Issues Opened", "Issue Comments",
 			"PR Size S", "PR Size M", "PR Size L", "PR Size XL"},
 		Values:   []int{prs, prsMerged, reviews, issues, comments, prSmall, prMedium, prLarge, prXLarge},
 		Averages: []float64{avgPrs, avgMerged, avgReviews, avgIssues, avgComments, avgSmall, avgMedium, avgLarge, avgXLarge},
-	}, nil
+	}
+
+	var rep sql.NullFloat64
+	if scanErr := s.db.QueryRow(`SELECT reputation FROM developer WHERE username = ?`, username).Scan(&rep); scanErr == nil && rep.Valid {
+		result.Reputation = &rep.Float64
+	}
+
+	return result, nil
 }
