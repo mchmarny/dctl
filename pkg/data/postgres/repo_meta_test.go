@@ -68,8 +68,8 @@ func TestGetRepoOverview_NilDB(t *testing.T) {
 func TestGetRepoOverview_WithData(t *testing.T) {
 	store := setupTestDB(t)
 
-	_, err := store.db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived)
-		VALUES ('org1', 'repo1', 100, 50, 10, 'Go', 'Apache-2.0', 0)`)
+	_, err := store.db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, last_import_at)
+		VALUES ('org1', 'repo1', 100, 50, 10, 'Go', 'Apache-2.0', 0, '2026-03-02T10:00:00Z')`)
 	require.NoError(t, err)
 
 	_, err = store.db.Exec(`INSERT INTO developer (username, full_name) VALUES ('user1', 'User One'), ('user2', 'User Two')`)
@@ -91,7 +91,7 @@ func TestGetRepoOverview_WithData(t *testing.T) {
 	assert.Equal(t, 2, list[0].Events)
 	assert.Equal(t, 2, list[0].Contributors)
 	assert.Equal(t, "Go", list[0].Language)
-	assert.Equal(t, "2026-03-02", list[0].LastImport)
+	assert.Equal(t, "2026-03-02T10:00:00Z", list[0].LastImport)
 }
 
 func TestGetRepoOverview_WithOrgFilter(t *testing.T) {

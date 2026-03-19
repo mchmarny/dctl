@@ -384,7 +384,8 @@ const (
 		COUNT(DISTINCT e.org || '/' || e.repo),
 		COUNT(*),
 		COUNT(DISTINCT e.username),
-		COALESCE(MAX(e.date), '')
+		COALESCE((SELECT MAX(rm.last_import_at) FROM repo_meta rm
+			WHERE rm.org = COALESCE(?, rm.org) AND rm.repo = COALESCE(?, rm.repo)), '')
 	FROM event e
 	WHERE e.org = COALESCE(?, e.org)
 	  AND e.repo = COALESCE(?, e.repo)
@@ -424,7 +425,7 @@ func (s *Store) GetInsightsSummary(org, repo, entity *string, months int) (*data
 		return nil, fmt.Errorf("failed to query pony factor: %w", err)
 	}
 
-	if err := s.db.QueryRow(selectBannerStatsSQL, org, repo, entity, since).Scan(
+	if err := s.db.QueryRow(selectBannerStatsSQL, org, repo, org, repo, entity, since).Scan(
 		&summary.Orgs, &summary.Repos, &summary.Events, &summary.Contributors, &summary.LastImport,
 	); err != nil {
 		return nil, fmt.Errorf("failed to query banner stats: %w", err)

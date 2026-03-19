@@ -1,3 +1,9 @@
+function formatImportDate(ts, withTime) {
+    if (!ts) return '—';
+    if (withTime && ts.length >= 16) return ts.substring(0, 10) + ' ' + ts.substring(11, 16);
+    return ts.substring(0, 10);
+}
+
 function isDarkMode() {
     const theme = document.documentElement.getAttribute('data-theme');
     if (theme === 'dark') return true;
@@ -314,7 +320,7 @@ function loadSummaryBanner(months, org, repo, entity) {
         $("#banner-repos").text(data.repos.toLocaleString());
         $("#banner-events").text(data.events.toLocaleString());
         $("#banner-contributors").text(data.contributors.toLocaleString());
-        $("#banner-last-import").text(data.last_import || '—');
+        $("#banner-last-import").text(formatImportDate(data.last_import, repo));
     });
 }
 
@@ -1393,7 +1399,7 @@ function loadRepoOverview(url) {
             $row.append($('<td class="num"></td>').text(r.scored + '/' + r.contributors));
             $row.append($('<td></td>').text(r.language || '—'));
             $row.append($('<td></td>').text(r.license || '—'));
-            $row.append($('<td></td>').text(r.last_import || '—'));
+            $row.append($('<td></td>').text(formatImportDate(r.last_import, false)));
             $tbody.append($row);
         });
     });

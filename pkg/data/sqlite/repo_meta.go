@@ -15,11 +15,13 @@ import (
 )
 
 const (
-	upsertRepoMetaSQL = `INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	upsertRepoMetaSQL = `INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, updated_at, last_import_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(org, repo) DO UPDATE SET
-			stars = ?, forks = ?, open_issues = ?, language = ?, license = ?, archived = ?, updated_at = ?
+			stars = ?, forks = ?, open_issues = ?, language = ?, license = ?, archived = ?, updated_at = ?, last_import_at = ?
 	`
+
+	updateLastImportAtSQL = `UPDATE repo_meta SET last_import_at = ? WHERE org = ? AND repo = ?`
 
 	selectRepoMetaUpdatedAtSQL = `SELECT COALESCE(updated_at, '')
 		FROM repo_meta
@@ -38,7 +40,7 @@ const (
 			COUNT(e.type), COUNT(DISTINCT e.username),
 			COUNT(DISTINCT CASE WHEN d.reputation IS NOT NULL THEN e.username END),
 			rm.language, rm.license, rm.archived,
-			COALESCE(MAX(e.date), rm.updated_at)
+			rm.last_import_at
 		FROM repo_meta rm
 		LEFT JOIN event e ON rm.org = e.org AND rm.repo = e.repo AND e.date >= ?
 		LEFT JOIN developer d ON e.username = d.username
@@ -57,6 +59,8 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 		if t, parseErr := time.Parse("2006-01-02T15:04:05Z", lastUpdated); parseErr == nil {
 			if time.Since(t) < 24*time.Hour {
 				slog.Debug("metadata fresh, skipping", "org", owner, "repo", repo, "updated_at", lastUpdated)
+				now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+				_, _ = s.db.Exec(updateLastImportAtSQL, now, owner, repo)
 				return nil
 			}
 		}
@@ -83,9 +87,9 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 
 	_, err = s.db.Exec(upsertRepoMetaSQL,
 		owner, repo, r.GetStargazersCount(), r.GetForksCount(), r.GetOpenIssuesCount(),
-		lang, license, archived, now,
+		lang, license, archived, now, now,
 		r.GetStargazersCount(), r.GetForksCount(), r.GetOpenIssuesCount(),
-		lang, license, archived, now,
+		lang, license, archived, now, now,
 	)
 	if err != nil {
 		return fmt.Errorf("error upserting repo meta %s/%s: %w", owner, repo, err)
