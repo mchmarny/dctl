@@ -100,6 +100,13 @@ gcloud scheduler jobs create http devpulse-sync-schedule \
     --oauth-service-account-email $SERVICE_ACCOUNT
 ```
 
+## Execute Sync Manually
+
+```shell
+gcloud run jobs execute devpulse-sync --region $REGION --project $PROJECT_ID \
+    --update-args="--org=$ORG,--repo=$REPO"
+```
+
 ## Monitoring
 
 List recent job executions:

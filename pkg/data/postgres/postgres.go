@@ -70,6 +70,12 @@ func runMigrations(db *sql.DB) error {
 		return fmt.Errorf("creating schema_version table: %w", err)
 	}
 
+	// Acquire an advisory lock to serialize migrations across concurrent instances.
+	if _, err := db.Exec("SELECT pg_advisory_lock(1)"); err != nil {
+		return fmt.Errorf("acquiring migration lock: %w", err)
+	}
+	defer func() { _, _ = db.Exec("SELECT pg_advisory_unlock(1)") }()
+
 	var currentVersion int
 	if err := db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_version").Scan(&currentVersion); err != nil {
 		return fmt.Errorf("reading schema version: %w", err)

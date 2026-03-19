@@ -404,7 +404,8 @@ const (
 		COUNT(DISTINCT e.org || '/' || e.repo),
 		COUNT(*),
 		COUNT(DISTINCT e.username),
-		COALESCE(MAX(e.date), '')
+		COALESCE((SELECT MAX(rm.last_import_at) FROM repo_meta rm
+			WHERE rm.org = COALESCE($1, rm.org) AND rm.repo = COALESCE($2, rm.repo)), '')
 	FROM event e
 	WHERE e.org = COALESCE($1, e.org)
 	  AND e.repo = COALESCE($2, e.repo)

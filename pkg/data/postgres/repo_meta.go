@@ -15,12 +15,13 @@ import (
 )
 
 const (
-	// upsertRepoMetaSQL: 16 params
-	upsertRepoMetaSQL = `INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	upsertRepoMetaSQL = `INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, updated_at, last_import_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT(org, repo) DO UPDATE SET
-			stars = $10, forks = $11, open_issues = $12, language = $13, license = $14, archived = $15, updated_at = $16
+			stars = $11, forks = $12, open_issues = $13, language = $14, license = $15, archived = $16, updated_at = $17, last_import_at = $18
 	`
+
+	updateLastImportAtSQL = `UPDATE repo_meta SET last_import_at = $1 WHERE org = $2 AND repo = $3`
 
 	// selectRepoMetaUpdatedAtSQL: $1=org, $2=repo
 	selectRepoMetaUpdatedAtSQL = `SELECT COALESCE(updated_at, '')
@@ -42,13 +43,13 @@ const (
 			COUNT(e.type), COUNT(DISTINCT e.username),
 			COUNT(DISTINCT CASE WHEN d.reputation IS NOT NULL THEN e.username END),
 			rm.language, rm.license, rm.archived,
-			COALESCE(MAX(e.date), rm.updated_at)
+			rm.last_import_at
 		FROM repo_meta rm
 		LEFT JOIN event e ON rm.org = e.org AND rm.repo = e.repo AND e.date >= $1
 		LEFT JOIN developer d ON e.username = d.username
 		WHERE rm.org = COALESCE($2, rm.org)
 		GROUP BY rm.org, rm.repo, rm.stars, rm.forks, rm.open_issues,
-			rm.language, rm.license, rm.archived, rm.updated_at
+			rm.language, rm.license, rm.archived, rm.last_import_at
 		ORDER BY rm.org, rm.repo
 	`
 )
@@ -62,6 +63,8 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 		if t, parseErr := time.Parse("2006-01-02T15:04:05Z", lastUpdated); parseErr == nil {
 			if time.Since(t) < 24*time.Hour {
 				slog.Debug("metadata fresh, skipping", "org", owner, "repo", repo, "updated_at", lastUpdated)
+				now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+				_, _ = s.db.Exec(updateLastImportAtSQL, now, owner, repo)
 				return nil
 			}
 		}
@@ -88,9 +91,9 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 
 	_, err = s.db.Exec(upsertRepoMetaSQL,
 		owner, repo, r.GetStargazersCount(), r.GetForksCount(), r.GetOpenIssuesCount(),
-		lang, license, archived, now,
+		lang, license, archived, now, now,
 		r.GetStargazersCount(), r.GetForksCount(), r.GetOpenIssuesCount(),
-		lang, license, archived, now,
+		lang, license, archived, now, now,
 	)
 	if err != nil {
 		return fmt.Errorf("error upserting repo meta %s/%s: %w", owner, repo, err)

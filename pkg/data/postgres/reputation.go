@@ -29,6 +29,7 @@ const (
 		  ` + forkExcludeSQL + `
 		  AND e.org = COALESCE($1, e.org)
 		  AND e.repo = COALESCE($2, e.repo)
+		  AND (d.reputation_deep IS NULL OR d.reputation_deep = 0)
 		  AND (d.reputation IS NULL
 		   OR d.reputation_updated_at IS NULL
 		   OR d.reputation_updated_at < $3)

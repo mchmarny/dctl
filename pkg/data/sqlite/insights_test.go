@@ -29,8 +29,13 @@ func TestGetInsightsSummary_NilDB(t *testing.T) {
 func TestGetInsightsSummary_WithData(t *testing.T) {
 	store := setupTestDB(t)
 
+	// Insert repo meta
+	_, err := store.db.Exec(`INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, last_import_at)
+		VALUES ('org1', 'repo1', 10, 5, 1, 'Go', 'MIT', 0, '2025-01-31T12:00:00Z')`)
+	require.NoError(t, err)
+
 	// Insert developers
-	_, err := store.db.Exec(`INSERT INTO developer (username, full_name, entity) VALUES
+	_, err = store.db.Exec(`INSERT INTO developer (username, full_name, entity) VALUES
 		('alice', 'Alice', 'ACME'),
 		('bob', 'Bob', 'ACME'),
 		('carol', 'Carol', 'BETA')`)
