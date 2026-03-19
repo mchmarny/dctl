@@ -16,7 +16,6 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/test-on-call.yaml
-    secrets: inherit
 
   release:
     runs-on: ubuntu-latest
@@ -38,6 +37,8 @@ jobs:
 
       - name: Setup Build Tools
         uses: ./.github/actions/setup-build-tools
+        with:
+          install_goreleaser: 'false'
 
       - name: Build CLI
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29  # v7.0.0
@@ -106,4 +107,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-        run: gh release edit "${{ github.ref_name }}" --draft=false
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --draft=false
