@@ -50,7 +50,7 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 ![](docs/img/community.png)
 
 **Dashboard**
-- **Global summary banner** -- organizations, repositories, events, contributors, and last import at a glance
+- **Global summary banner** -- organizations, repositories, events, contributors, and last import timestamp (GMT) at a glance
 - **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, and Events tabs with lazy-loaded charts
 - **Event search filters** -- filter by type, date range, username, or entity from the Events tab
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
@@ -170,10 +170,16 @@ sources:
     repos:
       - devpulse
 score:
-  count: 999
+  count: 100
 ```
 
-The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the flattened list based on `UTC hour % total repos`, runs a full import, then deep-scores all contributors. With 3 repos on an hourly schedule, each repo is imported ~8 times per day while staying within GitHub's 5,000 requests/hour API rate limit.
+The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the flattened list based on `UTC hour % total repos`, runs a full import, then deep-scores up to `score.count` lowest-reputation contributors. With 9 repos on an hourly schedule, each repo is imported 2-3 times per day while staying within GitHub's 5,000 requests/hour API rate limit.
+
+Stale threshold controls how recently a contributor must have been scored to skip re-scoring (default: `3d`):
+
+```shell
+devpulse sync --config sync.yaml --stale 1w
+```
 
 ### 5. Dashboard view
 
@@ -183,7 +189,7 @@ devpulse server
 
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
-The dashboard shows a global summary banner (orgs, repos, events, contributors, last import) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
+The dashboard shows a global summary banner (orgs, repos, events, contributors, last import timestamp in GMT) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
 
 You can run `devpulse import` in a separate terminal or cron job while the server is running — the dashboard picks up new data immediately after each import transaction commits. See [docs/SERVER.md](docs/SERVER.md) for details.
 

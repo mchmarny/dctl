@@ -20,7 +20,7 @@ This starts a local HTTP server and opens your browser to `http://127.0.0.1:8080
 The dashboard has three sections:
 
 1. **Top bar** — search input, period selector, and theme toggle on a single line
-2. **Summary banner** — global counts (organizations, repositories, events, contributors, last import) that update with the active search scope
+2. **Summary banner** — global counts (organizations, repositories, events, contributors, last import timestamp in GMT) that update with the active search scope. When a specific repo is selected, the import timestamp includes the time (`YYYY-MM-DD HH:MM`); otherwise it shows date only.
 3. **Tabbed panels** — six tabs with lazy-loaded charts: Health, Activity, Velocity, Quality, Community, Events
 
 ## Search
