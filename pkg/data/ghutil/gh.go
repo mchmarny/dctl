@@ -210,7 +210,9 @@ func GetOrgRepos(ctx context.Context, client *http.Client, org string) ([]*data.
 		if err != nil {
 			return nil, fmt.Errorf("failed to list repositories for: %s: %w", org, err)
 		}
-		CheckRateLimit(resp)
+		if err := CheckRateLimit(ctx, resp); err != nil {
+			return nil, err
+		}
 
 		for _, r := range items {
 			list = append(list, MapRepo(r))

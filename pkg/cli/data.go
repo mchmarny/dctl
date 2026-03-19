@@ -165,7 +165,10 @@ func percentageAPIHandler(w http.ResponseWriter, r *http.Request, fn percentageP
 	org := r.URL.Query().Get("o")
 	repo := r.URL.Query().Get("r")
 	entity := r.URL.Query().Get("e")
-	exclude := strings.Split(r.URL.Query().Get("x"), arraySelector)
+	var exclude []string
+	if x := r.URL.Query().Get("x"); x != "" {
+		exclude = strings.Split(x, arraySelector)
+	}
 
 	slog.Debug("event type query", "org", org, "repo", repo, "entity", entity, "months", months)
 

@@ -38,6 +38,7 @@ const (
 		  AND number IS NOT NULL
 		  AND number > 0
 		  AND (additions IS NULL OR changed_files IS NULL)
+		LIMIT 500
 	`
 
 	// updatePRSizeSQL: $1=additions, $2=deletions, $3=changed_files, $4=commits,
@@ -175,27 +176,18 @@ func (s *Store) ImportEvents(ctx context.Context, token, owner, repo string, mon
 	slog.Info("importing events",
 		"repo", owner+"/"+repo,
 		"since", earliest.Format("2006-01-02"))
-	var wg sync.WaitGroup
-	var importErrors []error
-	var errMu sync.Mutex
-
+	var g errgroup.Group
 	for i := range importers {
-		wg.Add(1)
-		go func(fn importerFunc) {
-			defer wg.Done()
+		fn := importers[i]
+		g.Go(func() error {
 			if err := fn(ctx); err != nil {
-				errMu.Lock()
-				importErrors = append(importErrors, err)
-				errMu.Unlock()
+				slog.Error("event import failed", "repo", owner+"/"+repo, "error", err)
 			}
-		}(importers[i])
+			return nil // log and continue, don't cancel siblings
+		})
 	}
 
-	wg.Wait()
-
-	for _, err := range importErrors {
-		slog.Error("event import failed", "repo", owner+"/"+repo, "error", err)
-	}
+	_ = g.Wait()
 
 	if err := imp.flush(); err != nil {
 		return nil, nil, fmt.Errorf("error flushing final events: %s/%s: %w", imp.owner, imp.repo, err)
@@ -409,11 +401,15 @@ func (e *eventImporter) flush() error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	e.mu.Lock()
 	e.flushed += len(events)
+	total := e.flushed
+	e.mu.Unlock()
+
 	slog.Debug("flushed events",
 		"repo", e.owner+"/"+e.repo,
 		"batch", len(events),
-		"total", e.flushed,
+		"total", total,
 		"developers", len(users),
 		"duration_sec", time.Since(start).Seconds())
 
@@ -488,7 +484,9 @@ func (e *eventImporter) importPREvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing prs, rate: %s, status: %d", ghutil.RateInfo(&resp.Rate), resp.StatusCode)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 		slog.Debug("pr events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", ghutil.RateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -568,6 +566,9 @@ func (e *eventImporter) backfillPRSize(ctx context.Context) error {
 
 	updated := 0
 	for _, p := range prs {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		pr, resp, err := e.client.PullRequests.Get(ctx, e.owner, e.repo, p.number)
 		if err != nil {
 			if wait := ghutil.AbuseRetryAfter(err); wait > 0 {
@@ -586,7 +587,9 @@ func (e *eventImporter) backfillPRSize(ctx context.Context) error {
 		if resp.StatusCode != http.StatusOK {
 			continue
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 
 		additions := pr.GetAdditions()
 		deletions := pr.GetDeletions()
@@ -624,7 +627,9 @@ func (e *eventImporter) importPRReviews(ctx context.Context, prNumber int) error
 		if err != nil {
 			return fmt.Errorf("error listing reviews for PR #%d: %w", prNumber, err)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 
 		for i := range reviews {
 			if reviews[i].User == nil || reviews[i].HTMLURL == nil {
@@ -673,7 +678,9 @@ func (e *eventImporter) importIssueEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing issues, rate: %s, status: %d", ghutil.RateInfo(&resp.Rate), resp.StatusCode)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 		slog.Debug("issue events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", ghutil.RateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -738,7 +745,9 @@ func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing issue comments, rate: %s, status: %d", ghutil.RateInfo(&resp.Rate), resp.StatusCode)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 		slog.Debug("issue comment events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", ghutil.RateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -785,7 +794,9 @@ func (e *eventImporter) importPRReviewEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing pr comments, rate: %s, status: %d", ghutil.RateInfo(&resp.Rate), resp.StatusCode)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 		slog.Debug("pr review events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", ghutil.RateInfo(&resp.Rate))
 
 		if len(items) == 0 {
@@ -838,7 +849,9 @@ func (e *eventImporter) importForkEvents(ctx context.Context) error {
 			net.PrintHTTPResponse(resp.Response)
 			return fmt.Errorf("error listing forks, rate: %s, status: %d", ghutil.RateInfo(&resp.Rate), resp.StatusCode)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 		slog.Debug("fork events", "found", len(items), "next_page", resp.NextPage, "last_page", resp.LastPage, "rate", ghutil.RateInfo(&resp.Rate))
 
 		if len(items) == 0 {

@@ -130,7 +130,9 @@ func (s *Store) ImportReleases(ctx context.Context, token, owner, repo string) e
 		if listErr != nil || resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("error listing releases %s/%s: %w", owner, repo, listErr)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return err
+		}
 
 		if len(releases) == 0 {
 			break

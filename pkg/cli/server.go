@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -155,8 +156,9 @@ func makeRouter(store data.Store, basePath string) *http.ServeMux {
 
 	mux := http.NewServeMux()
 
-	// Static files
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(embedFS)))
+	// Static files — serve only assets/ subtree, not templates/
+	assetsFS, _ := fs.Sub(embedFS, "assets")
+	mux.Handle("GET /static/assets/", http.StripPrefix("/static/assets/", http.FileServerFS(assetsFS)))
 	mux.HandleFunc("GET /favicon.ico", faviconHandler())
 
 	// Views

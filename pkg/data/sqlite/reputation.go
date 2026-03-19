@@ -251,7 +251,7 @@ func (s *Store) GetOrComputeDeepReputation(ctx context.Context, token, username 
 		result := &data.UserReputation{
 			Username:   username,
 			Reputation: rep,
-			Deep:       false,
+			Deep:       true,
 		}
 		if signalsJSON.Valid && signalsJSON.String != "" {
 			var ss data.SignalSummary
@@ -400,6 +400,7 @@ func (s *Store) gatherLocalSignals(username, since string, stats *globalStats) s
 	return sig
 }
 
+//nolint:gocyclo // complexity from rate-limit error handling
 func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, username string, orgs []string, orgSet map[string]bool, since string, stats *globalStats) (score.Signals, error) {
 	sig := s.gatherLocalSignals(username, since, stats)
 
@@ -407,7 +408,9 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 	if err != nil {
 		return sig, fmt.Errorf("error getting user %s: %w", username, err)
 	}
-	ghutil.CheckRateLimit(resp)
+	if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+		return sig, err
+	}
 
 	if usr.CreatedAt != nil {
 		sig.AgeDays = int64(time.Since(usr.CreatedAt.Time).Hours() / 24)
@@ -431,7 +434,9 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 				slog.Debug("error checking org membership", "org", org, "username", username, "error", memberErr)
 				continue
 			}
-			ghutil.CheckRateLimit(memberResp)
+			if err := ghutil.CheckRateLimit(ctx, memberResp); err != nil {
+				return sig, err
+			}
 			if isMember {
 				sig.OrgMember = true
 				break
@@ -452,7 +457,9 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 			slog.Debug("error listing repos for fork count", "username", username, "error", repoErr)
 			break
 		}
-		ghutil.CheckRateLimit(repoResp)
+		if err := ghutil.CheckRateLimit(ctx, repoResp); err != nil {
+			return sig, err
+		}
 		for _, r := range repos {
 			if r.GetFork() {
 				forkedCount++
@@ -472,7 +479,9 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 	if mergedErr != nil {
 		slog.Debug("error searching merged PRs", "username", username, "error", mergedErr)
 	} else {
-		ghutil.CheckRateLimit(mergedResp)
+		if err := ghutil.CheckRateLimit(ctx, mergedResp); err != nil {
+			return sig, err
+		}
 		sig.PRsMerged = int64(mergedResult.GetTotal())
 	}
 
@@ -483,7 +492,9 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 	if closedErr != nil {
 		slog.Debug("error searching closed PRs", "username", username, "error", closedErr)
 	} else {
-		ghutil.CheckRateLimit(closedResp)
+		if err := ghutil.CheckRateLimit(ctx, closedResp); err != nil {
+			return sig, err
+		}
 		sig.PRsClosed = int64(closedResult.GetTotal())
 	}
 
@@ -499,7 +510,9 @@ func (s *Store) gatherFullSignals(ctx context.Context, client *github.Client, us
 			slog.Debug("error searching recent PRs", "username", username, "error", recentErr)
 			break
 		}
-		ghutil.CheckRateLimit(recentResp)
+		if err := ghutil.CheckRateLimit(ctx, recentResp); err != nil {
+			return sig, err
+		}
 		for _, issue := range recentResult.Issues {
 			if repoURL := issue.GetRepositoryURL(); repoURL != "" {
 				recentRepoSet[repoURL] = true

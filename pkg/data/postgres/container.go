@@ -83,7 +83,9 @@ func listRepoContainerPackages(ctx context.Context, client *github.Client, org, 
 			}
 			return nil, fmt.Errorf("listing packages for %s: %w", org, err)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return nil, err
+		}
 
 		total += len(packages)
 
@@ -153,7 +155,9 @@ func fetchAndStoreVersions(ctx context.Context, client *github.Client, stmt *sql
 		if err != nil {
 			return 0, fmt.Errorf("listing versions for %s/%s: %w", org, pkgName, err)
 		}
-		ghutil.CheckRateLimit(resp)
+		if err := ghutil.CheckRateLimit(ctx, resp); err != nil {
+			return 0, err
+		}
 
 		seenOld := false
 		for _, v := range versions {

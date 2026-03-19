@@ -103,33 +103,12 @@ func (s *Store) GetDataState() (map[string]int64, error) {
 
 	state := make(map[string]int64)
 	for k, v := range stateQueries {
-		stmt, err := s.db.Prepare(v)
-		if err != nil {
-			return nil, fmt.Errorf("error preparing %s statement: %w", k, err)
-		}
-		defer stmt.Close()
-
-		count, err := getCount(stmt)
-		if err != nil {
+		var count int64
+		if err := s.db.QueryRow(v).Scan(&count); err != nil {
 			return nil, fmt.Errorf("error getting %s count: %w", k, err)
 		}
 		state[k] = count
 	}
 
 	return state, nil
-}
-
-func getCount(stmt *sql.Stmt) (int64, error) {
-	row := stmt.QueryRow()
-
-	var count int64
-	err := row.Scan(&count)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("failed to scan row: %w", err)
-	}
-
-	return count, nil
 }
