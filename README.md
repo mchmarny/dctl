@@ -5,7 +5,9 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/mchmarny/devpulse.svg)](https://pkg.go.dev/github.com/mchmarny/devpulse)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Community health analytics for GitHub organizations and repositories. `devpulse` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard.
+Community health analytics for GitHub organizations and repositories. `devpulse` imports contribution data from the GitHub API, enriches it with developer affiliations, and surfaces project health insights through a local dashboard. 
+
+> Motivation and the drivers behind this project are covered in the blog post [here](https://blog.chmarny.com/posts/devpulse-community-health-analytics-for-the-rest-of-us/)
 
 ## Features
 
