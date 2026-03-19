@@ -16,6 +16,7 @@ import (
 	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/net"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -94,19 +95,17 @@ func (s *Store) UpdateEvents(ctx context.Context, token string, concurrency int)
 
 	results := make(map[string]int)
 	var mu sync.Mutex
-	sem := make(chan struct{}, concurrency)
-	var wg sync.WaitGroup
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(concurrency)
 
 	for _, r := range list {
-		wg.Add(1)
-		go func(org, repo string) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
+		org, repo := r.Org, r.Repo
+		g.Go(func() error {
 			m, _, importErr := s.ImportEvents(ctx, token, org, repo, data.EventAgeMonthsDefault)
 			if importErr != nil {
 				slog.Error("error importing events", "org", org, "repo", repo, "error", importErr)
+				return nil // log and continue, don't abort other repos
 			}
 
 			mu.Lock()
@@ -114,10 +113,14 @@ func (s *Store) UpdateEvents(ctx context.Context, token string, concurrency int)
 				results[k] += v
 			}
 			mu.Unlock()
-		}(r.Org, r.Repo)
+
+			return nil
+		})
 	}
 
-	wg.Wait()
+	if err := g.Wait(); err != nil {
+		return results, fmt.Errorf("error during event update: %w", err)
+	}
 
 	return results, nil
 }

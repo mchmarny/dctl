@@ -12,6 +12,7 @@ require (
 	github.com/urfave/cli/v3 v3.7.0
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/oauth2 v0.36.0
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.47.0
 )

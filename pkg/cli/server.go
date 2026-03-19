@@ -22,7 +22,10 @@ import (
 
 const (
 	serverShutdownWaitSeconds = 5
-	serverTimeoutSeconds      = 300
+	serverReadTimeout         = 30 * time.Second
+	serverReadHeaderTimeout   = 5 * time.Second
+	serverWriteTimeout        = 60 * time.Second
+	serverIdleTimeout         = 120 * time.Second
 	serverMaxHeaderBytes      = 20
 	serverPortDefault         = 8080
 )
@@ -111,11 +114,13 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	}
 
 	s := &http.Server{
-		Addr:           address,
-		Handler:        handler,
-		ReadTimeout:    serverTimeoutSeconds * time.Second,
-		WriteTimeout:   serverTimeoutSeconds * time.Second,
-		MaxHeaderBytes: 1 << serverMaxHeaderBytes,
+		Addr:              address,
+		Handler:           handler,
+		ReadTimeout:       serverReadTimeout,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
+		MaxHeaderBytes:    1 << serverMaxHeaderBytes,
 	}
 
 	done := make(chan os.Signal, 1)

@@ -115,11 +115,13 @@ func (s *Store) ImportReleases(ctx context.Context, token, owner, repo string) e
 	if err != nil {
 		return fmt.Errorf("error preparing release insert: %w", err)
 	}
+	defer stmt.Close()
 
 	assetStmt, err := s.db.Prepare(insertReleaseAssetSQL)
 	if err != nil {
 		return fmt.Errorf("error preparing release asset insert: %w", err)
 	}
+	defer assetStmt.Close()
 
 	opt := &github.ListOptions{PerPage: pageSizeDefault, Page: 1}
 
@@ -156,6 +158,9 @@ func upsertReleasePage(db *sql.DB, stmt, assetStmt *sql.Stmt, owner, repo string
 		return false, fmt.Errorf("error starting release tx: %w", err)
 	}
 
+	txStmt := tx.Stmt(stmt)
+	txAssetStmt := tx.Stmt(assetStmt)
+
 	seenOld := false
 	for _, r := range releases {
 		tag := r.GetTagName()
@@ -174,7 +179,7 @@ func upsertReleasePage(db *sql.DB, stmt, assetStmt *sql.Stmt, owner, repo string
 			break
 		}
 
-		if _, execErr := tx.Stmt(stmt).Exec(
+		if _, execErr := txStmt.Exec(
 			owner, repo, tag, name, publishedAt, pre,
 			name, publishedAt, pre,
 		); execErr != nil {
@@ -187,7 +192,7 @@ func upsertReleasePage(db *sql.DB, stmt, assetStmt *sql.Stmt, owner, repo string
 			if aName == "" {
 				continue
 			}
-			if _, execErr := tx.Stmt(assetStmt).Exec(
+			if _, execErr := txAssetStmt.Exec(
 				owner, repo, tag, aName, a.GetContentType(), a.GetSize(), a.GetDownloadCount(),
 				a.GetContentType(), a.GetSize(), a.GetDownloadCount(),
 			); execErr != nil {

@@ -11,16 +11,18 @@ import (
 )
 
 const (
-	maxIdleConns     = 10
-	timeoutInSeconds = 60
-	clientAgent      = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36"
+	maxIdleConns        = 50
+	maxIdleConnsPerHost = 20
+	timeoutInSeconds    = 60
+	clientAgent         = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36"
 )
 
 var (
 	reqTransport = &http.Transport{
 		MaxIdleConns:          maxIdleConns,
+		MaxIdleConnsPerHost:   maxIdleConnsPerHost,
 		IdleConnTimeout:       timeoutInSeconds * time.Second,
-		DisableCompression:    true,
+		DisableCompression:    false,
 		DisableKeepAlives:     false,
 		ResponseHeaderTimeout: time.Duration(timeoutInSeconds) * time.Second,
 	}
