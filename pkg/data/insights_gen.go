@@ -21,7 +21,7 @@ const (
 
 // LLMConfig holds configuration for the Claude API.
 type LLMConfig struct {
-	Token   string // nolint:gosec // not a hardcoded credential
+	Token   string //nolint:gosec // not a hardcoded credential
 	BaseURL string
 	Model   string
 }
@@ -34,7 +34,7 @@ func NewLLMConfigFromEnv() *LLMConfig {
 		return nil
 	}
 	return &LLMConfig{
-		Token:  apiKey,
+		Token:   apiKey,
 		BaseURL: os.Getenv("ANTHROPIC_BASE_URL"),
 		Model:   os.Getenv("ANTHROPIC_MODEL"),
 	}
