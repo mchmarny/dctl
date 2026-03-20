@@ -92,6 +92,8 @@ type InsightsStore interface {
 	GetContributorFunnel(org, repo, entity *string, months int) (*ContributorFunnelSeries, error)
 	GetContributorMomentum(org, repo, entity *string, months int) (*MomentumSeries, error)
 	GetContributorProfile(username string, org, repo, entity *string, months int) (*ContributorProfileSeries, error)
+	GetIssueOpenCloseRatio(org, repo, entity *string, months int) (*IssueRatioSeries, error)
+	GetTimeToFirstResponse(org, repo, entity *string, months int) (*FirstResponseSeries, error)
 }
 
 // ReleaseStore manages release imports and queries.

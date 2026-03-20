@@ -197,6 +197,8 @@ func makeRouter(store data.Store, basePath string) *http.ServeMux {
 	mux.HandleFunc("GET /data/insights/release-downloads-by-tag", insightsReleaseDownloadsByTagAPIHandler(store))
 	mux.HandleFunc("GET /data/insights/container-activity", insightsContainerActivityAPIHandler(store))
 	mux.HandleFunc("GET /data/insights/reputation", insightsReputationAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/issue-ratio", insightsIssueRatioAPIHandler(store))
+	mux.HandleFunc("GET /data/insights/time-to-first-response", insightsTimeToFirstResponseAPIHandler(store))
 
 	return mux
 }

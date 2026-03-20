@@ -231,6 +231,18 @@ type VelocitySeries struct {
 	AvgDays []float64 `json:"avg_days" yaml:"avgDays"`
 }
 
+type IssueRatioSeries struct {
+	Months []string `json:"months" yaml:"months"`
+	Opened []int    `json:"opened" yaml:"opened"`
+	Closed []int    `json:"closed" yaml:"closed"`
+}
+
+type FirstResponseSeries struct {
+	Months   []string  `json:"months" yaml:"months"`
+	IssueAvg []float64 `json:"issue_avg" yaml:"issueAvg"`
+	PRAvg    []float64 `json:"pr_avg" yaml:"prAvg"`
+}
+
 type RetentionSeries struct {
 	Months    []string `json:"months" yaml:"months"`
 	New       []int    `json:"new" yaml:"new"`
@@ -442,15 +454,21 @@ type RepoMetricHistory struct {
 // ---------------------------------------------------------------------------
 
 type RepoMeta struct {
-	Org        string `json:"org" yaml:"org"`
-	Repo       string `json:"repo" yaml:"repo"`
-	Stars      int    `json:"stars" yaml:"stars"`
-	Forks      int    `json:"forks" yaml:"forks"`
-	OpenIssues int    `json:"open_issues" yaml:"openIssues"`
-	Language   string `json:"language" yaml:"language"`
-	License    string `json:"license" yaml:"license"`
-	Archived   bool   `json:"archived" yaml:"archived"`
-	UpdatedAt  string `json:"updated_at" yaml:"updatedAt"`
+	Org                string `json:"org" yaml:"org"`
+	Repo               string `json:"repo" yaml:"repo"`
+	Stars              int    `json:"stars" yaml:"stars"`
+	Forks              int    `json:"forks" yaml:"forks"`
+	OpenIssues         int    `json:"open_issues" yaml:"openIssues"`
+	Language           string `json:"language" yaml:"language"`
+	License            string `json:"license" yaml:"license"`
+	Archived           bool   `json:"archived" yaml:"archived"`
+	HasCoC             bool   `json:"has_coc" yaml:"hasCoc"`
+	HasContributing    bool   `json:"has_contributing" yaml:"hasContributing"`
+	HasReadme          bool   `json:"has_readme" yaml:"hasReadme"`
+	HasIssueTemplate   bool   `json:"has_issue_template" yaml:"hasIssueTemplate"`
+	HasPRTemplate      bool   `json:"has_pr_template" yaml:"hasPrTemplate"`
+	CommunityHealthPct int    `json:"community_health_pct" yaml:"communityHealthPct"`
+	UpdatedAt          string `json:"updated_at" yaml:"updatedAt"`
 }
 
 type RepoOverview struct {

@@ -446,6 +446,21 @@ func intPtr(v int) *int {
 	return &v
 }
 
+func parseIssueNumberFromURL(url string) int {
+	parts := strings.Split(url, "/")
+	for i, p := range parts {
+		if p == "issues" && i+1 < len(parts) {
+			numStr := strings.SplitN(parts[i+1], "#", 2)[0]
+			n, err := strconv.Atoi(numStr)
+			if err != nil {
+				return 0
+			}
+			return n
+		}
+	}
+	return 0
+}
+
 func parsePRNumberFromURL(url string) int {
 	parts := strings.Split(url, "/")
 	if len(parts) == 0 {
@@ -719,6 +734,7 @@ func getStrPtr(s string) *string {
 	return &s
 }
 
+//nolint:dupl // pagination boilerplate shared with importPRReviewEvents; different API + item processing
 func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
 	slog.Debug("starting issue comment event import", "page", e.state[data.EventTypeIssueComment].Page, "since", e.state[data.EventTypeIssueComment].Since.Format("2006-01-02"))
 
@@ -751,7 +767,15 @@ func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
 		}
 
 		for i := range items {
-			if err := e.add(data.EventTypeIssueComment, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), ghutil.ParseUsers(items[i].Body), nil, nil); err != nil {
+			extra := &eventExtra{
+				CreatedAt: timestampStr(items[i].CreatedAt),
+			}
+			if items[i].HTMLURL != nil {
+				if n := parseIssueNumberFromURL(*items[i].HTMLURL); n > 0 {
+					extra.Number = &n
+				}
+			}
+			if err := e.add(data.EventTypeIssueComment, *items[i].HTMLURL, items[i].User, timestampToTime(items[i].UpdatedAt), ghutil.ParseUsers(items[i].Body), nil, extra); err != nil {
 				return fmt.Errorf("error adding issue comment event: %s/%s: %w", e.owner, e.repo, err)
 			}
 		}
@@ -768,6 +792,7 @@ func (e *eventImporter) importIssueCommentEvents(ctx context.Context) error {
 	return nil
 }
 
+//nolint:dupl // pagination boilerplate shared with importIssueCommentEvents; different API + item processing
 func (e *eventImporter) importPRReviewEvents(ctx context.Context) error {
 	slog.Debug("starting pr review event import", "page", e.state[data.EventTypePRReview].Page, "since", e.state[data.EventTypePRReview].Since.Format("2006-01-02"))
 

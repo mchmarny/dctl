@@ -415,6 +415,87 @@ const (
 	  ` + forkExcludeSQL + `
 	`
 
+	// selectIssueOpenCloseRatioSQL: $1=org, $2=repo, $3=entity, $4=since, $5=org, $6=repo, $7=entity, $8=since
+	selectIssueOpenCloseRatioSQL = `SELECT month, SUM(opened) AS opened, SUM(closed) AS closed
+		FROM (
+			SELECT SUBSTRING(e.created_at, 1, 7) AS month, 1 AS opened, 0 AS closed
+			FROM event e
+			JOIN developer d ON e.username = d.username
+			WHERE e.type = 'issue'
+			  AND e.created_at IS NOT NULL
+			  AND e.org = COALESCE($1, e.org)
+			  AND e.repo = COALESCE($2, e.repo)
+			  AND COALESCE(d.entity, '') = COALESCE($3, COALESCE(d.entity, ''))
+			  AND e.created_at >= $4
+			  ` + botExcludeSQL + `
+			UNION ALL
+			SELECT SUBSTRING(e.closed_at, 1, 7) AS month, 0 AS opened, 1 AS closed
+			FROM event e
+			JOIN developer d ON e.username = d.username
+			WHERE e.type = 'issue'
+			  AND e.closed_at IS NOT NULL
+			  AND e.org = COALESCE($5, e.org)
+			  AND e.repo = COALESCE($6, e.repo)
+			  AND COALESCE(d.entity, '') = COALESCE($7, COALESCE(d.entity, ''))
+			  AND e.closed_at >= $8
+			  ` + botExcludeSQL + `
+		) sub
+		GROUP BY month
+		ORDER BY month
+	`
+
+	// selectTimeToFirstResponseSQL: $1=org, $2=repo, $3=entity, $4=since, $5=org, $6=repo, $7=entity, $8=since
+	selectTimeToFirstResponseSQL = `WITH issue_first AS (
+		SELECT
+			e.org, e.repo, e.number,
+			SUBSTRING(e.created_at, 1, 7) AS month,
+			MIN(
+				EXTRACT(EPOCH FROM (c.created_at::timestamp - e.created_at::timestamp)) / 3600.0
+			) AS hours_to_first
+		FROM event e
+		JOIN event c ON c.org = e.org AND c.repo = e.repo AND c.number = e.number
+			AND c.type = 'issue_comment' AND c.created_at > e.created_at
+		JOIN developer d ON e.username = d.username
+		WHERE e.type = 'issue'
+		  AND e.created_at IS NOT NULL
+		  AND e.number IS NOT NULL
+		  AND e.org = COALESCE($1, e.org)
+		  AND e.repo = COALESCE($2, e.repo)
+		  AND COALESCE(d.entity, '') = COALESCE($3, COALESCE(d.entity, ''))
+		  AND e.created_at >= $4
+		  ` + botExcludeSQL + `
+		GROUP BY e.org, e.repo, e.number, month
+	), pr_first AS (
+		SELECT
+			e.org, e.repo, e.number,
+			SUBSTRING(e.created_at, 1, 7) AS month,
+			MIN(
+				EXTRACT(EPOCH FROM (c.created_at::timestamp - e.created_at::timestamp)) / 3600.0
+			) AS hours_to_first
+		FROM event e
+		JOIN event c ON c.org = e.org AND c.repo = e.repo AND c.number = e.number
+			AND c.type = 'pr_review' AND c.created_at > e.created_at
+		JOIN developer d ON e.username = d.username
+		WHERE e.type = 'pr'
+		  AND e.created_at IS NOT NULL
+		  AND e.number IS NOT NULL
+		  AND e.org = COALESCE($5, e.org)
+		  AND e.repo = COALESCE($6, e.repo)
+		  AND COALESCE(d.entity, '') = COALESCE($7, COALESCE(d.entity, ''))
+		  AND e.created_at >= $8
+		  ` + botExcludeSQL + `
+		GROUP BY e.org, e.repo, e.number, month
+	)
+	SELECT
+		COALESCE(i.month, p.month) AS month,
+		COALESCE(i.avg_hours, 0),
+		COALESCE(p.avg_hours, 0)
+	FROM (SELECT month, AVG(hours_to_first) AS avg_hours FROM issue_first GROUP BY month) i
+	FULL OUTER JOIN (SELECT month, AVG(hours_to_first) AS avg_hours FROM pr_first GROUP BY month) p
+		ON i.month = p.month
+	ORDER BY month
+`
+
 	// selectDailyActivitySQL: $1=org, $2=repo, $3=entity, $4=since
 	selectDailyActivitySQL = `SELECT e.date, COUNT(*) AS cnt
 		FROM event e
@@ -486,41 +567,46 @@ func (s *Store) GetDailyActivity(org, repo, entity *string, months int) (*data.D
 	return series, nil
 }
 
-func (s *Store) GetContributorRetention(org, repo, entity *string, months int) (*data.RetentionSeries, error) {
-	if s.db == nil {
-		return nil, data.ErrDBNotInitialized
+func getMonthDualSeries[T int | float64](db *sql.DB, query string, org, repo, entity *string, months int) ([]string, []T, []T, error) {
+	if db == nil {
+		return nil, nil, nil, data.ErrDBNotInitialized
 	}
 
 	since := sinceDate(months)
 
-	rows, err := s.db.Query(selectRetentionSQL, org, repo, entity, since, org, repo, entity, since)
+	rows, err := db.Query(query, org, repo, entity, since, org, repo, entity, since)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query contributor retention: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to query month dual series: %w", err)
 	}
 	defer rows.Close()
 
-	sr := &data.RetentionSeries{
-		Months:    make([]string, 0),
-		New:       make([]int, 0),
-		Returning: make([]int, 0),
-	}
+	var ms []string
+	var a, b []T
 
 	for rows.Next() {
 		var month string
-		var newC, retC int
-		if err := rows.Scan(&month, &newC, &retC); err != nil {
-			return nil, fmt.Errorf("failed to scan retention row: %w", err)
+		var v1, v2 T
+		if err := rows.Scan(&month, &v1, &v2); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to scan month dual row: %w", err)
 		}
-		sr.Months = append(sr.Months, month)
-		sr.New = append(sr.New, newC)
-		sr.Returning = append(sr.Returning, retC)
+		ms = append(ms, month)
+		a = append(a, v1)
+		b = append(b, v2)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
+		return nil, nil, nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
-	return sr, nil
+	return ms, a, b, nil
+}
+
+func (s *Store) GetContributorRetention(org, repo, entity *string, months int) (*data.RetentionSeries, error) {
+	ms, newC, retC, err := getMonthDualSeries[int](s.db, selectRetentionSQL, org, repo, entity, months)
+	if err != nil {
+		return nil, err
+	}
+	return &data.RetentionSeries{Months: ms, New: newC, Returning: retC}, nil
 }
 
 func (s *Store) GetPRReviewRatio(org, repo, entity *string, months int) (*data.PRReviewRatioSeries, error) {
@@ -947,4 +1033,20 @@ func (s *Store) GetContributorProfile(username string, org, repo, entity *string
 	}
 
 	return result, nil
+}
+
+func (s *Store) GetTimeToFirstResponse(org, repo, entity *string, months int) (*data.FirstResponseSeries, error) {
+	ms, issueAvg, prAvg, err := getMonthDualSeries[float64](s.db, selectTimeToFirstResponseSQL, org, repo, entity, months)
+	if err != nil {
+		return nil, err
+	}
+	return &data.FirstResponseSeries{Months: ms, IssueAvg: issueAvg, PRAvg: prAvg}, nil
+}
+
+func (s *Store) GetIssueOpenCloseRatio(org, repo, entity *string, months int) (*data.IssueRatioSeries, error) {
+	ms, opened, closed, err := getMonthDualSeries[int](s.db, selectIssueOpenCloseRatioSQL, org, repo, entity, months)
+	if err != nil {
+		return nil, err
+	}
+	return &data.IssueRatioSeries{Months: ms, Opened: opened, Closed: closed}, nil
 }

@@ -585,6 +585,34 @@ func developerSearchAPIHandler(store data.Store) http.HandlerFunc {
 	}
 }
 
+func insightsTimeToFirstResponseAPIHandler(store data.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := store.GetTimeToFirstResponse(p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get time to first response", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying time to first response")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
+func insightsIssueRatioAPIHandler(store data.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		entity := optional(r.URL.Query().Get("e"))
+		res, err := store.GetIssueOpenCloseRatio(p.org, p.repo, entity, p.months)
+		if err != nil {
+			slog.Error("failed to get issue open/close ratio", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying issue open/close ratio")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func insightsForksAndActivityAPIHandler(store data.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p := parseInsightParams(r)
