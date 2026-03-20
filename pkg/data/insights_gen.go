@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
@@ -17,6 +18,8 @@ const (
 	claudeAPIVersion     = "2023-06-01"
 	DefaultInsightsModel = "claude-haiku-4-5-20251001"
 	insightsMaxTokens    = 4096
+	insightsMaxRetries   = 3
+	insightsRetryDelay   = 5 * time.Second
 )
 
 // LLMConfig holds configuration for the Claude API.
@@ -194,26 +197,42 @@ func GenerateInsights(ctx context.Context, cfg *LLMConfig, metrics *InsightsMetr
 		return nil, model, fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/v1/messages", bytes.NewReader(bodyBytes))
-	if err != nil {
-		return nil, model, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", cfg.Token)
-	req.Header.Set("anthropic-version", claudeAPIVersion)
+	var respBytes []byte
+	for attempt := range insightsMaxRetries {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/v1/messages", bytes.NewReader(bodyBytes))
+		if err != nil {
+			return nil, model, fmt.Errorf("create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("x-api-key", cfg.Token)
+		req.Header.Set("anthropic-version", claudeAPIVersion)
 
-	resp, err := http.DefaultClient.Do(req) //nolint:gosec // G704: URL from trusted ANTHROPIC_BASE_URL config, not user input
-	if err != nil {
-		return nil, model, fmt.Errorf("api call: %w", err)
-	}
-	defer resp.Body.Close()
+		resp, err := http.DefaultClient.Do(req) //nolint:gosec // G704: URL from trusted ANTHROPIC_BASE_URL config, not user input
+		if err != nil {
+			return nil, model, fmt.Errorf("api call: %w", err)
+		}
 
-	respBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, model, fmt.Errorf("read response: %w", err)
-	}
+		respBytes, err = io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, model, fmt.Errorf("read response: %w", err)
+		}
 
-	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+
+		if (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == 529) && attempt < insightsMaxRetries-1 {
+			delay := insightsRetryDelay * time.Duration(attempt+1)
+			slog.Warn("insights API retrying", "status", resp.StatusCode, "attempt", attempt+1, "delay", delay)
+			select {
+			case <-ctx.Done():
+				return nil, model, ctx.Err()
+			case <-time.After(delay):
+				continue
+			}
+		}
+
 		return nil, model, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBytes))
 	}
 
