@@ -29,7 +29,7 @@ const (
 	updateLastImportAtSQL = `UPDATE repo_meta SET last_import_at = $1 WHERE org = $2 AND repo = $3`
 
 	// selectRepoMetaUpdatedAtSQL: $1=org, $2=repo
-	selectRepoMetaUpdatedAtSQL = `SELECT COALESCE(updated_at, '')
+	selectRepoMetaUpdatedAtSQL = `SELECT COALESCE(updated_at, ''), COALESCE(community_health_pct, 0)
 		FROM repo_meta
 		WHERE org = $1 AND repo = $2
 	`
@@ -63,10 +63,11 @@ const (
 
 func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) error {
 	var lastUpdated string
-	if scanErr := s.db.QueryRow(selectRepoMetaUpdatedAtSQL, owner, repo).Scan(&lastUpdated); scanErr != nil && scanErr != sql.ErrNoRows {
+	var healthPct int
+	if scanErr := s.db.QueryRow(selectRepoMetaUpdatedAtSQL, owner, repo).Scan(&lastUpdated, &healthPct); scanErr != nil && scanErr != sql.ErrNoRows {
 		return fmt.Errorf("querying repo meta updated_at for %s/%s: %w", owner, repo, scanErr)
 	}
-	if lastUpdated != "" {
+	if lastUpdated != "" && healthPct > 0 {
 		if t, parseErr := time.Parse("2006-01-02T15:04:05Z", lastUpdated); parseErr == nil {
 			if time.Since(t) < 24*time.Hour {
 				slog.Debug("metadata fresh, skipping", "org", owner, "repo", repo, "updated_at", lastUpdated)
