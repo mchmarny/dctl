@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
       contents: read
     steps:
-      - uses: mchmarny/reputer@71a4aeefc09189a0a0df7f45e4223426162fc213  # pinned
+      - uses: mchmarny/reputer@2f59fb7cb3a64dc2f6653b7a76cc9ba644bdfed0  # v0.5.1
         with:
           trusted-orgs: |
             mchmarny
