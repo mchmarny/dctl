@@ -1090,7 +1090,7 @@ a.link {
 
 .insights-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   padding: 20px;
   align-items: start;
@@ -1233,3 +1233,9 @@ a.link {
     background: var(--light-color);
     color: var(--accent);
 }
+
+.community-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem 1rem; }
+.community-badge { font-size: 0.8rem; padding: 0.15rem 0.5rem; border-radius: 4px; }
+.badge-ok { color: var(--fg); background: var(--accent-green, #2ea04370); }
+.badge-partial { color: var(--fg); background: var(--accent-yellow, #d29a0070); }
+.badge-missing { color: var(--fg-muted); background: var(--bg-muted, #88888830); }

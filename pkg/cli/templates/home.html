@@ -195,7 +195,7 @@
                     <span class="insight-desc">Pull request size by lines changed. S (&lt;50), M (50-250), L (250-1000), XL (&gt;1000).</span>
                 </div>
             </article>
-            <article class="grid-full-width">
+            <article>
                 <div class="tbl">
                     <div class="content-header">
                         Forks &amp; Activity
@@ -206,12 +206,34 @@
                     <span class="insight-desc">Monthly fork count vs total events (PRs, issues, reviews, comments). Correlation may indicate interest-driven development.</span>
                 </div>
             </article>
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Issue Open/Close Ratio
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="issue-ratio-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Monthly opened vs closed issues. Growing gap between opened and closed may indicate backlog pressure.</span>
+                </div>
+            </article>
         </section>
     </div>
 
     <!-- Velocity Tab -->
     <div class="tab-content" data-tab="velocity">
         <section class="grid">
+            <article>
+                <div class="tbl">
+                    <div class="content-header">
+                        Time to First Response
+                    </div>
+                    <div class="tbl-chart tbl-home">
+                        <canvas class="chart" id="time-to-first-response-chart"></canvas>
+                    </div>
+                    <span class="insight-desc">Average hours until first review (PRs) or comment (issues). Lower is better.</span>
+                </div>
+            </article>
             <article>
                 <div class="tbl">
                     <div class="content-header">
@@ -256,7 +278,7 @@
                     <span class="insight-desc">Total binary asset downloads per month across all GitHub releases.</span>
                 </div>
             </article>
-            <article class="grid-full-width">
+            <article>
                 <div class="tbl">
                     <div class="content-header">
                         Downloads by Release

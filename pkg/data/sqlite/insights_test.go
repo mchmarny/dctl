@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -571,6 +572,76 @@ func TestGetContributorProfile_WithData(t *testing.T) {
 	assert.Equal(t, 4, series.Values[5])
 	// Averages > 0
 	assert.Greater(t, series.Averages[0], float64(0))
+}
+
+func TestGetIssueOpenCloseRatio_NilDB(t *testing.T) {
+	s := &Store{}
+	_, err := s.GetIssueOpenCloseRatio(nil, nil, nil, 6)
+	require.ErrorIs(t, err, data.ErrDBNotInitialized)
+}
+
+func TestGetIssueOpenCloseRatio_EmptyDB(t *testing.T) {
+	store := setupTestDB(t)
+	series, err := store.GetIssueOpenCloseRatio(nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetIssueOpenCloseRatio_WithData(t *testing.T) {
+	store := setupTestDB(t)
+
+	_, err := store.db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice')`)
+	require.NoError(t, err)
+
+	_, err = store.db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, created_at, closed_at)
+		VALUES
+		('org1', 'repo1', 'alice', 'issue', '2025-01-10', 'http://a', '', '', 'open', '2025-01-10T00:00:00Z', NULL),
+		('org1', 'repo1', 'alice', 'issue', '2025-01-12', 'http://b', '', '', 'closed', '2025-01-05T00:00:00Z', '2025-01-12T00:00:00Z'),
+		('org1', 'repo1', 'alice', 'issue', '2025-01-15', 'http://c', '', '', 'closed', '2025-01-08T00:00:00Z', '2025-01-15T00:00:00Z')`)
+	require.NoError(t, err)
+
+	series, err := store.GetIssueOpenCloseRatio(nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 1)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.Equal(t, 3, series.Opened[0])
+	assert.Equal(t, 2, series.Closed[0])
+}
+
+func TestGetTimeToFirstResponse_NilDB(t *testing.T) {
+	s := &Store{}
+	_, err := s.GetTimeToFirstResponse(nil, nil, nil, 6)
+	require.ErrorIs(t, err, data.ErrDBNotInitialized)
+}
+
+func TestGetTimeToFirstResponse_EmptyDB(t *testing.T) {
+	store := setupTestDB(t)
+	series, err := store.GetTimeToFirstResponse(nil, nil, nil, 6)
+	require.NoError(t, err)
+	assert.Empty(t, series.Months)
+}
+
+func TestGetTimeToFirstResponse_WithData(t *testing.T) {
+	store := setupTestDB(t)
+	_, err := store.db.Exec(`INSERT INTO developer (username, full_name) VALUES ('alice', 'Alice'), ('bob', 'Bob')`)
+	require.NoError(t, err)
+
+	// Issue created Jan 10, first comment Jan 11 (24 hours)
+	// PR created Jan 10, first review Jan 10 12:00 (12 hours)
+	_, err = store.db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels, state, number, created_at)
+		VALUES
+		('org1', 'repo1', 'alice', 'issue', '2025-01-10', 'http://i/1', '', '', 'open', 1, '2025-01-10T00:00:00Z'),
+		('org1', 'repo1', 'bob', 'issue_comment', '2025-01-11', 'http://i/1#c1', '', '', NULL, 1, '2025-01-11T00:00:00Z'),
+		('org1', 'repo1', 'alice', 'pr', '2025-01-10', 'http://p/2', '', '', 'open', 2, '2025-01-10T00:00:00Z'),
+		('org1', 'repo1', 'bob', 'pr_review', '2025-01-10', 'http://p/2#r1', '', '', NULL, 2, '2025-01-10T12:00:00Z')`)
+	require.NoError(t, err)
+
+	series, err := store.GetTimeToFirstResponse(nil, nil, nil, 24)
+	require.NoError(t, err)
+	require.Len(t, series.Months, 1)
+	assert.Equal(t, "2025-01", series.Months[0])
+	assert.InDelta(t, 24.0, series.IssueAvg[0], 0.1)
+	assert.InDelta(t, 12.0, series.PRAvg[0], 0.1)
 }
 
 func padDay(i int) string {

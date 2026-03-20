@@ -15,10 +15,15 @@ import (
 )
 
 const (
-	upsertRepoMetaSQL = `INSERT INTO repo_meta (org, repo, stars, forks, open_issues, language, license, archived, updated_at, last_import_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	upsertRepoMetaSQL = `INSERT INTO repo_meta (org, repo, stars, forks, open_issues,
+		language, license, archived,
+		has_coc, has_contributing, has_readme, has_issue_template, has_pr_template, community_health_pct,
+		updated_at, last_import_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(org, repo) DO UPDATE SET
-			stars = ?, forks = ?, open_issues = ?, language = ?, license = ?, archived = ?, updated_at = ?, last_import_at = ?
+			stars = ?, forks = ?, open_issues = ?, language = ?, license = ?, archived = ?,
+			has_coc = ?, has_contributing = ?, has_readme = ?, has_issue_template = ?, has_pr_template = ?, community_health_pct = ?,
+			updated_at = ?, last_import_at = ?
 	`
 
 	updateLastImportAtSQL = `UPDATE repo_meta SET last_import_at = ? WHERE org = ? AND repo = ?`
@@ -28,7 +33,9 @@ const (
 		WHERE org = ? AND repo = ?
 	`
 
-	selectRepoMetaSQL = `SELECT org, repo, stars, forks, open_issues, language, license, archived, updated_at
+	selectRepoMetaSQL = `SELECT org, repo, stars, forks, open_issues, language, license, archived,
+			has_coc, has_contributing, has_readme, has_issue_template, has_pr_template, community_health_pct,
+			updated_at
 		FROM repo_meta
 		WHERE org = COALESCE(?, org)
 		  AND repo = COALESCE(?, repo)
@@ -76,6 +83,11 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 		return rlErr
 	}
 
+	cp, rlErr := fetchCommunityProfile(ctx, client, owner, repo)
+	if rlErr != nil {
+		return rlErr
+	}
+
 	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 	lang := r.GetLanguage()
 	var license string
@@ -89,9 +101,9 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 
 	_, err = s.db.Exec(upsertRepoMetaSQL,
 		owner, repo, r.GetStargazersCount(), r.GetForksCount(), r.GetOpenIssuesCount(),
-		lang, license, archived, now, now,
+		lang, license, archived, cp.coc, cp.contributing, cp.readme, cp.issueTmpl, cp.prTmpl, cp.healthPct, now, now,
 		r.GetStargazersCount(), r.GetForksCount(), r.GetOpenIssuesCount(),
-		lang, license, archived, now, now,
+		lang, license, archived, cp.coc, cp.contributing, cp.readme, cp.issueTmpl, cp.prTmpl, cp.healthPct, now, now,
 	)
 	if err != nil {
 		return fmt.Errorf("error upserting repo meta %s/%s: %w", owner, repo, err)
@@ -108,6 +120,50 @@ func (s *Store) ImportRepoMeta(ctx context.Context, token, owner, repo string) e
 
 	slog.Debug("metadata done", "org", owner, "repo", repo)
 	return nil
+}
+
+type communityProfile struct {
+	coc, contributing, readme, issueTmpl, prTmpl, healthPct int
+}
+
+func fetchCommunityProfile(ctx context.Context, client *github.Client, owner, repo string) (communityProfile, error) {
+	var cp communityProfile
+
+	profile, resp, err := client.Repositories.GetCommunityHealthMetrics(ctx, owner, repo)
+	if err != nil {
+		slog.Warn("failed to get community profile", "org", owner, "repo", repo, "error", err)
+		return cp, nil
+	}
+	if resp != nil {
+		if rlErr := ghutil.CheckRateLimit(ctx, resp); rlErr != nil {
+			return cp, rlErr
+		}
+	}
+
+	if profile != nil {
+		if profile.Files != nil {
+			if profile.Files.CodeOfConduct != nil {
+				cp.coc = 1
+			}
+			if profile.Files.Contributing != nil {
+				cp.contributing = 1
+			}
+			if profile.Files.Readme != nil {
+				cp.readme = 1
+			}
+			if profile.Files.IssueTemplate != nil {
+				cp.issueTmpl = 1
+			}
+			if profile.Files.PullRequestTemplate != nil {
+				cp.prTmpl = 1
+			}
+		}
+		if profile.HealthPercentage != nil {
+			cp.healthPct = *profile.HealthPercentage
+		}
+	}
+
+	return cp, nil
 }
 
 func (s *Store) ImportAllRepoMeta(ctx context.Context, token string) error {
@@ -139,12 +195,19 @@ func (s *Store) GetRepoMetas(org, repo *string) ([]*data.RepoMeta, error) {
 	list := make([]*data.RepoMeta, 0)
 	for rows.Next() {
 		m := &data.RepoMeta{}
-		var archived int
+		var archived, hasCoc, hasContrib, hasReadme, hasIssueTmpl, hasPRTmpl int
 		if err := rows.Scan(&m.Org, &m.Repo, &m.Stars, &m.Forks, &m.OpenIssues,
-			&m.Language, &m.License, &archived, &m.UpdatedAt); err != nil {
+			&m.Language, &m.License, &archived,
+			&hasCoc, &hasContrib, &hasReadme, &hasIssueTmpl, &hasPRTmpl, &m.CommunityHealthPct,
+			&m.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan repo meta row: %w", err)
 		}
 		m.Archived = archived != 0
+		m.HasCoC = hasCoc != 0
+		m.HasContributing = hasContrib != 0
+		m.HasReadme = hasReadme != 0
+		m.HasIssueTemplate = hasIssueTmpl != 0
+		m.HasPRTemplate = hasPRTmpl != 0
 		list = append(list, m)
 	}
 

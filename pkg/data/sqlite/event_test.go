@@ -51,3 +51,22 @@ func TestGetStrPtr(t *testing.T) {
 	assert.NotNil(t, ptr)
 	assert.Equal(t, "hello", *ptr)
 }
+
+func TestParseIssueNumberFromURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want int
+	}{
+		{"valid", "https://github.com/org/repo/issues/123#issuecomment-456", 123},
+		{"no_fragment", "https://github.com/org/repo/issues/42", 42},
+		{"pull_url", "https://github.com/org/repo/pull/99#issuecomment-789", 0},
+		{"empty", "", 0},
+		{"no_issues_segment", "https://github.com/org/repo/discussions/5", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, parseIssueNumberFromURL(tt.url))
+		})
+	}
+}

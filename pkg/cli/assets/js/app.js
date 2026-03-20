@@ -118,6 +118,8 @@ let releaseDownloadsChart;
 let releaseDownloadsByTagChart;
 let reputationChart;
 let forksAndActivityChart;
+let issueRatioChart;
+let timeToFirstResponseChart;
 let starsTrendChart;
 let forksTrendChart;
 let changeFailureRateChart;
@@ -348,8 +350,10 @@ function loadTabCharts(tab, months, org, repo, entity) {
             loadTimeSeriesChart('/data/type?' + q, onTimeSeriesChartSelect);
             loadPRSizeChart('/data/insights/pr-size?' + q);
             loadForksAndActivityChart('/data/insights/forks-and-activity?' + q);
+            loadIssueRatioChart('/data/insights/issue-ratio?' + q);
             break;
         case 'velocity':
+            loadTimeToFirstResponseChart('/data/insights/time-to-first-response?' + q);
             loadVelocityChart('/data/insights/time-to-merge?' + q, 'time-to-merge-chart', 'timeToMerge');
             loadChangeFailureRateChart('/data/insights/change-failure-rate?' + q);
             loadReleaseCadenceChart('/data/insights/release-cadence?' + q);
@@ -617,6 +621,12 @@ function resetCharts() {
     }
     if (forksAndActivityChart) {
         forksAndActivityChart.destroy();
+    }
+    if (issueRatioChart) {
+        issueRatioChart.destroy();
+    }
+    if (timeToFirstResponseChart) {
+        timeToFirstResponseChart.destroy();
     }
     if (changeFailureRateChart) {
         changeFailureRateChart.destroy();
@@ -1212,10 +1222,81 @@ function loadForksAndActivityChart(url) {
     });
 }
 
+function loadIssueRatioChart(url) {
+    $.get(url, function (data) {
+        if (issueRatioChart) issueRatioChart.destroy();
+        issueRatioChart = new Chart($("#issue-ratio-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Opened',
+                    data: data.opened,
+                    backgroundColor: colors[3],
+                    borderWidth: 1,
+                    order: 2
+                }, {
+                    label: 'Closed',
+                    data: data.closed,
+                    backgroundColor: colors[2],
+                    borderWidth: 1,
+                    order: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { stacked: true, ticks: { font: { size: 14 } } },
+                    y: { stacked: true, beginAtZero: true, ticks: { font: { size: 14 } },
+                        title: { display: true, text: 'Issues' } }
+                }
+            }
+        });
+    });
+}
+
+function loadTimeToFirstResponseChart(url) {
+    $.get(url, function (data) {
+        if (timeToFirstResponseChart) timeToFirstResponseChart.destroy();
+        timeToFirstResponseChart = new Chart($("#time-to-first-response-chart")[0].getContext("2d"), {
+            type: 'bar',
+            data: {
+                labels: data.months,
+                datasets: [{
+                    label: 'Issues (avg hrs)',
+                    data: data.issue_avg,
+                    backgroundColor: colors[3],
+                    borderWidth: 1,
+                    order: 2
+                }, {
+                    label: 'PRs (avg hrs)',
+                    data: data.pr_avg,
+                    backgroundColor: colors[2],
+                    borderWidth: 1,
+                    order: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    x: { ticks: { font: { size: 14 } } },
+                    y: { beginAtZero: true, ticks: { font: { size: 14 } },
+                        title: { display: true, text: 'Avg Hours' } }
+                }
+            }
+        });
+    });
+}
+
 function loadRepoMeta(url) {
     $.get(url, function (data) {
         const container = $("#repo-meta-container");
         container.empty();
+        container.siblings(".community-badges").remove();
         if (!data || data.length === 0) {
             container.html('<span class="insight-label">No metadata imported yet</span>');
             return;
@@ -1237,17 +1318,43 @@ function loadRepoMeta(url) {
         const items = [
             { label: 'Stars', val: stars.toLocaleString() },
             { label: 'Forks', val: forks.toLocaleString() },
-            { label: 'Open Issues', val: issues.toLocaleString() },
+            { label: 'Issues', val: issues.toLocaleString() },
             { label: 'Language', val: topLang },
             { label: 'License', val: topLicense },
             { label: 'Repos', val: data.length + (archived > 0 ? ` (${archived} archived)` : '') }
         ];
+        // Community profile badges
+        var communityFiles = [
+            { key: 'has_readme', label: 'README' },
+            { key: 'has_contributing', label: 'Contributing' },
+            { key: 'has_coc', label: 'Code of Conduct' },
+            { key: 'has_issue_template', label: 'Issue Template' },
+            { key: 'has_pr_template', label: 'PR Template' }
+        ];
+        var hasProfile = data.some(function(m) { return m.community_health_pct > 0; });
+        if (hasProfile) {
+            var avgHealth = Math.round(data.reduce(function(s, m) { return s + m.community_health_pct; }, 0) / data.length);
+            items.push({ label: 'Health', val: avgHealth + '%' });
+        }
+
         $.each(items, function (i, item) {
             $('<div class="insight-card">')
                 .append(`<span class="insight-label">${item.label}</span>`)
                 .append(`<span class="insight-val">${item.val}</span>`)
                 .appendTo(container);
         });
+
+        if (hasProfile) {
+            var badgeHtml = '<div class="community-badges">';
+            $.each(communityFiles, function (j, f) {
+                var count = data.filter(function(m) { return m[f.key]; }).length;
+                var icon = count === data.length ? '&#10003;' : (count > 0 ? '~' : '&#10007;');
+                var cls = count === data.length ? 'badge-ok' : (count > 0 ? 'badge-partial' : 'badge-missing');
+                badgeHtml += '<span class="community-badge ' + cls + '">' + icon + ' ' + f.label + '</span>';
+            });
+            badgeHtml += '</div>';
+            container.after(badgeHtml);
+        }
 
         // Sparkline for stars/forks trend.
         var mhParams = 'm=' + ($("#period_months").val() || '6') + '&o=' + (new URLSearchParams(url.split('?')[1]).get('o') || '') + '&r=' + (new URLSearchParams(url.split('?')[1]).get('r') || '');
