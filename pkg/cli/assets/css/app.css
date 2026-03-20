@@ -1239,3 +1239,10 @@ a.link {
 .badge-ok { color: var(--fg); background: var(--accent-green, #2ea04370); }
 .badge-partial { color: var(--fg); background: var(--accent-yellow, #d29a0070); }
 .badge-missing { color: var(--fg-muted); background: var(--bg-muted, #88888830); }
+
+.insights-list { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.insights-bullet { padding: 0.75rem 1rem; border-left: 3px solid var(--accent); background: var(--bg-muted, #f6f8fa10); border-radius: 0 4px 4px 0; }
+.insights-bullet-headline { font-weight: 700; color: var(--fg); margin-bottom: 0.25rem; }
+.insights-bullet-detail { font-size: 0.9rem; color: var(--fg); opacity: 0.75; line-height: 1.5; }
+.insights-bullet.action { border-left-color: var(--accent-green, #2ea043); }
+.insights-meta { padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--gray); text-align: right; }

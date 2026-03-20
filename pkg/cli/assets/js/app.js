@@ -389,6 +389,9 @@ function loadTabCharts(tab, months, org, repo, entity) {
             })();
             initContributorSearch(q);
             break;
+        case 'insights':
+            loadGeneratedInsights('/data/insights/generated?o=' + org + '&r=' + repo);
+            break;
         case 'events':
             break;
     }
@@ -2211,5 +2214,45 @@ function loadContributorMomentumChart(url) {
                 }
             }
         });
+    });
+}
+
+function loadGeneratedInsights(url) {
+    $.get(url, function (data) {
+        var obsContainer = $("#insights-observations");
+        var actContainer = $("#insights-actions");
+        var metaContainer = $("#insights-meta");
+        obsContainer.empty();
+        actContainer.empty();
+        metaContainer.empty();
+
+        if (!data || data.length === 0 || !data[0].insights) {
+            obsContainer.html('<span class="insight-label">No insights generated yet. Insights will be generated during next sync.</span>');
+            actContainer.html('<span class="insight-label">\u2014</span>');
+            return;
+        }
+
+        var item = data[0];
+        var insights = item.insights;
+
+        if (insights.observations && insights.observations.length > 0) {
+            $.each(insights.observations, function (i, o) {
+                $('<div class="insights-bullet">')
+                    .append('<div class="insights-bullet-headline">' + o.headline + '</div>')
+                    .append('<div class="insights-bullet-detail">' + o.detail + '</div>')
+                    .appendTo(obsContainer);
+            });
+        }
+
+        if (insights.actions && insights.actions.length > 0) {
+            $.each(insights.actions, function (i, a) {
+                $('<div class="insights-bullet action">')
+                    .append('<div class="insights-bullet-headline">' + a.headline + '</div>')
+                    .append('<div class="insights-bullet-detail">' + a.detail + '</div>')
+                    .appendTo(actContainer);
+            });
+        }
+
+        metaContainer.text('Generated ' + item.generated_at + ' \u00b7 ' + item.model + ' \u00b7 ' + item.period_months + ' month period');
     });
 }
