@@ -21,7 +21,7 @@ const (
 
 // LLMConfig holds configuration for the Claude API.
 type LLMConfig struct {
-	Token   string //nolint:gosec // not a hardcoded credential
+	Token   string
 	BaseURL string
 	Model   string
 }
