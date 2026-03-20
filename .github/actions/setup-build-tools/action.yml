@@ -39,6 +39,8 @@ runs:
         KO_TAR="ko_${KO_VERSION}_${KO_OS}_${KO_ARCH}.tar.gz"
         KO_TMP="$(mktemp -d)"
         curl -fsSL -o "${KO_TMP}/${KO_TAR}" "${KO_BASE}/${KO_TAR}"
+        # NOTE: checksums.txt is fetched from the same release; a compromised
+        # release could serve a matching pair. ko does not publish signed checksums.
         curl -fsSL -o "${KO_TMP}/checksums.txt" "${KO_BASE}/checksums.txt"
         EXPECTED=$(grep "${KO_TAR}" "${KO_TMP}/checksums.txt" | head -1 | awk '{print $1}')
         ACTUAL=$(sha256sum "${KO_TMP}/${KO_TAR}" | awk '{print $1}')

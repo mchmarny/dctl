@@ -9,14 +9,16 @@ import (
 )
 
 func faviconHandler() http.HandlerFunc {
+	ico, readErr := embedFS.ReadFile("assets/img/favicon.ico")
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		file, err := embedFS.ReadFile("assets/img/favicon.ico")
-		if err != nil {
+		if readErr != nil {
 			http.NotFound(w, r)
 			return
 		}
 		w.Header().Set("Content-Type", "image/x-icon")
-		if _, err = w.Write(file); err != nil {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		if _, err := w.Write(ico); err != nil {
 			slog.Error("failed to write favicon", "error", err)
 		}
 	}

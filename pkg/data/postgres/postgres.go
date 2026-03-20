@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -24,6 +25,13 @@ type Store struct {
 	db *sql.DB
 }
 
+const (
+	maxOpenConns    = 25
+	maxIdleConns    = 10
+	connMaxLifetime = 5 * time.Minute
+	connMaxIdleTime = 1 * time.Minute
+)
+
 // New creates a new PostgreSQL Store, running migrations automatically.
 func New(dsn string) (*Store, error) {
 	if dsn == "" {
@@ -34,6 +42,11 @@ func New(dsn string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
+
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
+	db.SetConnMaxIdleTime(connMaxIdleTime)
 
 	if err := db.Ping(); err != nil {
 		db.Close()

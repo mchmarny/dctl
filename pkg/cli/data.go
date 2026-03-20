@@ -11,11 +11,12 @@ import (
 )
 
 const (
-	percentageListLimit = 9
-	repoNamePartsLimit  = 2
-	hundredPercent      = 100
-	categoryOther       = "ALL OTHERS"
-	arraySelector       = "|"
+	percentageListLimit       = 9
+	repoNamePartsLimit        = 2
+	hundredPercent            = 100
+	categoryOther             = "ALL OTHERS"
+	arraySelector             = "|"
+	maxRequestBodyBytes int64 = 1 << 20 // 1 MB
 )
 
 type SeriesData[T any] struct {
@@ -164,7 +165,10 @@ func percentageAPIHandler(w http.ResponseWriter, r *http.Request, fn percentageP
 	org := r.URL.Query().Get("o")
 	repo := r.URL.Query().Get("r")
 	entity := r.URL.Query().Get("e")
-	exclude := strings.Split(r.URL.Query().Get("x"), arraySelector)
+	var exclude []string
+	if x := r.URL.Query().Get("x"); x != "" {
+		exclude = strings.Split(x, arraySelector)
+	}
 
 	slog.Debug("event type query", "org", org, "repo", repo, "entity", entity, "months", months)
 
@@ -218,6 +222,7 @@ func queryParamInt(r *http.Request, key string, def int) int {
 
 func eventSearchAPIHandler(store data.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 		var q data.EventSearchCriteria
 		if err := json.NewDecoder(r.Body).Decode(&q); err != nil {
 			slog.Error("error binding json", "error", err)

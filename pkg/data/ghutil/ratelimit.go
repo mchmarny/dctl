@@ -1,6 +1,7 @@
 package ghutil
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"math/rand/v2"
@@ -11,19 +12,19 @@ import (
 
 const RateLimitThreshold = 10
 
-func CheckRateLimit(resp *github.Response) {
+func CheckRateLimit(ctx context.Context, resp *github.Response) error {
 	if resp == nil {
-		return
+		return nil
 	}
 
 	if resp.Rate.Remaining > RateLimitThreshold {
-		return
+		return nil
 	}
 
 	resetAt := resp.Rate.Reset.Time
 	wait := time.Until(resetAt)
 	if wait <= 0 {
-		return
+		return nil
 	}
 
 	jitter := time.Duration(rand.IntN(2000)) * time.Millisecond //nolint:gosec // jitter for rate limit backoff, not security-sensitive
@@ -42,7 +43,12 @@ func CheckRateLimit(resp *github.Response) {
 		)
 	}
 
-	time.Sleep(total)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(total):
+		return nil
+	}
 }
 
 // AbuseRetryAfter returns the retry-after duration if the error is a secondary

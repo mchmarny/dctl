@@ -1,6 +1,7 @@
 package ghutil
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,7 +11,8 @@ import (
 
 func TestCheckRateLimit_Nil(t *testing.T) {
 	start := time.Now()
-	CheckRateLimit(nil)
+	err := CheckRateLimit(context.Background(), nil)
+	assert.NoError(t, err)
 	assert.Less(t, time.Since(start), time.Second, "nil response should return immediately")
 }
 
@@ -23,7 +25,8 @@ func TestCheckRateLimit_HighRemaining(t *testing.T) {
 		},
 	}
 	start := time.Now()
-	CheckRateLimit(resp)
+	err := CheckRateLimit(context.Background(), resp)
+	assert.NoError(t, err)
 	assert.Less(t, time.Since(start), time.Second, "high remaining should not sleep")
 }
 
@@ -36,6 +39,7 @@ func TestCheckRateLimit_ResetInPast(t *testing.T) {
 		},
 	}
 	start := time.Now()
-	CheckRateLimit(resp)
+	err := CheckRateLimit(context.Background(), resp)
+	assert.NoError(t, err)
 	assert.Less(t, time.Since(start), time.Second, "past reset should not sleep")
 }

@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/mchmarny/devpulse/pkg/data"
 	"github.com/mchmarny/devpulse/pkg/data/postgres"
@@ -71,11 +73,15 @@ var (
 func Execute() {
 	initLogging(envBool("DEVPULSE_DEBUG"), envBool("DEVPULSE_LOG_JSON"))
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
 	cmd := newApp()
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+	if err := cmd.Run(ctx, os.Args); err != nil {
+		stop()
 		slog.Error("fatal error", "error", err)
 		os.Exit(1)
 	}
+	stop()
 }
 
 type appConfig struct {

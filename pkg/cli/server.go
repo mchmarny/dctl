@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,7 +23,10 @@ import (
 
 const (
 	serverShutdownWaitSeconds = 5
-	serverTimeoutSeconds      = 300
+	serverReadTimeout         = 30 * time.Second
+	serverReadHeaderTimeout   = 5 * time.Second
+	serverWriteTimeout        = 60 * time.Second
+	serverIdleTimeout         = 120 * time.Second
 	serverMaxHeaderBytes      = 20
 	serverPortDefault         = 8080
 )
@@ -111,11 +115,13 @@ func cmdStartServer(_ context.Context, cmd *cli.Command) error {
 	}
 
 	s := &http.Server{
-		Addr:           address,
-		Handler:        handler,
-		ReadTimeout:    serverTimeoutSeconds * time.Second,
-		WriteTimeout:   serverTimeoutSeconds * time.Second,
-		MaxHeaderBytes: 1 << serverMaxHeaderBytes,
+		Addr:              address,
+		Handler:           handler,
+		ReadTimeout:       serverReadTimeout,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
+		MaxHeaderBytes:    1 << serverMaxHeaderBytes,
 	}
 
 	done := make(chan os.Signal, 1)
@@ -150,8 +156,9 @@ func makeRouter(store data.Store, basePath string) *http.ServeMux {
 
 	mux := http.NewServeMux()
 
-	// Static files
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(embedFS)))
+	// Static files — serve only assets/ subtree, not templates/
+	assetsFS, _ := fs.Sub(embedFS, "assets")
+	mux.Handle("GET /static/assets/", http.StripPrefix("/static/assets/", http.FileServerFS(assetsFS)))
 	mux.HandleFunc("GET /favicon.ico", faviconHandler())
 
 	// Views
