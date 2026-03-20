@@ -21,7 +21,7 @@ const (
 
 // LLMConfig holds configuration for the Claude API.
 type LLMConfig struct {
-	APIKey  string
+	Token   string // nolint:gosec // not a hardcoded credential
 	BaseURL string
 	Model   string
 }
@@ -34,7 +34,7 @@ func NewLLMConfigFromEnv() *LLMConfig {
 		return nil
 	}
 	return &LLMConfig{
-		APIKey:  apiKey,
+		Token:  apiKey,
 		BaseURL: os.Getenv("ANTHROPIC_BASE_URL"),
 		Model:   os.Getenv("ANTHROPIC_MODEL"),
 	}
@@ -199,10 +199,10 @@ func GenerateInsights(ctx context.Context, cfg *LLMConfig, metrics *InsightsMetr
 		return nil, model, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", cfg.APIKey)
+	req.Header.Set("x-api-key", cfg.Token)
 	req.Header.Set("anthropic-version", claudeAPIVersion)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) //nolint:gosec // G704: URL from trusted ANTHROPIC_BASE_URL config, not user input
 	if err != nil {
 		return nil, model, fmt.Errorf("api call: %w", err)
 	}
