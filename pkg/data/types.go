@@ -485,3 +485,22 @@ type RepoOverview struct {
 	Archived     bool   `json:"archived"`
 	LastImport   string `json:"last_import"`
 }
+
+type InsightBullet struct {
+	Headline string `json:"headline" yaml:"headline"`
+	Detail   string `json:"detail" yaml:"detail"`
+}
+
+type GeneratedInsights struct {
+	Observations []InsightBullet `json:"observations" yaml:"observations"`
+	Actions      []InsightBullet `json:"actions" yaml:"actions"`
+}
+
+type RepoInsights struct {
+	Org          string             `json:"org" yaml:"org"`
+	Repo         string             `json:"repo" yaml:"repo"`
+	Insights     *GeneratedInsights `json:"insights" yaml:"insights"`
+	PeriodMonths int                `json:"period_months" yaml:"periodMonths"`
+	Model        string             `json:"model" yaml:"model"`
+	GeneratedAt  string             `json:"generated_at" yaml:"generatedAt"`
+}

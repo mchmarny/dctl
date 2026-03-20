@@ -42,6 +42,20 @@ var (
 		Sources: urfave.EnvVars("DEVPULSE_STALE"),
 	}
 
+	syncInsightsStaleFlag = &urfave.StringFlag{
+		Name:    "insights-stale",
+		Usage:   "Duration before insights are regenerated (e.g. 7d, 1w)",
+		Value:   "7d",
+		Sources: urfave.EnvVars("DEVPULSE_INSIGHTS_STALE"),
+	}
+
+	syncInsightsPeriodFlag = &urfave.IntFlag{
+		Name:    "insights-period",
+		Usage:   "Number of months of data to analyze for insights",
+		Value:   3,
+		Sources: urfave.EnvVars("DEVPULSE_INSIGHTS_PERIOD"),
+	}
+
 	syncCmd = &urfave.Command{
 		Name:            "sync",
 		HideHelpCommand: true,
@@ -61,6 +75,8 @@ Examples:
 			syncOrgFlag,
 			syncRepoFlag,
 			syncStaleFlag,
+			syncInsightsStaleFlag,
+			syncInsightsPeriodFlag,
 			debugFlag,
 			logJSONFlag,
 		},
@@ -144,9 +160,7 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 
 	pool := ghutil.NewTokenPool(tokenStr)
 	slog.Info("token pool initialized", "tokens", pool.Size())
-
 	cfg := getConfig(cmd)
-
 	var (
 		errors     int
 		eventCount int
@@ -179,22 +193,20 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 
 	// Substitutions
 	phaseStart = time.Now()
-	slog.Info("applying substitutions")
 	if _, subErr := cfg.Store.ApplySubstitutions(); subErr != nil {
 		errors++
 		slog.Error("substitutions failed", "error", subErr)
 	}
 	substitutionsSec := time.Since(phaseStart).Seconds()
 
-	// Extras (metadata, releases, etc.)
+	// Extras
 	phaseStart = time.Now()
 	importRepoExtras(ctx, cfg.Store, pool.Token(), target.Org, []string{target.Repo})
 	extrasSec := time.Since(phaseStart).Seconds()
 
-	// Reputation (local, no API calls)
+	// Reputation
 	phaseStart = time.Now()
 	org := target.Org
-	slog.Info("computing reputation")
 	if _, repErr := cfg.Store.ImportReputation(&org, nil); repErr != nil {
 		errors++
 		slog.Error("reputation failed", "error", repErr)
@@ -223,6 +235,12 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	}
 	scoringSec := time.Since(phaseStart).Seconds()
 
+	// Insights
+	phaseStart = time.Now()
+	insightsGenerated, insightsErrors := runInsightsGeneration(ctx, cfg.Store, target, cmd)
+	errors += insightsErrors
+	insightsSec := time.Since(phaseStart).Seconds()
+
 	totalSec := time.Since(start).Seconds()
 
 	slog.Info("sync_summary",
@@ -239,6 +257,8 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		"extras_sec", extrasSec,
 		"reputation_sec", reputationSec,
 		"scoring_sec", scoringSec,
+		"insights_sec", insightsSec,
+		"insights_generated", insightsGenerated,
 	)
 
 	return nil
@@ -331,4 +351,57 @@ func parseDurationHours(s string) (int, error) {
 		return 0, err
 	}
 	return int(d.Hours()), nil
+}
+
+func runInsightsGeneration(ctx context.Context, store data.Store, target syncTarget, cmd *urfave.Command) (bool, int) {
+	llmCfg := data.NewLLMConfigFromEnv()
+	if llmCfg == nil {
+		slog.Debug("ANTHROPIC_API_KEY not set, skipping insights generation")
+		return false, 0
+	}
+
+	staleHours, err := parseDurationHours(cmd.String(syncInsightsStaleFlag.Name))
+	if err != nil {
+		slog.Error("invalid --insights-stale value", "error", err)
+		return false, 0
+	}
+
+	genAt, _ := store.GetRepoInsightsGeneratedAt(target.Org, target.Repo)
+	if genAt != "" {
+		if t, pErr := time.Parse("2006-01-02T15:04:05Z", genAt); pErr == nil {
+			if time.Since(t) <= time.Duration(staleHours)*time.Hour {
+				slog.Debug("insights fresh, skipping", "org", target.Org, "repo", target.Repo, "generated_at", genAt)
+				return false, 0
+			}
+		}
+	}
+
+	period := cmd.Int(syncInsightsPeriodFlag.Name)
+	slog.Info("generating insights", "org", target.Org, "repo", target.Repo, "period_months", period)
+
+	metrics, gatherErr := data.GatherInsightsMetrics(store, target.Org, target.Repo, period)
+	if gatherErr != nil {
+		slog.Error("failed to gather metrics", "error", gatherErr)
+		return false, 1
+	}
+
+	gi, usedModel, genErr := data.GenerateInsights(ctx, llmCfg, metrics, period)
+	if genErr != nil {
+		slog.Error("insights generation failed", "error", genErr)
+		return false, 1
+	}
+
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	ri := &data.RepoInsights{
+		Insights:     gi,
+		PeriodMonths: period,
+		Model:        usedModel,
+		GeneratedAt:  now,
+	}
+	if saveErr := store.SaveRepoInsights(target.Org, target.Repo, ri); saveErr != nil {
+		slog.Error("failed to save insights", "error", saveErr)
+		return false, 1
+	}
+
+	return true, 0
 }

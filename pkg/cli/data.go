@@ -641,6 +641,19 @@ func insightsReputationAPIHandler(store data.Store) http.HandlerFunc {
 	}
 }
 
+func insightsGeneratedAPIHandler(store data.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := parseInsightParams(r)
+		res, err := store.GetRepoInsights(p.org, p.repo)
+		if err != nil {
+			slog.Error("failed to get generated insights", "error", err)
+			writeError(w, http.StatusInternalServerError, "error querying generated insights")
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
+	}
+}
+
 func parseRepo(repo *string) (*string, *string, bool) {
 	if repo == nil {
 		return nil, nil, false
