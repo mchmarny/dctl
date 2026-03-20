@@ -199,7 +199,8 @@ func GenerateInsights(ctx context.Context, cfg *LLMConfig, metrics *InsightsMetr
 
 	var respBytes []byte
 	for attempt := range insightsMaxRetries {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/v1/messages", bytes.NewReader(bodyBytes))
+		var req *http.Request
+		req, err = http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/v1/messages", bytes.NewReader(bodyBytes))
 		if err != nil {
 			return nil, model, fmt.Errorf("create request: %w", err)
 		}
@@ -207,7 +208,8 @@ func GenerateInsights(ctx context.Context, cfg *LLMConfig, metrics *InsightsMetr
 		req.Header.Set("x-api-key", cfg.Token)
 		req.Header.Set("anthropic-version", claudeAPIVersion)
 
-		resp, err := http.DefaultClient.Do(req) //nolint:gosec // G704: URL from trusted ANTHROPIC_BASE_URL config, not user input
+		var resp *http.Response
+		resp, err = http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, model, fmt.Errorf("api call: %w", err)
 		}

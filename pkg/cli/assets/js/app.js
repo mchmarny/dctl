@@ -399,6 +399,14 @@ function loadTabCharts(tab, months, org, repo, entity) {
 
 function loadAllCharts(months, org, repo, entity) {
     lastTabKey = "";
+    var hasRepo = repo && repo.indexOf("/") !== -1;
+    var insightsBtn = $('.tab-btn[data-tab="insights"]');
+    if (hasRepo) {
+        insightsBtn.show();
+    } else {
+        insightsBtn.hide();
+        if (activeTab === "insights") { activeTab = "health"; }
+    }
     loadSummaryBanner(months, org, repo, entity);
     activateTab(activeTab);
 }
