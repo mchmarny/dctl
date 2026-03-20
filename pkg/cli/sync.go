@@ -377,7 +377,11 @@ func runInsightsGeneration(ctx context.Context, store data.Store, target syncTar
 	}
 
 	period := cmd.Int(syncInsightsPeriodFlag.Name)
-	slog.Info("generating insights", "org", target.Org, "repo", target.Repo, "period_months", period)
+	model := llmCfg.Model
+	if model == "" {
+		model = data.DefaultInsightsModel
+	}
+	slog.Info("generating insights", "org", target.Org, "repo", target.Repo, "period_months", period, "model", model, "base_url", llmCfg.BaseURL)
 
 	metrics, gatherErr := data.GatherInsightsMetrics(store, target.Org, target.Repo, period)
 	if gatherErr != nil {
