@@ -21,7 +21,7 @@ The dashboard has three sections:
 
 1. **Top bar** — search input, period selector, and theme toggle on a single line
 2. **Summary banner** — global counts (organizations, repositories, events, contributors, last import timestamp in GMT) that update with the active search scope. When a specific repo is selected, the import timestamp includes the time (`YYYY-MM-DD HH:MM`); otherwise it shows date only.
-3. **Tabbed panels** — six tabs with lazy-loaded charts: Health, Activity, Velocity, Quality, Community, Events
+3. **Tabbed panels** — seven tabs with lazy-loaded charts: Health, Activity, Velocity, Quality, Community, Insights, Events
 
 ## Search
 
@@ -47,7 +47,7 @@ Charts load lazily — only the active tab's data is fetched. Switching tabs loa
 ### Health
 
 - **Project Health** — bus factor and pony factor with daily activity sparkline
-- **Repository Metadata** — stars, forks, open issues, language, license, repo count with sparkline
+- **Repository Status** — stars, forks, open issues, language, license, repo count with sparkline
 - **Stars Trend** — daily star count over the last 30 days
 - **Forks Trend** — daily fork count over the last 30 days
 
@@ -56,10 +56,12 @@ Charts load lazily — only the active tab's data is fetched. Switching tabs loa
 - **Monthly Activity** — GitHub events grouped by month with total line and linear regression trend
 - **PR Size Distribution** — pull requests bucketed by lines changed (S/M/L/XL) per month
 - **Forks & Activity** — monthly fork count vs total event activity
+- **Issue Open/Close Ratio** — monthly ratio of opened to closed issues
 
 ### Velocity
 
 - **Lead Time (PR to Merge)** — average days from PR creation to merge
+- **Time to First Response** — average time from issue/PR creation to first comment or review
 - **Change Failure Rate** — percentage of deployments causing failures
 - **Release Cadence** — monthly release counts (total, stable, deployments)
 - **Release Downloads** — monthly download trends
@@ -79,6 +81,10 @@ Charts load lazily — only the active tab's data is fetched. Switching tabs loa
 - **First-Time Contributors** — new contributor milestones per month
 - **Top Entities** — contributing companies/orgs with drill-down to developers
 - **Top Collaborators** — ranked by total event count
+
+### Insights
+
+- **Key Observations** — LLM-generated key observations and action items based on repository activity, contributor trends, and project health metrics
 
 ### Events
 

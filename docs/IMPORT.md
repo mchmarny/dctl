@@ -64,6 +64,7 @@ Subsequent imports are faster than the first run:
 | Metric history | Daily star/fork counts (30-day backfill) | GitHub API (ListStargazers, ListForks) |
 | Releases | Tags, publish dates, asset downloads | GitHub API |
 | Reputation | Shallow contributor reputation scores (no API calls) | Local DB |
+| Insights | LLM-generated key observations and action items (requires `ANTHROPIC_API_KEY`) | Anthropic API |
 
 ## Flags
 
@@ -77,6 +78,16 @@ Subsequent imports are faster than the first run:
 | `--format` | Output format: `json` or `yaml` | json |
 | `--debug` | Enable verbose logging | false |
 | `--log-json` | Output logs in JSON format | false |
+| `--insights-stale` | Re-generate insights if older than this duration | 7d |
+| `--insights-period` | Time window of data used for insight generation | 3 months |
+
+## Environment variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | API key for Anthropic (enables insight generation) | For insights |
+| `ANTHROPIC_BASE_URL` | Override the Anthropic API endpoint | No |
+| `ANTHROPIC_MODEL` | Anthropic model to use for insight generation | No |
 
 ## Debug output
 

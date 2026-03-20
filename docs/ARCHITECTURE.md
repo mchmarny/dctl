@@ -25,8 +25,11 @@ devpulse/
 │   │   ├── assets/     Frontend: CSS, JS, images (embedded via go:embed)
 │   │   └── templates/  HTML templates: header, home (tabbed dashboard), footer
 │   ├── data/           Store interface, shared types, helpers
+│   │   │               includes insights_gen.go (LLM-based insight generation)
 │   │   ├── sqlite/     SQLite Store implementation + migrations
+│   │   │               includes repo_insights.go
 │   │   ├── postgres/   PostgreSQL Store implementation + migrations
+│   │   │               includes repo_insights.go
 │   │   └── ghutil/     Shared GitHub API helpers (rate limiting, user mapping)
 │   ├── auth/           GitHub OAuth device flow + OS keychain token storage
 │   ├── logging/        Structured logging setup (slog)
@@ -70,13 +73,14 @@ Both backends implement the `data.Store` interface. Schema migrations are applie
 |-------|---------|
 | `event` | Contribution events (PRs, reviews, issues, comments, forks) with timing metadata |
 | `developer` | Developer profiles, entity affiliations, reputation scores (shallow + deep) |
-| `repo_meta` | Repository metadata (stars, forks, language, license, last import timestamp) |
+| `repo_meta` | Repository metadata (stars, forks, language, license, last import timestamp, community profile: has_coc, has_contributing, has_readme, has_issue_template, has_pr_template, community_health_pct) |
 | `repo_metric_history` | Daily star/fork counts for trend charts |
 | `release` | Release tags, dates, and download counts |
 | `release_asset` | Per-asset download counts |
 | `container_package` | Container image versions |
 | `state` | Import pagination state for incremental fetches |
 | `sub` | Entity name substitution rules |
+| `repo_insights` | LLM-generated observations per repo (org, repo, insights_json, period_months, model, generated_at) |
 | `schema_version` | Migration tracking |
 
 ### Query Patterns
@@ -108,7 +112,8 @@ The `sync` command is designed for scheduled (e.g., hourly) execution:
 2. Picks one repo via round-robin (`UTC hour % total repos`)
 3. Runs the full import pipeline for that repo
 4. Deep-scores up to `score.count` lowest-reputation contributors
-5. Logs a structured `sync_summary` with timing metrics
+5. Insights — generates LLM-based observations via Anthropic API (if `ANTHROPIC_API_KEY` is set)
+6. Logs a structured `sync_summary` with timing metrics
 
 ## Dashboard
 
@@ -117,7 +122,7 @@ The `sync` command is designed for scheduled (e.g., hourly) execution:
 The HTTP server (`pkg/cli/server.go`) serves:
 - **Static assets** — CSS, JS, images via `go:embed` filesystem
 - **HTML templates** — Go `html/template` with header/home/footer structure
-- **Data API** — 20+ JSON endpoints under `/data/` for chart data
+- **Data API** — 20+ JSON endpoints under `/data/` for chart data, including `/data/insights/issue-ratio`, `/data/insights/time-to-first-response`, `/data/insights/generated`
 
 ### Frontend
 
@@ -130,7 +135,7 @@ The HTTP server (`pkg/cli/server.go`) serves:
 The dashboard is organized into:
 1. **Top bar** — search input (`org:` / `repo:` prefix), period selector, theme toggle
 2. **Summary banner** — global counts (orgs, repos, events, contributors, last import timestamp in GMT). Shows datetime when a repo is selected, date-only otherwise.
-3. **Six tabs** — Health, Activity, Velocity, Quality, Community, Events
+3. **Seven tabs** — Health, Activity, Velocity, Quality, Community, Events, Insights
 
 Charts load lazily per tab — only the active tab's API calls are made. Tab state persists in the URL hash (`#health`, `#activity`, etc.) for browser navigation.
 

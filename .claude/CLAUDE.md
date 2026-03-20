@@ -106,6 +106,7 @@ pkg/data/           Store interface, shared types, helpers
 pkg/data/sqlite/    SQLite Store implementation + migrations
 pkg/data/postgres/  PostgreSQL Store implementation + migrations
 pkg/data/ghutil/    Shared GitHub API helpers (rate limiting, user mapping)
+pkg/data/insights_gen.go  LLM insights generation
 pkg/auth/           GitHub OAuth token management (OS keychain)
 pkg/net/            HTTP client utilities
 config/             Sync config files (YAML, org/repo lists)
@@ -113,11 +114,18 @@ infra/gcp/          Terraform for GCP infrastructure
 tools/              Dev scripts (version bump, shared helpers)
 ```
 
-CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync`, `reset`
+CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync` (supports `--insights-stale` and `--insights-period` flags), `reset`
 
 Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite/PostgreSQL → HTTP API → Chart.js dashboard
 
-Dashboard is full-width with a summary banner and six lazy-loaded tabs (Health, Activity, Velocity, Quality, Community, Events). Top bar has search, period selector, and theme toggle on one line. Search supports `org:` and `repo:` prefix syntax.
+Dashboard is full-width with a summary banner and seven lazy-loaded tabs (Health, Activity, Velocity, Quality, Community, Events, Insights). Top bar has search, period selector, and theme toggle on one line. Search supports `org:` and `repo:` prefix syntax.
+
+## Environment Variables
+
+- `GITHUB_TOKEN` — required, comma-separated for token pool rotation
+- `ANTHROPIC_API_KEY` — optional, enables LLM insights generation
+- `ANTHROPIC_BASE_URL` — optional, custom Anthropic API endpoint
+- `ANTHROPIC_MODEL` — optional, defaults to `claude-haiku-4-5-20251001`
 
 ## CI/CD
 

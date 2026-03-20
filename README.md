@@ -13,8 +13,9 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 
 **Project Health**
 - **Bus factor / pony factor** -- minimum developers or organizations producing 50% of contributions
-- **Repository metadata** -- stars, forks, open issues, language, license with 30-day sparkline
+- **Repository Status** -- stars, forks, open issues, language, license with 30-day sparkline
 - **Stars & forks trends** -- daily star and fork counts over the last 30 days with historical backfill
+- **Community Profile** -- badges for README, Contributing, Code of Conduct, and issue/PR templates
 
 ![](docs/img/health.png)
 
@@ -22,6 +23,7 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **Activity trends** -- monthly event volume (PRs, reviews, issues, comments, forks) with total and 3-month moving average
 - **PR size distribution** -- pull requests bucketed by lines changed (S/M/L/XL) per month
 - **Forks & activity** -- monthly fork count vs total event activity
+- **Issue Open/Close Ratio** -- monthly opened vs closed issues
 
 ![](docs/img/activity.png)
 
@@ -30,6 +32,7 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 - **Change failure rate** -- percentage of deployments causing failures (bug issues near releases + revert PRs)
 - **Release cadence** -- monthly release counts (total, stable, deployments) with merge-to-main fallback
 - **Release downloads** -- monthly download trends and top releases by download count
+- **Time to First Response** -- average hours to first review or comment on PRs
 
 ![](docs/img/velocity.png)
 
@@ -49,9 +52,12 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 
 ![](docs/img/community.png)
 
+**Insights**
+- **LLM-generated observations** -- AI-powered analysis of repository health, trends, and action items per repo
+
 **Dashboard**
 - **Global summary banner** -- organizations, repositories, events, contributors, and last import timestamp (GMT) at a glance
-- **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, and Events tabs with lazy-loaded charts
+- **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, Insights, and Events tabs with lazy-loaded charts
 - **Event search filters** -- filter by type, date range, username, or entity from the Events tab
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
 - **Unified search** -- `org:name` or `repo:name` prefix syntax; all panels respect scope
@@ -189,7 +195,7 @@ devpulse server
 
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
-The dashboard shows a global summary banner (orgs, repos, events, contributors, last import timestamp in GMT) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
+The dashboard shows a global summary banner (orgs, repos, events, contributors, last import timestamp in GMT) and organizes insights into seven tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, **Insights**, and **Events**. Charts load lazily per tab.
 
 You can run `devpulse import` in a separate terminal or cron job while the server is running — the dashboard picks up new data immediately after each import transaction commits. See [docs/SERVER.md](docs/SERVER.md) for details.
 
@@ -270,6 +276,16 @@ devpulse import --org <org> --repo <repo>
 Migrations run automatically on first connection. Special characters in the password must be URL-encoded (e.g., `/` → `%2F`, `@` → `%40`).
 
 For Google Cloud AlloyDB, connect through the [AlloyDB Auth Proxy](https://cloud.google.com/alloydb/docs/auth-proxy/overview) with `--public-ip` and use `127.0.0.1` as the host.
+
+### LLM (Insights tab)
+
+The Insights tab uses an LLM to generate observations and action items. Configure via environment variables:
+
+```shell
+export ANTHROPIC_API_KEY="sk-ant-..."        # required for Insights tab
+export ANTHROPIC_BASE_URL="https://..."      # optional, override API endpoint
+export ANTHROPIC_MODEL="claude-..."          # optional, override model selection
+```
 
 ## Architecture
 
