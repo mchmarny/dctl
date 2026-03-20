@@ -12,22 +12,37 @@ export SERVICE_ACCOUNT="devpulse-run@${PROJECT_ID}.iam.gserviceaccount.com"
 
 ## Secrets
 
-Store the GitHub token and AlloyDB connection string in Secret Manager:
+Store secrets in Secret Manager:
 
 ```shell
+# GitHub token (no scopes needed — only increases rate limit to 5,000 req/hour)
 echo -n "<github-pat>" | gcloud secrets create devpulse-github-token \
     --project $PROJECT_ID \
     --data-file=-
 
+# AlloyDB connection string
 echo -n "<alloydb-connection-string>" | gcloud secrets create devpulse-db \
+    --project $PROJECT_ID \
+    --data-file=-
+
+# Anthropic API key (for LLM-generated insights)
+echo -n "<anthropic-api-key>" | gcloud secrets create anthropic-api-key \
     --project $PROJECT_ID \
     --data-file=-
 ```
 
-To use multiple GitHub tokens for higher API rate limits (5,000 req/hour per token), store them comma-separated. Tokens need no scopes — they only increase the rate limit:
+To use multiple GitHub tokens for higher rate limits, store them comma-separated:
 
 ```shell
 echo -n "<token1>,<token2>" | gcloud secrets versions add devpulse-github-token \
+    --project $PROJECT_ID \
+    --data-file=-
+```
+
+To update the Anthropic API key:
+
+```shell
+echo -n "<new-key>" | gcloud secrets versions add anthropic-api-key \
     --project $PROJECT_ID \
     --data-file=-
 ```
@@ -77,13 +92,29 @@ gcloud run jobs create devpulse-sync \
     --command /ko-app/devpulse \
     --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/<config-name>.yaml,--stale,3d" \
     --service-account $SERVICE_ACCOUNT \
-    --set-secrets DEVPULSE_DB=devpulse-db:latest,GITHUB_TOKEN=devpulse-github-token:latest \
-    --set-env-vars DEVPULSE_DEBUG=true,DEVPULSE_LOG_JSON=true \
+    --set-secrets DEVPULSE_DB=devpulse-db:latest,GITHUB_TOKEN=devpulse-github-token:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest \
+    --set-env-vars DEVPULSE_DEBUG=true,DEVPULSE_LOG_JSON=true,ANTHROPIC_MODEL=claude-haiku-4-5-20251001 \
     --network devpulse \
     --subnet app \
     --vpc-egress private-ranges-only \
     --region $REGION \
     --task-timeout 3600
+```
+
+To update secrets or env vars without clobbering existing ones:
+
+```shell
+# Update secrets (use --update-secrets, not --set-secrets)
+gcloud run jobs update devpulse-sync \
+    --project $PROJECT_ID \
+    --region $REGION \
+    --update-secrets="GITHUB_TOKEN=devpulse-github-token:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest"
+
+# Update env vars (use --update-env-vars, not --set-env-vars)
+gcloud run jobs update devpulse-sync \
+    --project $PROJECT_ID \
+    --region $REGION \
+    --update-env-vars="ANTHROPIC_MODEL=claude-haiku-4-5-20251001"
 ```
 
 ## Cloud Scheduler
