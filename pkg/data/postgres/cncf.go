@@ -46,11 +46,11 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, store data.
 	const maxConcurrent = 10
 
 	var (
-		wg       sync.WaitGroup
-		mu       sync.Mutex
-		sem      = make(chan struct{}, maxConcurrent)
-		merged   []*data.Developer
-		firstErr error
+		wg      sync.WaitGroup
+		mu      sync.Mutex
+		sem     = make(chan struct{}, maxConcurrent)
+		merged  []*data.Developer
+		skipped int
 	)
 
 	for _, u := range dbDevs {
@@ -75,9 +75,8 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, store data.
 			mu.Lock()
 			defer mu.Unlock()
 			if mergeErr != nil {
-				if firstErr == nil {
-					firstErr = fmt.Errorf("error updating developer %s: %w", username, mergeErr)
-				}
+				skipped++
+				slog.Warn("skipping developer affiliation", "username", username, "error", mergeErr)
 				return
 			}
 			if d != nil {
@@ -88,10 +87,6 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, store data.
 
 	wg.Wait()
 
-	if firstErr != nil {
-		return nil, firstErr
-	}
-
 	if len(merged) > 0 {
 		if err := store.SaveDevelopers(merged); err != nil {
 			return nil, fmt.Errorf("saving merged developers: %w", err)
@@ -99,6 +94,7 @@ func UpdateDevelopersWithCNCFEntityAffiliations(ctx context.Context, store data.
 	}
 
 	res.MappedDevs = len(merged)
+	res.SkippedDevs = skipped
 
 	if err := entityStore.CleanEntities(); err != nil {
 		return nil, fmt.Errorf("error cleaning entities: %w", err)

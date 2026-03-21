@@ -431,10 +431,11 @@ type CNCFAffiliation struct {
 }
 
 type AffiliationImportResult struct {
-	Duration   string `json:"duration,omitempty" yaml:"duration,omitempty"`
-	DBDevs     int    `json:"db_devs,omitempty" yaml:"dbDevs,omitempty"`
-	CNCFDevs   int    `json:"cncf_devs,omitempty" yaml:"cncfDevs,omitempty"`
-	MappedDevs int    `json:"mapped_devs,omitempty" yaml:"mappedDevs,omitempty"`
+	Duration    string `json:"duration,omitempty" yaml:"duration,omitempty"`
+	DBDevs      int    `json:"db_devs,omitempty" yaml:"dbDevs,omitempty"`
+	CNCFDevs    int    `json:"cncf_devs,omitempty" yaml:"cncfDevs,omitempty"`
+	MappedDevs  int    `json:"mapped_devs,omitempty" yaml:"mappedDevs,omitempty"`
+	SkippedDevs int    `json:"skipped_devs,omitempty" yaml:"skippedDevs,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
