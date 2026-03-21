@@ -114,7 +114,7 @@ infra/gcp/          Terraform for GCP infrastructure
 tools/              Dev scripts (version bump, shared helpers)
 ```
 
-CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync` (supports `--insights-stale` and `--insights-period` flags), `reset`
+CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync` (per-repo reputation/insight config in YAML), `reset`
 
 Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite/PostgreSQL → HTTP API → Chart.js dashboard
 

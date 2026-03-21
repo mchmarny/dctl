@@ -30,13 +30,13 @@ devpulse score --org <org> --count 20
 
 ## Stale threshold
 
-Control how recently a contributor must have been scored to skip re-scoring:
+The `--stale` flag controls how recently a contributor must have been scored to skip re-scoring. Accepts Go duration syntax (`72h`) plus shorthand `d` (days) and `w` (weeks). Default: `3d` (72 hours).
 
 ```shell
 devpulse score --org <org> --stale 1w
 ```
 
-Accepts Go duration syntax (`72h`) plus shorthand `d` (days) and `w` (weeks). Default: `3d` (72 hours).
+When using the `sync` command, stale threshold is configured per-repo in the YAML config file via `reputation.staleAfter` instead of this flag.
 
 Deep scoring makes multiple GitHub API calls per user. Run incrementally to stay within rate limits — each invocation scores the next batch of lowest-reputation contributors.
 

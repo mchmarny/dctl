@@ -78,8 +78,6 @@ Subsequent imports are faster than the first run:
 | `--format` | Output format: `json` or `yaml` | json |
 | `--debug` | Enable verbose logging | false |
 | `--log-json` | Output logs in JSON format | false |
-| `--insights-stale` | Re-generate insights if older than this duration | 7d |
-| `--insights-period` | Time window of data used for insight generation | 3 months |
 
 ## Environment variables
 

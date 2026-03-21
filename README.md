@@ -162,30 +162,30 @@ devpulse sync --config https://raw.githubusercontent.com/org/repo/main/config/sy
 
 # Override round-robin to sync a specific repo
 devpulse sync --config sync.yaml --org NVIDIA --repo DCGM
+
+# Sync a specific repo without a config file (uses hardcoded defaults)
+devpulse sync --org NVIDIA --repo DCGM
 ```
 
-Config format:
+Config format (all `reputation` and `insight` fields are optional with sensible defaults):
 
 ```yaml
-sources:
-  - org: myorg
-    repos:
-      - repo1
-      - repo2
-  - org: mchmarny
-    repos:
-      - devpulse
-score:
-  count: 100
+repos:
+  - name: repo1
+    org: myorg
+    reputation:
+      scoreCount: 50        # contributors to deep-score per run (default: 50)
+      staleAfter: "3d"      # re-score after this duration (default: 3d)
+    insight:
+      periodMonths: 3       # months of data for insights (default: 3)
+      staleAfter: "3d"      # regenerate insights after this (default: 3d)
+  - name: repo2
+    org: myorg
+  - name: devpulse
+    org: mchmarny
 ```
 
-The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the flattened list based on `UTC hour % total repos`, runs a full import, then deep-scores up to `score.count` lowest-reputation contributors. With 9 repos on an hourly schedule, each repo is imported 2-3 times per day while staying within GitHub's 5,000 requests/hour API rate limit.
-
-Stale threshold controls how recently a contributor must have been scored to skip re-scoring (default: `3d`):
-
-```shell
-devpulse sync --config sync.yaml --stale 1w
-```
+The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the list based on `UTC hour % total repos`, runs a full import, then deep-scores the lowest-reputation contributors. With 9 repos on an hourly schedule, each repo is imported 2-3 times per day while staying within GitHub's 5,000 requests/hour API rate limit. Reputation and insight thresholds are configured per-repo in the YAML file.
 
 ### 5. Dashboard view
 

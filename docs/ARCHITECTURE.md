@@ -111,7 +111,7 @@ The `sync` command is designed for scheduled (e.g., hourly) execution:
 1. Loads a config file listing org/repo targets
 2. Picks one repo via round-robin (`UTC hour % total repos`)
 3. Runs the full import pipeline for that repo
-4. Deep-scores up to `score.count` lowest-reputation contributors
+4. Deep-scores lowest-reputation contributors (per-repo `reputation.scoreCount`)
 5. Insights — generates LLM-based observations via Anthropic API (if `ANTHROPIC_API_KEY` is set)
 6. Logs a structured `sync_summary` with timing metrics
 
