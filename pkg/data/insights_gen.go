@@ -209,7 +209,7 @@ func GenerateInsights(ctx context.Context, cfg *LLMConfig, metrics *InsightsMetr
 		req.Header.Set("anthropic-version", claudeAPIVersion)
 
 		var resp *http.Response
-		resp, err = http.DefaultClient.Do(req)
+		resp, err = http.DefaultClient.Do(req) //nolint:gosec,nolintlint // G704: URL from trusted config
 		if err != nil {
 			return nil, model, fmt.Errorf("api call: %w", err)
 		}
