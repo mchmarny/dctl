@@ -1245,4 +1245,4 @@ a.link {
 .insights-bullet-headline { font-weight: 700; color: var(--fg); margin-bottom: 0.25rem; }
 .insights-bullet-detail { font-size: 0.9rem; color: var(--fg); opacity: 0.75; line-height: 1.5; }
 .insights-bullet.action { border-left-color: var(--accent-green, #2ea043); }
-.insights-meta { padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--gray); text-align: right; }
+.insights-meta { padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--gray); text-align: left; }

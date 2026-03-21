@@ -399,16 +399,28 @@ function loadTabCharts(tab, months, org, repo, entity) {
 
 function loadAllCharts(months, org, repo, entity) {
     lastTabKey = "";
-    var hasRepo = repo && repo.indexOf("/") !== -1;
-    var insightsBtn = $('.tab-btn[data-tab="insights"]');
-    if (hasRepo) {
-        insightsBtn.show();
-    } else {
-        insightsBtn.hide();
-        if (activeTab === "insights") { activeTab = "health"; }
-    }
+    checkInsightsAvailable(org, repo);
     loadSummaryBanner(months, org, repo, entity);
     activateTab(activeTab);
+}
+
+function checkInsightsAvailable(org, repo) {
+    var btn = $('.tab-btn[data-tab="insights"]');
+    if (!repo) {
+        btn.hide();
+        if (activeTab === "insights") { activeTab = "health"; }
+        return;
+    }
+    $.get('/data/insights/generated?o=' + org + '&r=' + repo, function (data) {
+        if (data && data.length > 0 && data[0].insights) {
+            btn.show();
+        } else {
+            btn.hide();
+            if (activeTab === "insights") { activeTab = "health"; activateTab(activeTab); }
+        }
+    }).fail(function () {
+        btn.hide();
+    });
 }
 
 function applySelection(scope, item, skipPushState) {
@@ -455,6 +467,7 @@ function applySelection(scope, item, skipPushState) {
     submitSearch();
     updatePeriodOptions(org, repo, function () {
         var m = $("#period_months").val();
+        checkInsightsAvailable(org, repo);
         loadSummaryBanner(m, org, repo, entity);
         activateTab(activeTab);
     });
@@ -2261,6 +2274,6 @@ function loadGeneratedInsights(url) {
             });
         }
 
-        metaContainer.text('Generated ' + item.generated_at + ' \u00b7 ' + item.model + ' \u00b7 ' + item.period_months + ' month period');
+        metaContainer.text('Generated ' + item.generated_at + ' for ' + item.period_months + ' month period');
     });
 }

@@ -11,7 +11,7 @@ build_tools:
 
 # Linting
 linting:
-  golangci_lint: 'v2.10.1'
+  golangci_lint: 'v2.11.3'
 
 # Quality Thresholds
 quality:
