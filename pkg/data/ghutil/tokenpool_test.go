@@ -57,6 +57,14 @@ func TestTokenPoolRoundRobin(t *testing.T) {
 	assert.Equal(t, 50, seen["b"])
 }
 
+func TestTokenPoolNeverReturnsComma(t *testing.T) {
+	pool := NewTokenPool("ghp_abc123,ghp_def456")
+	for range 10 {
+		tok := pool.Token()
+		assert.NotContains(t, tok, ",", "Token() must return a single token, not comma-separated")
+	}
+}
+
 func TestTokenPoolConcurrentAccess(t *testing.T) {
 	pool := NewTokenPool("tok1", "tok2", "tok3")
 

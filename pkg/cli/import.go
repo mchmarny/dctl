@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mchmarny/devpulse/pkg/data"
+	"github.com/mchmarny/devpulse/pkg/data/ghutil"
 	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/net"
 	"github.com/urfave/cli/v3"
@@ -129,8 +130,9 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// 1. events
+	pool := ghutil.NewTokenPool(token)
 	for _, r := range repos {
-		m, summary, importErr := cfg.Store.ImportEvents(ctx, token, org, r, months)
+		m, summary, importErr := cfg.Store.ImportEvents(ctx, pool.Token(), org, r, months)
 		if importErr != nil {
 			slog.Error("failed to import events", "org", org, "repo", r, "error", importErr)
 			continue
@@ -145,7 +147,7 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 
 	// 2. affiliations
 	slog.Info("updating affiliations")
-	a, err := importAffiliations(ctx, cfg.Store)
+	a, err := importAffiliations(ctx, cfg.Store, pool.Token())
 	if err != nil {
 		slog.Error("affiliations failed", "error", err)
 	} else {
@@ -186,13 +188,14 @@ func cmdImport(ctx context.Context, cmd *cli.Command) error {
 func cmdUpdate(ctx context.Context, cfg *appConfig, token string, concurrency int, start time.Time) error {
 	slog.Info("updating all previously imported data", "concurrency", concurrency)
 
-	m, err := cfg.Store.UpdateEvents(ctx, token, concurrency)
+	pool := ghutil.NewTokenPool(token)
+	m, err := cfg.Store.UpdateEvents(ctx, pool.Token(), concurrency)
 	if err != nil {
 		return fmt.Errorf("failed to import events: %w", err)
 	}
 
 	slog.Info("updating affiliations")
-	a, err := importAffiliations(ctx, cfg.Store)
+	a, err := importAffiliations(ctx, cfg.Store, pool.Token())
 	if err != nil {
 		slog.Error("affiliations failed", "error", err)
 	}
@@ -263,12 +266,7 @@ func importRepoExtras(ctx context.Context, store data.Store, token, org string, 
 	}
 }
 
-func importAffiliations(ctx context.Context, store data.Store) (*data.AffiliationImportResult, error) {
-	token, err := requireGitHubToken()
-	if err != nil {
-		return nil, err
-	}
-
+func importAffiliations(ctx context.Context, store data.Store, token string) (*data.AffiliationImportResult, error) {
 	client := net.GetOAuthClient(ctx, token)
 
 	res, err := sqlite.UpdateDevelopersWithCNCFEntityAffiliations(ctx, store, store, client)

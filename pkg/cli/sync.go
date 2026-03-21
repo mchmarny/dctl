@@ -185,7 +185,7 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	// Affiliations
 	phaseStart = time.Now()
 	slog.Info("updating affiliations")
-	if _, affErr := importAffiliations(ctx, cfg.Store); affErr != nil {
+	if _, affErr := importAffiliations(ctx, cfg.Store, pool.Token()); affErr != nil {
 		errors++
 		slog.Error("affiliations failed", "error", affErr)
 	}
