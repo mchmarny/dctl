@@ -1,14 +1,57 @@
-sources:
-  - org: NVIDIA
-    repos:
-      - aicr
-      - DCGM
-      - dcgm-exporter
-      - gpu-operator
-      - k8s-device-plugin
-      - kubevirt-gpu-device-plugin
-      - nvidia-container-toolkit
-      - NVSentinel
-      - skyhook
-score:
-  count: 100
+repos:
+  - name: aicr
+    org: NVIDIA
+    reputation:
+      staleAfter: "2d"
+      scoreCount: 50
+    insight:
+      periodMonths: 3
+      staleAfter: "3d"
+  - name: DCGM
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"
+  - name: dcgm-exporter
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"
+  - name: gpu-operator
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"
+  - name: k8s-device-plugin
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"
+  - name: kubevirt-gpu-device-plugin
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"
+  - name: nvidia-container-toolkit
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"
+  - name: NVSentinel
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "3d"
+  - name: skyhook
+    org: NVIDIA
+    reputation:
+      staleAfter: "7d"
+    insight:
+      staleAfter: "7d"

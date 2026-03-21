@@ -10,26 +10,84 @@ import (
 	urfave "github.com/urfave/cli/v3"
 )
 
-func TestFlattenTargets(t *testing.T) {
-	sources := []syncSource{
-		{Org: "NVIDIA", Repos: []string{"aicr", "skyhook"}},
-		{Org: "mchmarny", Repos: []string{"devpulse"}},
+func TestResolveTargets(t *testing.T) {
+	repos := []syncRepo{
+		{Name: "aicr", Org: "NVIDIA"},
+		{Name: "skyhook", Org: "NVIDIA", Reputation: &syncReputation{ScoreCount: 200}},
+		{Name: "devpulse", Org: "mchmarny", Insight: &syncInsight{PeriodMonths: 6, StaleAfter: "14d"}},
 	}
 
-	targets := flattenTargets(sources)
-
+	targets, err := resolveTargets(repos)
+	require.NoError(t, err)
 	require.Len(t, targets, 3)
-	assert.Equal(t, syncTarget{Org: "NVIDIA", Repo: "aicr"}, targets[0])
-	assert.Equal(t, syncTarget{Org: "NVIDIA", Repo: "skyhook"}, targets[1])
-	assert.Equal(t, syncTarget{Org: "mchmarny", Repo: "devpulse"}, targets[2])
+
+	assert.Equal(t, "NVIDIA", targets[0].Org)
+	assert.Equal(t, "aicr", targets[0].Repo)
+	assert.Equal(t, defaultScoreCount, targets[0].ScoreCount)
+	assert.Equal(t, 72, targets[0].ReputationStale) // 3d default
+	assert.Equal(t, defaultInsightPeriod, targets[0].InsightPeriod)
+	assert.Equal(t, 72, targets[0].InsightStale) // 3d default
+
+	assert.Equal(t, 200, targets[1].ScoreCount)
+
+	assert.Equal(t, 6, targets[2].InsightPeriod)
+	assert.Equal(t, 336, targets[2].InsightStale) // 14d
 }
 
-func TestFlattenTargetsEmpty(t *testing.T) {
-	targets := flattenTargets(nil)
+func TestResolveTargetsEmpty(t *testing.T) {
+	targets, err := resolveTargets(nil)
+	require.NoError(t, err)
 	assert.Empty(t, targets)
+}
 
-	targets = flattenTargets([]syncSource{{Org: "org", Repos: nil}})
-	assert.Empty(t, targets)
+func TestResolveTargetDefaults(t *testing.T) {
+	target, err := resolveTarget("NVIDIA", "aicr", nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, defaultScoreCount, target.ScoreCount)
+	assert.Equal(t, 72, target.ReputationStale)
+	assert.Equal(t, 72, target.InsightStale)
+	assert.Equal(t, defaultInsightPeriod, target.InsightPeriod)
+}
+
+func TestResolveTargetOverrides(t *testing.T) {
+	target, err := resolveTarget("NVIDIA", "aicr",
+		&syncReputation{ScoreCount: 50, StaleAfter: "1d"},
+		&syncInsight{PeriodMonths: 6, StaleAfter: "2w"},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, 50, target.ScoreCount)
+	assert.Equal(t, 24, target.ReputationStale)
+	assert.Equal(t, 6, target.InsightPeriod)
+	assert.Equal(t, 336, target.InsightStale)
+}
+
+func TestResolveTargetInvalidStale(t *testing.T) {
+	_, err := resolveTarget("NVIDIA", "aicr",
+		&syncReputation{StaleAfter: "bogus"}, nil)
+	require.Error(t, err)
+
+	_, err = resolveTarget("NVIDIA", "aicr",
+		nil, &syncInsight{StaleAfter: "bogus"})
+	require.Error(t, err)
+}
+
+func TestFindRepo(t *testing.T) {
+	sc := &syncConfig{
+		Repos: []syncRepo{
+			{Name: "aicr", Org: "NVIDIA", Reputation: &syncReputation{ScoreCount: 100}},
+			{Name: "skyhook", Org: "NVIDIA"},
+		},
+	}
+
+	found := findRepo(sc, "NVIDIA", "aicr")
+	require.NotNil(t, found)
+	assert.Equal(t, 100, found.Reputation.ScoreCount)
+
+	found = findRepo(sc, "nvidia", "AICR") // case insensitive
+	require.NotNil(t, found)
+
+	found = findRepo(sc, "NVIDIA", "nonexistent")
+	assert.Nil(t, found)
 }
 
 func TestPickTarget(t *testing.T) {
@@ -61,28 +119,34 @@ func TestPickTarget(t *testing.T) {
 }
 
 func TestLoadSyncConfigFromFile(t *testing.T) {
-	yaml := `sources:
-  - org: NVIDIA
-    repos:
-      - aicr
-      - skyhook
-  - org: mchmarny
-    repos:
-      - devpulse
-score:
-  count: 999
+	yaml := `repos:
+  - name: aicr
+    org: NVIDIA
+    reputation:
+      scoreCount: 100
+      staleAfter: "48h"
+  - name: skyhook
+    org: NVIDIA
+  - name: devpulse
+    org: mchmarny
+    insight:
+      periodMonths: 6
 `
 	f := t.TempDir() + "/sync.yaml"
 	require.NoError(t, writeTestFile(f, yaml))
 
 	sc, err := loadSyncConfig(t.Context(), f)
 	require.NoError(t, err)
-	require.Len(t, sc.Sources, 2)
-	assert.Equal(t, "NVIDIA", sc.Sources[0].Org)
-	assert.Equal(t, []string{"aicr", "skyhook"}, sc.Sources[0].Repos)
-	assert.Equal(t, "mchmarny", sc.Sources[1].Org)
-	assert.Equal(t, []string{"devpulse"}, sc.Sources[1].Repos)
-	assert.Equal(t, 999, sc.Score.Count)
+	require.Len(t, sc.Repos, 3)
+	assert.Equal(t, "NVIDIA", sc.Repos[0].Org)
+	assert.Equal(t, "aicr", sc.Repos[0].Name)
+	require.NotNil(t, sc.Repos[0].Reputation)
+	assert.Equal(t, 100, sc.Repos[0].Reputation.ScoreCount)
+	assert.Equal(t, "48h", sc.Repos[0].Reputation.StaleAfter)
+	assert.Nil(t, sc.Repos[1].Reputation)
+	assert.Equal(t, "mchmarny", sc.Repos[2].Org)
+	require.NotNil(t, sc.Repos[2].Insight)
+	assert.Equal(t, 6, sc.Repos[2].Insight.PeriodMonths)
 }
 
 func TestLoadSyncConfigFileNotFound(t *testing.T) {
@@ -91,12 +155,9 @@ func TestLoadSyncConfigFileNotFound(t *testing.T) {
 }
 
 func TestCmdSyncOrgRepoValidation(t *testing.T) {
-	yaml := `sources:
-  - org: NVIDIA
-    repos:
-      - aicr
-score:
-  count: 999
+	yaml := `repos:
+  - name: aicr
+    org: NVIDIA
 `
 	f := t.TempDir() + "/sync.yaml"
 	require.NoError(t, writeTestFile(f, yaml))

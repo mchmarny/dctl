@@ -35,27 +35,6 @@ var (
 		Usage: "Override target repo (requires --org)",
 	}
 
-	syncStaleFlag = &urfave.StringFlag{
-		Name:    "stale",
-		Usage:   "Duration before a reputation score is considered stale (e.g. 72h, 3d, 1w)",
-		Value:   "3d",
-		Sources: urfave.EnvVars("DEVPULSE_STALE"),
-	}
-
-	syncInsightsStaleFlag = &urfave.StringFlag{
-		Name:    "insights-stale",
-		Usage:   "Duration before insights are regenerated (e.g. 7d, 1w)",
-		Value:   "7d",
-		Sources: urfave.EnvVars("DEVPULSE_INSIGHTS_STALE"),
-	}
-
-	syncInsightsPeriodFlag = &urfave.IntFlag{
-		Name:    "insights-period",
-		Usage:   "Number of months of data to analyze for insights",
-		Value:   3,
-		Sources: urfave.EnvVars("DEVPULSE_INSIGHTS_PERIOD"),
-	}
-
 	syncCmd = &urfave.Command{
 		Name:            "sync",
 		HideHelpCommand: true,
@@ -74,34 +53,49 @@ Examples:
 			syncConfigFlag,
 			syncOrgFlag,
 			syncRepoFlag,
-			syncStaleFlag,
-			syncInsightsStaleFlag,
-			syncInsightsPeriodFlag,
 			debugFlag,
 			logJSONFlag,
 		},
 	}
 )
 
+const (
+	defaultScoreCount      = 50
+	defaultReputationStale = "3d"
+	defaultInsightStale    = "3d"
+	defaultInsightPeriod   = 3
+)
+
 // syncConfig represents the sync configuration file.
 type syncConfig struct {
-	Sources []syncSource `yaml:"sources"`
-	Score   syncScore    `yaml:"score"`
+	Repos []syncRepo `yaml:"repos"`
 }
 
-type syncSource struct {
-	Org   string   `yaml:"org"`
-	Repos []string `yaml:"repos"`
+type syncRepo struct {
+	Name       string          `yaml:"name"`
+	Org        string          `yaml:"org"`
+	Reputation *syncReputation `yaml:"reputation,omitempty"`
+	Insight    *syncInsight    `yaml:"insight,omitempty"`
 }
 
-type syncScore struct {
-	Count int `yaml:"count"`
+type syncReputation struct {
+	ScoreCount int    `yaml:"scoreCount,omitempty"`
+	StaleAfter string `yaml:"staleAfter,omitempty"`
 }
 
-// syncTarget is a flattened org/repo pair.
+type syncInsight struct {
+	PeriodMonths int    `yaml:"periodMonths,omitempty"`
+	StaleAfter   string `yaml:"staleAfter,omitempty"`
+}
+
+// syncTarget is a resolved org/repo with numeric parameters ready for use.
 type syncTarget struct {
-	Org  string
-	Repo string
+	Org             string
+	Repo            string
+	ScoreCount      int
+	ReputationStale int // hours
+	InsightStale    int // hours
+	InsightPeriod   int // months
 }
 
 func cmdSync(ctx context.Context, cmd *urfave.Command) error {
@@ -116,41 +110,9 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		return fmt.Errorf("--org and --repo must be specified together")
 	}
 
-	var (
-		target syncTarget
-		sc     *syncConfig
-	)
-
-	if orgOverride != "" {
-		target = syncTarget{Org: orgOverride, Repo: repoOverride}
-		if configPath != "" {
-			var err error
-			sc, err = loadSyncConfig(ctx, configPath)
-			if err != nil {
-				return fmt.Errorf("loading sync config: %w", err)
-			}
-		}
-		slog.Info("sync target override", "org", target.Org, "repo", target.Repo)
-	} else {
-		if configPath == "" {
-			return fmt.Errorf("--config is required when --org/--repo are not set")
-		}
-		var err error
-		sc, err = loadSyncConfig(ctx, configPath)
-		if err != nil {
-			return fmt.Errorf("loading sync config: %w", err)
-		}
-		targets := flattenTargets(sc.Sources)
-		if len(targets) == 0 {
-			return fmt.Errorf("no repos found in sync config")
-		}
-		target = pickTarget(targets, time.Now())
-		slog.Info("sync target selected",
-			"org", target.Org,
-			"repo", target.Repo,
-			"index", time.Now().UTC().Hour()%len(targets),
-			"total", len(targets),
-		)
+	target, err := selectTarget(ctx, configPath, orgOverride, repoOverride)
+	if err != nil {
+		return err
 	}
 
 	tokenStr, err := requireGitHubToken()
@@ -215,17 +177,9 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 
 	// Score
 	phaseStart = time.Now()
-	count := 999
-	if sc != nil && sc.Score.Count > 0 {
-		count = sc.Score.Count
-	}
 	repo := target.Repo
-	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", count)
-	staleHours, parseErr := parseDurationHours(cmd.String(syncStaleFlag.Name))
-	if parseErr != nil {
-		return fmt.Errorf("invalid --stale value: %w", parseErr)
-	}
-	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, count, staleHours, &org, &repo)
+	slog.Info("deep scoring", "org", target.Org, "repo", target.Repo, "count", target.ScoreCount)
+	deepResult, scoreErr := cfg.Store.ImportDeepReputation(ctx, pool.Token, target.ScoreCount, target.ReputationStale, &org, &repo)
 	if scoreErr != nil {
 		errors++
 		slog.Error("deep scoring failed", "error", scoreErr)
@@ -237,7 +191,7 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 
 	// Insights
 	phaseStart = time.Now()
-	insightsGenerated, insightsErrors := runInsightsGeneration(ctx, cfg.Store, target, cmd)
+	insightsGenerated, insightsErrors := runInsightsGeneration(ctx, cfg.Store, target)
 	errors += insightsErrors
 	insightsSec := time.Since(phaseStart).Seconds()
 
@@ -306,14 +260,108 @@ func loadSyncConfig(ctx context.Context, path string) (*syncConfig, error) {
 	return &sc, nil
 }
 
-func flattenTargets(sources []syncSource) []syncTarget {
-	var targets []syncTarget
-	for _, s := range sources {
-		for _, r := range s.Repos {
-			targets = append(targets, syncTarget{Org: s.Org, Repo: r})
+func resolveTargets(repos []syncRepo) ([]syncTarget, error) {
+	targets := make([]syncTarget, 0, len(repos))
+	for _, r := range repos {
+		t, err := resolveTarget(r.Org, r.Name, r.Reputation, r.Insight)
+		if err != nil {
+			return nil, fmt.Errorf("repo %s/%s: %w", r.Org, r.Name, err)
+		}
+		targets = append(targets, t)
+	}
+	return targets, nil
+}
+
+func resolveTarget(org, repo string, rep *syncReputation, ins *syncInsight) (syncTarget, error) {
+	t := syncTarget{
+		Org:           org,
+		Repo:          repo,
+		ScoreCount:    defaultScoreCount,
+		InsightPeriod: defaultInsightPeriod,
+	}
+
+	repStale := defaultReputationStale
+	if rep != nil {
+		if rep.ScoreCount > 0 {
+			t.ScoreCount = rep.ScoreCount
+		}
+		if rep.StaleAfter != "" {
+			repStale = rep.StaleAfter
 		}
 	}
-	return targets
+	var err error
+	t.ReputationStale, err = parseDurationHours(repStale)
+	if err != nil {
+		return syncTarget{}, fmt.Errorf("invalid reputation.staleAfter %q: %w", repStale, err)
+	}
+
+	insStale := defaultInsightStale
+	if ins != nil {
+		if ins.PeriodMonths > 0 {
+			t.InsightPeriod = ins.PeriodMonths
+		}
+		if ins.StaleAfter != "" {
+			insStale = ins.StaleAfter
+		}
+	}
+	t.InsightStale, err = parseDurationHours(insStale)
+	if err != nil {
+		return syncTarget{}, fmt.Errorf("invalid insight.staleAfter %q: %w", insStale, err)
+	}
+
+	return t, nil
+}
+
+func selectTarget(ctx context.Context, configPath, org, repo string) (syncTarget, error) {
+	if org != "" {
+		if configPath != "" {
+			sc, err := loadSyncConfig(ctx, configPath)
+			if err != nil {
+				return syncTarget{}, fmt.Errorf("loading sync config: %w", err)
+			}
+			if found := findRepo(sc, org, repo); found != nil {
+				return resolveTarget(found.Org, found.Name, found.Reputation, found.Insight)
+			}
+		}
+		t, err := resolveTarget(org, repo, nil, nil)
+		if err != nil {
+			return syncTarget{}, err
+		}
+		slog.Info("sync target override", "org", t.Org, "repo", t.Repo)
+		return t, nil
+	}
+
+	if configPath == "" {
+		return syncTarget{}, fmt.Errorf("--config is required when --org/--repo are not set")
+	}
+	sc, err := loadSyncConfig(ctx, configPath)
+	if err != nil {
+		return syncTarget{}, fmt.Errorf("loading sync config: %w", err)
+	}
+	targets, rErr := resolveTargets(sc.Repos)
+	if rErr != nil {
+		return syncTarget{}, fmt.Errorf("resolving targets: %w", rErr)
+	}
+	if len(targets) == 0 {
+		return syncTarget{}, fmt.Errorf("no repos found in sync config")
+	}
+	target := pickTarget(targets, time.Now())
+	slog.Info("sync target selected",
+		"org", target.Org,
+		"repo", target.Repo,
+		"index", time.Now().UTC().Hour()%len(targets),
+		"total", len(targets),
+	)
+	return target, nil
+}
+
+func findRepo(sc *syncConfig, org, repo string) *syncRepo {
+	for i := range sc.Repos {
+		if strings.EqualFold(sc.Repos[i].Org, org) && strings.EqualFold(sc.Repos[i].Name, repo) {
+			return &sc.Repos[i]
+		}
+	}
+	return nil
 }
 
 func pickTarget(targets []syncTarget, now time.Time) syncTarget {
@@ -353,30 +401,24 @@ func parseDurationHours(s string) (int, error) {
 	return int(d.Hours()), nil
 }
 
-func runInsightsGeneration(ctx context.Context, store data.Store, target syncTarget, cmd *urfave.Command) (bool, int) {
+func runInsightsGeneration(ctx context.Context, store data.Store, target syncTarget) (bool, int) {
 	llmCfg := data.NewLLMConfigFromEnv()
 	if llmCfg == nil {
 		slog.Debug("ANTHROPIC_API_KEY not set, skipping insights generation")
 		return false, 0
 	}
 
-	staleHours, err := parseDurationHours(cmd.String(syncInsightsStaleFlag.Name))
-	if err != nil {
-		slog.Error("invalid --insights-stale value", "error", err)
-		return false, 0
-	}
-
 	genAt, _ := store.GetRepoInsightsGeneratedAt(target.Org, target.Repo)
 	if genAt != "" {
 		if t, pErr := time.Parse("2006-01-02T15:04:05Z", genAt); pErr == nil {
-			if time.Since(t) <= time.Duration(staleHours)*time.Hour {
+			if time.Since(t) <= time.Duration(target.InsightStale)*time.Hour {
 				slog.Debug("insights fresh, skipping", "org", target.Org, "repo", target.Repo, "generated_at", genAt)
 				return false, 0
 			}
 		}
 	}
 
-	period := cmd.Int(syncInsightsPeriodFlag.Name)
+	period := target.InsightPeriod
 	model := llmCfg.Model
 	if model == "" {
 		model = data.DefaultInsightsModel
