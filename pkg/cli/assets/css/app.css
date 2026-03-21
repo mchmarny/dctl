@@ -615,11 +615,18 @@ fieldset {
   }
 
   .page-content .grid {
+    grid-template-columns: 1fr;
     grid-gap: 10px;
   }
 
-  .logo-img {
-    height: 35px;
+  .story-content {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .search-and-user {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .search-and-user [type="search"] {
@@ -632,15 +639,103 @@ fieldset {
     height: 18px;
   }
 
+  .search-and-user form {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .logo-img {
+    height: 35px;
+    width: 35px;
+  }
+
+  .summary-banner {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .banner-val {
+    font-size: 1rem;
+  }
+
+  .banner-label {
+    font-size: 0.6rem;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .tab-content.active {
+    padding: 0.75rem;
+  }
+
+  #period-select {
+    font-size: 1rem;
+  }
+
+  .insights-summary {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .insights-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .insight-val {
+    font-size: 1.6rem;
+  }
+
+  .insights-summary .insight-val {
+    font-size: 2rem;
+  }
+
+  .insights-summary .insight-label {
+    font-size: 0.85rem;
+  }
+
+  .insight-desc {
+    font-size: 0.7rem;
+  }
+
+  .tbl-home {
+    height: auto;
+    min-height: 0;
+  }
+
+  article {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .tbl {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .tbl-chart {
+    overflow-x: auto;
+  }
+
+  canvas {
+    max-width: 100%;
+  }
+
+  .content-header {
+    font-size: 13px;
+    padding: 7px 10px;
+  }
+
   .page-footer {
     font-size: 10px;
     letter-spacing: 0;
-  }
-}
-
-@media screen and (max-width: 400px) {
-  .page-content .grid > article {
-    grid-column: 1 / -1;
   }
 }
 
