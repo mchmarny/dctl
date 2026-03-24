@@ -19,7 +19,7 @@ echo "Updating devpulse-sync job..."
 gcloud run jobs update devpulse-sync \
     --project="${PROJECT_ID}" \
     --region="${REGION}" \
-    --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/nvidia.yaml,--stale,3d" \
+    --args "sync,--config,https://raw.githubusercontent.com/mchmarny/devpulse/main/config/nvidia.yaml" \
     --set-env-vars DEVPULSE_DEBUG=true,DEVPULSE_LOG_JSON=true
 
 echo "Done. Both resources updated."
