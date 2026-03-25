@@ -138,7 +138,7 @@ func buildInsightsPrompt(metrics *InsightsMetrics, months int) string {
 	b.WriteString("- Low: Deployment frequency > 6 months, lead time > 1 month, change failure rate > 15%, time to restore > 1 week\n\n")
 	b.WriteString("## Instructions\n\n")
 	b.WriteString("Provide exactly 5 observations and 3 recommended actions based on these metrics.\n")
-	b.WriteString("Use first-person plural tone (e.g. \"we see\", \"our project\").\n")
+	b.WriteString("Use third-person tone (e.g. \"the project shows\", \"this repository has\").\n")
 	b.WriteString("Each observation and action must have a short headline and a 1-2 sentence detail.\n\n")
 	b.WriteString("Respond with JSON only, no markdown, no explanation. Use this exact format:\n")
 	b.WriteString(`{"observations":[{"headline":"...","detail":"..."}],"actions":[{"headline":"...","detail":"..."}]}`)
