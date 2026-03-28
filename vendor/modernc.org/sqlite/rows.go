@@ -128,10 +128,10 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 						// without breaking the legacy heuristic for existing users.
 						switch r.c.integerTimeFormat {
 						case "unix_micro":
-							dest[i] = time.UnixMicro(v).UTC()
+							dest[i] = r.c.applyTimezone(time.UnixMicro(v).UTC())
 							continue
 						case "unix_nano":
-							dest[i] = time.Unix(0, v).UTC()
+							dest[i] = r.c.applyTimezone(time.Unix(0, v).UTC())
 							continue
 						}
 
@@ -143,10 +143,10 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 						// timestamp?
 						if v > 1e12 || v < -1e12 {
 							// Milliseconds
-							dest[i] = time.UnixMilli(v).UTC()
+							dest[i] = r.c.applyTimezone(time.UnixMilli(v).UTC())
 						} else {
 							// Seconds
-							dest[i] = time.Unix(v, 0).UTC()
+							dest[i] = r.c.applyTimezone(time.Unix(v, 0).UTC())
 						}
 					default:
 						dest[i] = v
