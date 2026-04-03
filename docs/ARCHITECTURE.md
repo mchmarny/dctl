@@ -1,11 +1,11 @@
 # Architecture
 
-`devpulse` is a Go CLI that imports GitHub contribution data into a SQLite or PostgreSQL database and serves a browser-based analytics dashboard. Backend is selected by the `--db` flag: file path → SQLite (default), `postgres://` URI → PostgreSQL.
+`devpulse` is a Go CLI that imports GitHub contribution data into a SQLite database and serves a browser-based analytics dashboard.
 
 ## High-Level Data Flow
 
 ```
-GitHub API ──→ devpulse import ──→ SQLite (~/.devpulse/data.db) or PostgreSQL
+GitHub API ──→ devpulse import ──→ SQLite (~/.devpulse/data.db)
                                        │
 CNCF gitdm ──→ affiliations ──────────┘
                                        │
@@ -25,11 +25,7 @@ devpulse/
 │   │   ├── assets/     Frontend: CSS, JS, images (embedded via go:embed)
 │   │   └── templates/  HTML templates: header, home (tabbed dashboard), footer
 │   ├── data/           Store interface, shared types, helpers
-│   │   │               includes insights_gen.go (LLM-based insight generation)
 │   │   ├── sqlite/     SQLite Store implementation + migrations
-│   │   │               includes repo_insights.go
-│   │   ├── postgres/   PostgreSQL Store implementation + migrations
-│   │   │               includes repo_insights.go
 │   │   └── ghutil/     Shared GitHub API helpers (rate limiting, user mapping)
 │   ├── auth/           GitHub OAuth device flow + OS keychain token storage
 │   ├── logging/        Structured logging setup (slog)
@@ -60,12 +56,7 @@ devpulse/
 
 ### Database
 
-Two backends, selected by the `--db` flag or `DEVPULSE_DB` env var:
-
-- **SQLite** (default) — via [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite), pure Go, no CGO. Database file at `~/.devpulse/data.db`.
-- **PostgreSQL** — via [`github.com/lib/pq`](https://pkg.go.dev/github.com/lib/pq). Pass a `postgres://` connection URI.
-
-Both backends implement the `data.Store` interface. Schema migrations are applied automatically on startup from `pkg/data/{sqlite,postgres}/sql/migrations/`.
+SQLite via [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite), pure Go, no CGO. Database file at `~/.devpulse/data.db`. Schema migrations are applied automatically on startup from `pkg/data/sqlite/sql/migrations/`.
 
 ### Key Tables
 
@@ -80,13 +71,12 @@ Both backends implement the `data.Store` interface. Schema migrations are applie
 | `container_package` | Container image versions |
 | `state` | Import pagination state for incremental fetches |
 | `sub` | Entity name substitution rules |
-| `repo_insights` | LLM-generated observations per repo (org, repo, insights_json, period_months, model, generated_at) |
 | `schema_version` | Migration tracking |
 
 ### Query Patterns
 
 - **Optional filters**: `WHERE col = COALESCE(?, col)` — pass `nil` for no filter, a value to filter
-- **Entity filter on nullable column**: `IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))` (SQLite) / `COALESCE(d.entity, '') = COALESCE(?, COALESCE(d.entity, ''))` (PostgreSQL)
+- **Entity filter on nullable column**: `IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))`
 - **Upserts**: `INSERT ... ON CONFLICT(...) DO UPDATE SET` for idempotent imports
 - **Transactions**: Explicit `BEGIN`/`COMMIT` with rollback on error
 
@@ -112,8 +102,7 @@ The `sync` command is designed for scheduled (e.g., hourly) execution:
 2. Picks one repo via round-robin (`UTC hour % total repos`)
 3. Runs the full import pipeline for that repo
 4. Deep-scores lowest-reputation contributors (per-repo `reputation.scoreCount`)
-5. Insights — generates LLM-based observations via Anthropic API (if `ANTHROPIC_API_KEY` is set)
-6. Logs a structured `sync_summary` with timing metrics
+5. Logs a structured `sync_summary` with timing metrics
 
 ## Dashboard
 
@@ -122,7 +111,7 @@ The `sync` command is designed for scheduled (e.g., hourly) execution:
 The HTTP server (`pkg/cli/server.go`) serves:
 - **Static assets** — CSS, JS, images via `go:embed` filesystem
 - **HTML templates** — Go `html/template` with header/home/footer structure
-- **Data API** — 20+ JSON endpoints under `/data/` for chart data, including `/data/insights/issue-ratio`, `/data/insights/time-to-first-response`, `/data/insights/generated`
+- **Data API** — 20+ JSON endpoints under `/data/` for chart data
 
 ### Frontend
 
@@ -135,7 +124,7 @@ The HTTP server (`pkg/cli/server.go`) serves:
 The dashboard is organized into:
 1. **Top bar** — search input (`org:` / `repo:` prefix), period selector, theme toggle
 2. **Summary banner** — global counts (orgs, repos, events, contributors, last import timestamp in GMT). Shows datetime when a repo is selected, date-only otherwise.
-3. **Seven tabs** — Health, Activity, Velocity, Quality, Community, Events, Insights
+3. **Six tabs** — Health, Activity, Velocity, Quality, Community, Events
 
 Charts load lazily per tab — only the active tab's API calls are made. Tab state persists in the URL hash (`#health`, `#activity`, etc.) for browser navigation.
 
@@ -170,7 +159,7 @@ GitHub Actions workflows in `.github/workflows/`:
 |----------|---------|---------|
 | `test-on-push.yaml` | push to main, PRs | Calls reusable test workflow |
 | `test-on-call.yaml` | reusable (workflow_call) | tidy, lint, test with race detector |
-| `release-on-tag.yaml` | version tags (`v*.*.*`) | goreleaser build, cosign signing, SBOM, attestations, Homebrew tap, Cloud Run deploy |
+| `release-on-tag.yaml` | version tags (`v*.*.*`) | goreleaser build, cosign signing, SBOM, attestations, Homebrew tap |
 | `codeql-analysis.yaml` | schedule, push | CodeQL security analysis (Go + JavaScript) |
 | `scan-on-schedule.yaml` | schedule | Vulnerability scanning |
 | `score-on-schedule.yaml` | schedule | Scheduled reputation scoring |
