@@ -121,7 +121,7 @@ Every released artifact carries verifiable proof of origin and build process.
 1. **Automated checks** run via GitHub Actions:
    - Go tests with race detector
    - golangci-lint
-   - Vulnerability scan (grype)
+   - Vulnerability scan (govulncheck)
 
 2. **Maintainer review** covers:
    - Correctness and functionality

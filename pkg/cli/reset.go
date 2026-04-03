@@ -2,11 +2,9 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/urfave/cli/v3"
 )
@@ -33,10 +31,6 @@ func cmdReset(_ context.Context, cmd *cli.Command) error {
 			fmt.Println("Aborted.")
 			return nil
 		}
-	}
-
-	if strings.HasPrefix(cfg.DSN, "postgres://") || strings.HasPrefix(cfg.DSN, "postgresql://") {
-		return errors.New("reset is not supported for PostgreSQL databases, use psql to drop/recreate")
 	}
 
 	// close the store before deleting the file

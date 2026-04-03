@@ -14,7 +14,7 @@ func TestResolveTargets(t *testing.T) {
 	repos := []syncRepo{
 		{Name: "aicr", Org: "NVIDIA"},
 		{Name: "skyhook", Org: "NVIDIA", Reputation: &syncReputation{ScoreCount: 200}},
-		{Name: "devpulse", Org: "mchmarny", Insight: &syncInsight{PeriodMonths: 6, StaleAfter: "14d"}},
+		{Name: "devpulse", Org: "mchmarny"},
 	}
 
 	targets, err := resolveTargets(repos)
@@ -25,13 +25,7 @@ func TestResolveTargets(t *testing.T) {
 	assert.Equal(t, "aicr", targets[0].Repo)
 	assert.Equal(t, defaultScoreCount, targets[0].ScoreCount)
 	assert.Equal(t, 72, targets[0].ReputationStale) // 3d default
-	assert.Equal(t, defaultInsightPeriod, targets[0].InsightPeriod)
-	assert.Equal(t, 72, targets[0].InsightStale) // 3d default
-
 	assert.Equal(t, 200, targets[1].ScoreCount)
-
-	assert.Equal(t, 6, targets[2].InsightPeriod)
-	assert.Equal(t, 336, targets[2].InsightStale) // 14d
 }
 
 func TestResolveTargetsEmpty(t *testing.T) {
@@ -41,33 +35,24 @@ func TestResolveTargetsEmpty(t *testing.T) {
 }
 
 func TestResolveTargetDefaults(t *testing.T) {
-	target, err := resolveTarget("NVIDIA", "aicr", nil, nil)
+	target, err := resolveTarget("NVIDIA", "aicr", nil)
 	require.NoError(t, err)
 	assert.Equal(t, defaultScoreCount, target.ScoreCount)
 	assert.Equal(t, 72, target.ReputationStale)
-	assert.Equal(t, 72, target.InsightStale)
-	assert.Equal(t, defaultInsightPeriod, target.InsightPeriod)
 }
 
 func TestResolveTargetOverrides(t *testing.T) {
 	target, err := resolveTarget("NVIDIA", "aicr",
 		&syncReputation{ScoreCount: 50, StaleAfter: "1d"},
-		&syncInsight{PeriodMonths: 6, StaleAfter: "2w"},
 	)
 	require.NoError(t, err)
 	assert.Equal(t, 50, target.ScoreCount)
 	assert.Equal(t, 24, target.ReputationStale)
-	assert.Equal(t, 6, target.InsightPeriod)
-	assert.Equal(t, 336, target.InsightStale)
 }
 
 func TestResolveTargetInvalidStale(t *testing.T) {
 	_, err := resolveTarget("NVIDIA", "aicr",
-		&syncReputation{StaleAfter: "bogus"}, nil)
-	require.Error(t, err)
-
-	_, err = resolveTarget("NVIDIA", "aicr",
-		nil, &syncInsight{StaleAfter: "bogus"})
+		&syncReputation{StaleAfter: "bogus"})
 	require.Error(t, err)
 }
 
@@ -129,8 +114,6 @@ func TestLoadSyncConfigFromFile(t *testing.T) {
     org: NVIDIA
   - name: devpulse
     org: mchmarny
-    insight:
-      periodMonths: 6
 `
 	f := t.TempDir() + "/sync.yaml"
 	require.NoError(t, writeTestFile(f, yaml))
@@ -145,8 +128,6 @@ func TestLoadSyncConfigFromFile(t *testing.T) {
 	assert.Equal(t, "48h", sc.Repos[0].Reputation.StaleAfter)
 	assert.Nil(t, sc.Repos[1].Reputation)
 	assert.Equal(t, "mchmarny", sc.Repos[2].Org)
-	require.NotNil(t, sc.Repos[2].Insight)
-	assert.Equal(t, 6, sc.Repos[2].Insight.PeriodMonths)
 }
 
 func TestLoadSyncConfigFileNotFound(t *testing.T) {

@@ -23,7 +23,6 @@ jobs:
     needs: test
     permissions:
       contents: write
-      packages: write
       id-token: write
       attestations: write
     steps:
@@ -49,57 +48,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-          KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
+
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
         with:
           subject-checksums: dist/checksums-sha256.txt
 
-  deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: release
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      # GHCR image path through the AR remote repo
-      IMAGE: 'us-docker.pkg.dev/eidosx/devpulse-remote/mchmarny/devpulse'
-      IDENTITY_PROVIDER: 'projects/116689922666/locations/global/workloadIdentityPools/github-actions-pool-devpulse/providers/github-actions-provider-devpulse'
-      PROJECT_ID: 'eidosx'
-      SERVICE_ACCOUNT: 'github-actions-devpulse@eidosx.iam.gserviceaccount.com'
-    steps:
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093  # v3
-        with:
-          project_id: ${{ env.PROJECT_ID }}
-          workload_identity_provider: ${{ env.IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
-
-      - name: Setup gcloud CLI
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db  # v3.0.1
-
-      - name: Deploy to Cloud Run
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          echo "Deploying ${IMAGE}:${TAG}..."
-          gcloud run services update devpulse \
-            --image "${IMAGE}:${TAG}" \
-            --region us-west1
-          gcloud run jobs update devpulse-sync \
-            --image "${IMAGE}:${TAG}" \
-            --region us-west1
-
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs:
-      - release
-      - deploy
+    needs: release
     permissions:
       contents: write
     steps:

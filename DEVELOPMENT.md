@@ -89,7 +89,6 @@ This must pass before any PR is submitted.
 |--------|-------------|
 | `make build` | Build binary for current OS/arch (output in `./dist`) |
 | `make release` | Full release with goreleaser (snapshot) |
-| `make local` | Build and install binary to `/usr/local/bin` |
 
 ### Release
 
@@ -148,7 +147,7 @@ make server
 # Directly
 go run ./cmd/devpulse server --debug
 
-# JSON format (useful for cloud environments or log aggregators)
+# JSON format (useful for log aggregators)
 go run ./cmd/devpulse server --debug --log-json
 ```
 

@@ -66,14 +66,13 @@ The default SQLite database is at `~/.devpulse/data.db`:
 sqlite3 ~/.devpulse/data.db
 ```
 
-Schema is defined in `pkg/data/sqlite/sql/migrations/` (SQLite) and `pkg/data/postgres/sql/migrations/` (PostgreSQL). Key tables:
+Schema is defined in `pkg/data/sqlite/sql/migrations/`. Key tables:
 
 | Table | Primary Key | Description |
 |-------|-------------|-------------|
 | `developer` | `username` | Developer profiles, entity affiliations, and reputation scores |
 | `event` | `org, repo, username, type, date` | Contribution events with optional state/timing fields |
 | `repo_meta` | `org, repo` | Repository status (stars, forks, language, license, last import timestamp) |
-| `repo_insights` | `org, repo` | LLM-generated repository insights (insights_json, period_months, model, generated_at) |
 | `repo_metric_history` | `org, repo, date` | Daily star/fork counts for trend charts |
 | `release` | `org, repo, tag` | Release tags and publish dates |
 | `release_asset` | `org, repo, tag, name` | Release binary download counts |

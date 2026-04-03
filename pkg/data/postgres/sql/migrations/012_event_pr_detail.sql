@@ -1,2 +1,0 @@
-ALTER TABLE event ADD COLUMN changed_files INTEGER;
-ALTER TABLE event ADD COLUMN commits INTEGER;

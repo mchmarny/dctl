@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`devpulse` is a Go CLI that imports GitHub contribution data into a SQLite or PostgreSQL database and serves a browser-based analytics dashboard. Backend is selected by the `--db` flag: file path → SQLite (default), `postgres://` URI → PostgreSQL.
+`devpulse` is a Go CLI that imports GitHub contribution data into a SQLite database and serves a browser-based analytics dashboard.
 
 ## Build & Test
 
@@ -45,7 +45,7 @@ Tool versions and quality thresholds are centralized in `.settings.yaml` (single
 **Database:**
 - All SQL constants defined at the top of the file they're used in
 - COALESCE pattern for optional filters on non-nullable columns: `WHERE col = COALESCE(?, col)`
-- IFNULL/COALESCE pattern for nullable columns (e.g. entity): `IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))`
+- IFNULL pattern for nullable columns (e.g. entity): `IFNULL(d.entity, '') = COALESCE(?, IFNULL(d.entity, ''))`
 - Developer upsert preserves existing entity when new value is empty: `CASE WHEN ? = '' THEN COALESCE(developer.entity, '') ELSE ? END`
 - Transactions with explicit rollback on error
 - Upserts via `INSERT ... ON CONFLICT(...) DO UPDATE SET`
@@ -60,7 +60,6 @@ Tool versions and quality thresholds are centralized in `.settings.yaml` (single
 - CLI via `github.com/urfave/cli/v3`
 - Testing via `github.com/stretchr/testify` (assert + require)
 - SQLite via `modernc.org/sqlite` (pure Go, no CGO)
-- PostgreSQL via `github.com/lib/pq`
 
 **Testing:**
 - `setupTestDB(t)` helper creates temp DB with all migrations
@@ -104,28 +103,21 @@ cmd/devpulse/       Main entrypoint (thin wrapper)
 pkg/cli/            CLI commands, HTTP handlers, templates, static assets
 pkg/data/           Store interface, shared types, helpers
 pkg/data/sqlite/    SQLite Store implementation + migrations
-pkg/data/postgres/  PostgreSQL Store implementation + migrations
 pkg/data/ghutil/    Shared GitHub API helpers (rate limiting, user mapping)
-pkg/data/insights_gen.go  LLM insights generation
 pkg/auth/           GitHub OAuth token management (OS keychain)
 pkg/net/            HTTP client utilities
-config/             Sync config files (YAML, org/repo lists)
-infra/gcp/          Terraform for GCP infrastructure
 tools/              Dev scripts (version bump, shared helpers)
 ```
 
-CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync` (per-repo reputation/insight config in YAML), `reset`
+CLI commands: `auth`, `import`, `delete`, `score`, `substitute`, `query`, `server`, `sync` (per-repo reputation config in YAML), `reset`
 
-Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite/PostgreSQL → HTTP API → Chart.js dashboard
+Key data flow: GitHub API → EventImporter (concurrent, batched) → SQLite → HTTP API → Chart.js dashboard
 
-Dashboard is full-width with a summary banner and seven lazy-loaded tabs (Health, Activity, Velocity, Quality, Community, Events, Insights). Top bar has search, period selector, and theme toggle on one line. Search supports `org:` and `repo:` prefix syntax.
+Dashboard is full-width with a summary banner and six lazy-loaded tabs (Health, Activity, Velocity, Quality, Community, Events). Top bar has search, period selector, and theme toggle on one line. Search supports `org:` and `repo:` prefix syntax.
 
 ## Environment Variables
 
 - `GITHUB_TOKEN` — required, comma-separated for token pool rotation
-- `ANTHROPIC_API_KEY` — optional, enables LLM insights generation
-- `ANTHROPIC_BASE_URL` — optional, custom Anthropic API endpoint
-- `ANTHROPIC_MODEL` — optional, defaults to `claude-haiku-4-5-20251001`
 
 ## CI/CD
 
@@ -135,7 +127,7 @@ GitHub Actions workflows in `.github/workflows/`:
 |----------|---------|---------|
 | `test-on-push.yaml` | push to main, PRs | Calls reusable test workflow |
 | `test-on-call.yaml` | reusable (workflow_call) | tidy, lint, test with race detector |
-| `release-on-tag.yaml` | version tags (`v*.*.*`) | goreleaser build, cosign signing, SBOM, attestations, Homebrew tap, AR copy, Cloud Run deploy |
+| `release-on-tag.yaml` | version tags (`v*.*.*`) | goreleaser build, cosign signing, SBOM, attestations, Homebrew tap |
 | `codeql-analysis.yml` | schedule, push | CodeQL security analysis (Go + JavaScript) |
 
 ## Release Process

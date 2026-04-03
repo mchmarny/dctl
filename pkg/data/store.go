@@ -136,13 +136,6 @@ type ReputationStore interface {
 	GetReputationDistribution(org, repo, entity *string, months int) (*ReputationDistribution, error)
 }
 
-// InsightsGenerationStore manages LLM-generated repo insights.
-type InsightsGenerationStore interface {
-	GetRepoInsights(org, repo *string) ([]*RepoInsights, error)
-	SaveRepoInsights(org, repo string, insights *RepoInsights) error
-	GetRepoInsightsGeneratedAt(org, repo string) (string, error)
-}
-
 // Store is the top-level interface composing all sub-interfaces.
 type Store interface {
 	io.Closer
@@ -161,5 +154,4 @@ type Store interface {
 	RepoMetaStore
 	MetricHistoryStore
 	ReputationStore
-	InsightsGenerationStore
 }
