@@ -445,7 +445,6 @@ function applySelection(scope, item, skipPushState) {
     submitSearch();
     updatePeriodOptions(org, repo, function () {
         var m = $("#period_months").val();
-        checkInsightsAvailable(org, repo);
         loadSummaryBanner(m, org, repo, entity);
         activateTab(activeTab);
     });
