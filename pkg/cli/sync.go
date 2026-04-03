@@ -62,8 +62,6 @@ Examples:
 const (
 	defaultScoreCount      = 50
 	defaultReputationStale = "3d"
-	defaultInsightStale    = "3d"
-	defaultInsightPeriod   = 3
 )
 
 // syncConfig represents the sync configuration file.
@@ -75,17 +73,11 @@ type syncRepo struct {
 	Name       string          `yaml:"name"`
 	Org        string          `yaml:"org"`
 	Reputation *syncReputation `yaml:"reputation,omitempty"`
-	Insight    *syncInsight    `yaml:"insight,omitempty"`
 }
 
 type syncReputation struct {
 	ScoreCount int    `yaml:"scoreCount,omitempty"`
 	StaleAfter string `yaml:"staleAfter,omitempty"`
-}
-
-type syncInsight struct {
-	PeriodMonths int    `yaml:"periodMonths,omitempty"`
-	StaleAfter   string `yaml:"staleAfter,omitempty"`
 }
 
 // syncTarget is a resolved org/repo with numeric parameters ready for use.
@@ -94,8 +86,6 @@ type syncTarget struct {
 	Repo            string
 	ScoreCount      int
 	ReputationStale int // hours
-	InsightStale    int // hours
-	InsightPeriod   int // months
 }
 
 func cmdSync(ctx context.Context, cmd *urfave.Command) error {
@@ -189,12 +179,6 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 	}
 	scoringSec := time.Since(phaseStart).Seconds()
 
-	// Insights
-	phaseStart = time.Now()
-	insightsGenerated, insightsErrors := runInsightsGeneration(ctx, cfg.Store, target)
-	errors += insightsErrors
-	insightsSec := time.Since(phaseStart).Seconds()
-
 	totalSec := time.Since(start).Seconds()
 
 	slog.Info("sync_summary",
@@ -211,8 +195,6 @@ func cmdSync(ctx context.Context, cmd *urfave.Command) error {
 		"extras_sec", extrasSec,
 		"reputation_sec", reputationSec,
 		"scoring_sec", scoringSec,
-		"insights_sec", insightsSec,
-		"insights_generated", insightsGenerated,
 	)
 
 	return nil
@@ -263,7 +245,7 @@ func loadSyncConfig(ctx context.Context, path string) (*syncConfig, error) {
 func resolveTargets(repos []syncRepo) ([]syncTarget, error) {
 	targets := make([]syncTarget, 0, len(repos))
 	for _, r := range repos {
-		t, err := resolveTarget(r.Org, r.Name, r.Reputation, r.Insight)
+		t, err := resolveTarget(r.Org, r.Name, r.Reputation)
 		if err != nil {
 			return nil, fmt.Errorf("repo %s/%s: %w", r.Org, r.Name, err)
 		}
@@ -272,12 +254,11 @@ func resolveTargets(repos []syncRepo) ([]syncTarget, error) {
 	return targets, nil
 }
 
-func resolveTarget(org, repo string, rep *syncReputation, ins *syncInsight) (syncTarget, error) {
+func resolveTarget(org, repo string, rep *syncReputation) (syncTarget, error) {
 	t := syncTarget{
-		Org:           org,
-		Repo:          repo,
-		ScoreCount:    defaultScoreCount,
-		InsightPeriod: defaultInsightPeriod,
+		Org:        org,
+		Repo:       repo,
+		ScoreCount: defaultScoreCount,
 	}
 
 	repStale := defaultReputationStale
@@ -295,20 +276,6 @@ func resolveTarget(org, repo string, rep *syncReputation, ins *syncInsight) (syn
 		return syncTarget{}, fmt.Errorf("invalid reputation.staleAfter %q: %w", repStale, err)
 	}
 
-	insStale := defaultInsightStale
-	if ins != nil {
-		if ins.PeriodMonths > 0 {
-			t.InsightPeriod = ins.PeriodMonths
-		}
-		if ins.StaleAfter != "" {
-			insStale = ins.StaleAfter
-		}
-	}
-	t.InsightStale, err = parseDurationHours(insStale)
-	if err != nil {
-		return syncTarget{}, fmt.Errorf("invalid insight.staleAfter %q: %w", insStale, err)
-	}
-
 	return t, nil
 }
 
@@ -320,10 +287,10 @@ func selectTarget(ctx context.Context, configPath, org, repo string) (syncTarget
 				return syncTarget{}, fmt.Errorf("loading sync config: %w", err)
 			}
 			if found := findRepo(sc, org, repo); found != nil {
-				return resolveTarget(found.Org, found.Name, found.Reputation, found.Insight)
+				return resolveTarget(found.Org, found.Name, found.Reputation)
 			}
 		}
-		t, err := resolveTarget(org, repo, nil, nil)
+		t, err := resolveTarget(org, repo, nil)
 		if err != nil {
 			return syncTarget{}, err
 		}
@@ -399,55 +366,4 @@ func parseDurationHours(s string) (int, error) {
 		return 0, err
 	}
 	return int(d.Hours()), nil
-}
-
-func runInsightsGeneration(ctx context.Context, store data.Store, target syncTarget) (bool, int) {
-	llmCfg := data.NewLLMConfigFromEnv()
-	if llmCfg == nil {
-		slog.Debug("ANTHROPIC_API_KEY not set, skipping insights generation")
-		return false, 0
-	}
-
-	genAt, _ := store.GetRepoInsightsGeneratedAt(target.Org, target.Repo)
-	if genAt != "" {
-		if t, pErr := time.Parse("2006-01-02T15:04:05Z", genAt); pErr == nil {
-			if time.Since(t) <= time.Duration(target.InsightStale)*time.Hour {
-				slog.Debug("insights fresh, skipping", "org", target.Org, "repo", target.Repo, "generated_at", genAt)
-				return false, 0
-			}
-		}
-	}
-
-	period := target.InsightPeriod
-	model := llmCfg.Model
-	if model == "" {
-		model = data.DefaultInsightsModel
-	}
-	slog.Info("generating insights", "org", target.Org, "repo", target.Repo, "period_months", period, "model", model, "base_url", llmCfg.BaseURL)
-
-	metrics, gatherErr := data.GatherInsightsMetrics(store, target.Org, target.Repo, period)
-	if gatherErr != nil {
-		slog.Error("failed to gather metrics", "error", gatherErr)
-		return false, 1
-	}
-
-	gi, usedModel, genErr := data.GenerateInsights(ctx, llmCfg, metrics, period)
-	if genErr != nil {
-		slog.Error("insights generation failed", "error", genErr)
-		return false, 1
-	}
-
-	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
-	ri := &data.RepoInsights{
-		Insights:     gi,
-		PeriodMonths: period,
-		Model:        usedModel,
-		GeneratedAt:  now,
-	}
-	if saveErr := store.SaveRepoInsights(target.Org, target.Repo, ri); saveErr != nil {
-		slog.Error("failed to save insights", "error", saveErr)
-		return false, 1
-	}
-
-	return true, 0
 }
