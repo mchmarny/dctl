@@ -389,9 +389,6 @@ function loadTabCharts(tab, months, org, repo, entity) {
             })();
             initContributorSearch(q);
             break;
-        case 'insights':
-            loadGeneratedInsights('/data/insights/generated?o=' + org + '&r=' + repo);
-            break;
         case 'events':
             break;
     }
@@ -399,29 +396,10 @@ function loadTabCharts(tab, months, org, repo, entity) {
 
 function loadAllCharts(months, org, repo, entity) {
     lastTabKey = "";
-    checkInsightsAvailable(org, repo);
     loadSummaryBanner(months, org, repo, entity);
     activateTab(activeTab);
 }
 
-function checkInsightsAvailable(org, repo) {
-    var btn = $('.tab-btn[data-tab="insights"]');
-    if (!repo) {
-        btn.hide();
-        if (activeTab === "insights") { activeTab = "health"; }
-        return;
-    }
-    $.get('/data/insights/generated?o=' + org + '&r=' + repo, function (data) {
-        if (data && data.length > 0 && data[0].insights) {
-            btn.show();
-        } else {
-            btn.hide();
-            if (activeTab === "insights") { activeTab = "health"; activateTab(activeTab); }
-        }
-    }).fail(function () {
-        btn.hide();
-    });
-}
 
 function applySelection(scope, item, skipPushState) {
     resetSearch();
@@ -2238,42 +2216,3 @@ function loadContributorMomentumChart(url) {
     });
 }
 
-function loadGeneratedInsights(url) {
-    $.get(url, function (data) {
-        var obsContainer = $("#insights-observations");
-        var actContainer = $("#insights-actions");
-        var metaContainer = $("#insights-meta");
-        obsContainer.empty();
-        actContainer.empty();
-        metaContainer.empty();
-
-        if (!data || data.length === 0 || !data[0].insights) {
-            obsContainer.html('<span class="insight-label">No insights generated yet. Insights will be generated during next sync.</span>');
-            actContainer.html('<span class="insight-label">\u2014</span>');
-            return;
-        }
-
-        var item = data[0];
-        var insights = item.insights;
-
-        if (insights.observations && insights.observations.length > 0) {
-            $.each(insights.observations, function (i, o) {
-                $('<div class="insights-bullet">')
-                    .append('<div class="insights-bullet-headline">' + o.headline + '</div>')
-                    .append('<div class="insights-bullet-detail">' + o.detail + '</div>')
-                    .appendTo(obsContainer);
-            });
-        }
-
-        if (insights.actions && insights.actions.length > 0) {
-            $.each(insights.actions, function (i, a) {
-                $('<div class="insights-bullet action">')
-                    .append('<div class="insights-bullet-headline">' + a.headline + '</div>')
-                    .append('<div class="insights-bullet-detail">' + a.detail + '</div>')
-                    .appendTo(actContainer);
-            });
-        }
-
-        metaContainer.text('Generated ' + item.generated_at + ' for ' + item.period_months + ' month period');
-    });
-}

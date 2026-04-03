@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/mchmarny/devpulse/pkg/data"
-	"github.com/mchmarny/devpulse/pkg/data/postgres"
 	"github.com/mchmarny/devpulse/pkg/data/sqlite"
 	"github.com/mchmarny/devpulse/pkg/logging"
 	urfave "github.com/urfave/cli/v3"
@@ -50,7 +49,7 @@ var (
 
 	dbFilePathFlag = &urfave.StringFlag{
 		Name:    "db",
-		Usage:   "SQLite file path or postgres:// connection URI",
+		Usage:   "SQLite file path",
 		Value:   filepath.Join(getHomeDir(), data.DataFileName),
 		Sources: urfave.EnvVars("DEVPULSE_DB"),
 	}
@@ -139,9 +138,6 @@ func newApp() *urfave.Command {
 }
 
 func openStore(dsn string) (data.Store, error) {
-	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
-		return postgres.New(dsn)
-	}
 	return sqlite.New(dsn)
 }
 

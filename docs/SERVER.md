@@ -21,7 +21,7 @@ The dashboard has three sections:
 
 1. **Top bar** — search input, period selector, and theme toggle on a single line
 2. **Summary banner** — global counts (organizations, repositories, events, contributors, last import timestamp in GMT) that update with the active search scope. When a specific repo is selected, the import timestamp includes the time (`YYYY-MM-DD HH:MM`); otherwise it shows date only.
-3. **Tabbed panels** — seven tabs with lazy-loaded charts: Health, Activity, Velocity, Quality, Community, Insights, Events
+3. **Tabbed panels** — six tabs with lazy-loaded charts: Health, Activity, Velocity, Quality, Community, Events
 
 ## Search
 
@@ -81,10 +81,6 @@ Charts load lazily — only the active tab's data is fetched. Switching tabs loa
 - **First-Time Contributors** — new contributor milestones per month
 - **Top Entities** — contributing companies/orgs with drill-down to developers
 - **Top Collaborators** — ranked by total event count
-
-### Insights
-
-- **Key Observations** — LLM-generated key observations and action items based on repository activity, contributor trends, and project health metrics
 
 ### Events
 

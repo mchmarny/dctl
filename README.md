@@ -52,12 +52,9 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 
 ![](docs/img/community.png)
 
-**Insights**
-- **LLM-generated observations** -- AI-powered analysis of repository health, trends, and action items per repo
-
 **Dashboard**
 - **Global summary banner** -- organizations, repositories, events, contributors, and last import timestamp (GMT) at a glance
-- **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, Insights, and Events tabs with lazy-loaded charts
+- **Tabbed layout** -- Health, Activity, Velocity, Quality, Community, and Events tabs with lazy-loaded charts
 - **Event search filters** -- filter by type, date range, username, or entity from the Events tab
 - **Adjustable time period** -- dropdown adapts to available data range per search scope
 - **Unified search** -- `org:name` or `repo:name` prefix syntax; all panels respect scope
@@ -167,7 +164,7 @@ devpulse sync --config sync.yaml --org NVIDIA --repo DCGM
 devpulse sync --org NVIDIA --repo DCGM
 ```
 
-Config format (all `reputation` and `insight` fields are optional with sensible defaults):
+Config format (all `reputation` fields are optional with sensible defaults):
 
 ```yaml
 repos:
@@ -176,16 +173,13 @@ repos:
     reputation:
       scoreCount: 50        # contributors to deep-score per run (default: 50)
       staleAfter: "3d"      # re-score after this duration (default: 3d)
-    insight:
-      periodMonths: 3       # months of data for insights (default: 3)
-      staleAfter: "3d"      # regenerate insights after this (default: 3d)
   - name: repo2
     org: myorg
   - name: devpulse
     org: mchmarny
 ```
 
-The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the list based on `UTC hour % total repos`, runs a full import, then deep-scores the lowest-reputation contributors. With 9 repos on an hourly schedule, each repo is imported 2-3 times per day while staying within GitHub's 5,000 requests/hour API rate limit. Reputation and insight thresholds are configured per-repo in the YAML file.
+The `--config` flag (or `DEVPULSE_SYNC_CONFIG` env var) accepts a local file path or HTTP(S) URL. Each run picks one repo from the list based on `UTC hour % total repos`, runs a full import, then deep-scores the lowest-reputation contributors. With 9 repos on an hourly schedule, each repo is imported 2-3 times per day while staying within GitHub's 5,000 requests/hour API rate limit. Reputation thresholds are configured per-repo in the YAML file.
 
 ### 5. Dashboard view
 
@@ -195,7 +189,7 @@ devpulse server
 
 Opens your browser to `http://127.0.0.1:8080`. Use `--port` to change the port or `--no-browser` to suppress auto-open.
 
-The dashboard shows a global summary banner (orgs, repos, events, contributors, last import timestamp in GMT) and organizes insights into seven tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, **Insights**, and **Events**. Charts load lazily per tab.
+The dashboard shows a global summary banner (orgs, repos, events, contributors, last import timestamp in GMT) and organizes insights into six tabs: **Health**, **Activity**, **Velocity**, **Quality**, **Community**, and **Events**. Charts load lazily per tab.
 
 You can run `devpulse import` in a separate terminal or cron job while the server is running — the dashboard picks up new data immediately after each import transaction commits. See [docs/SERVER.md](docs/SERVER.md) for details.
 
@@ -255,37 +249,7 @@ devpulse substitute --type entity --old "INTERNATIONAL BUSINESS MACHINES" --new 
 
 ## Database
 
-By default, data is stored locally in [SQLite](https://www.sqlite.org/) (`~/.devpulse/data.db`). No external services required.
-
-### PostgreSQL
-
-To use PostgreSQL instead, pass a `postgres://` connection URI via `--db` or `DEVPULSE_DB`:
-
-```shell
-devpulse import --db "postgres://user:pass@host:5432/dbname?sslmode=disable" --org <org> --repo <repo>
-devpulse server --db "postgres://user:pass@host:5432/dbname?sslmode=disable"
-```
-
-Or via environment variable:
-
-```shell
-export DEVPULSE_DB="postgres://user:pass@host:5432/dbname?sslmode=disable"
-devpulse import --org <org> --repo <repo>
-```
-
-Migrations run automatically on first connection. Special characters in the password must be URL-encoded (e.g., `/` → `%2F`, `@` → `%40`).
-
-For Google Cloud AlloyDB, connect through the [AlloyDB Auth Proxy](https://cloud.google.com/alloydb/docs/auth-proxy/overview) with `--public-ip` and use `127.0.0.1` as the host.
-
-### LLM (Insights tab)
-
-The Insights tab uses an LLM to generate observations and action items. Configure via environment variables:
-
-```shell
-export ANTHROPIC_API_KEY="sk-ant-..."        # required for Insights tab
-export ANTHROPIC_BASE_URL="https://..."      # optional, override API endpoint
-export ANTHROPIC_MODEL="claude-..."          # optional, override model selection
-```
+Data is stored locally in [SQLite](https://www.sqlite.org/) (`~/.devpulse/data.db`). No external services required.
 
 ## Architecture
 
