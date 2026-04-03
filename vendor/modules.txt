@@ -43,7 +43,7 @@ github.com/remyoudompheng/bigfft
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/require
-# github.com/urfave/cli/v3 v3.7.0
+# github.com/urfave/cli/v3 v3.8.0
 ## explicit; go 1.22
 github.com/urfave/cli/v3
 # github.com/zalando/go-keyring v0.2.8
@@ -101,7 +101,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.47.0
+# modernc.org/sqlite v1.48.1
 ## explicit; go 1.25.0
 modernc.org/sqlite
 modernc.org/sqlite/lib

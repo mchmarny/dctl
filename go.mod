@@ -6,12 +6,12 @@ require (
 	github.com/google/go-github/v83 v83.0.0
 	github.com/mchmarny/reputer v0.5.1
 	github.com/stretchr/testify v1.11.1
-	github.com/urfave/cli/v3 v3.7.0
+	github.com/urfave/cli/v3 v3.8.0
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.47.0
+	modernc.org/sqlite v1.48.1
 )
 
 require (

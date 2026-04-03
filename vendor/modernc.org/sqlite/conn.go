@@ -29,6 +29,7 @@ type conn struct {
 
 	writeTimeFormat   string
 	beginMode         string
+	loc               *time.Location
 	intToTime         bool
 	textToTime        bool
 	integerTimeFormat string
@@ -87,12 +88,18 @@ func (c *conn) parseTime(s string) (interface{}, bool) {
 		return v, true
 	}
 
-	ts := strings.TrimSuffix(s, "Z")
+	ts, hadZ := strings.CutSuffix(s, "Z")
 
 	for _, f := range parseTimeFormats {
-		t, err := time.Parse(f, ts)
+		var t time.Time
+		var err error
+		if c.loc != nil && !hadZ {
+			t, err = time.ParseInLocation(f, ts, c.loc)
+		} else {
+			t, err = time.Parse(f, ts)
+		}
 		if err == nil {
-			return t, true
+			return c.applyTimezone(t), true
 		}
 	}
 
@@ -102,6 +109,8 @@ func (c *conn) parseTime(s string) (interface{}, bool) {
 // Attempt to parse s as a time string produced by t.String().  If x > 0 it's
 // the index of substring "m=" within s.  Return (s, false) if s is
 // not recognized as a valid time encoding.
+// This intentionally uses time.Parse, not time.ParseInLocation,
+// because the format already contains timezone information (-0700 MST).
 func (c *conn) parseTimeString(s0 string, x int) (interface{}, bool) {
 	s := s0
 	if x > 0 {
@@ -109,19 +118,28 @@ func (c *conn) parseTimeString(s0 string, x int) (interface{}, bool) {
 	}
 	s = strings.TrimSpace(s)
 	if t, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", s); err == nil {
-		return t, true
+		return c.applyTimezone(t), true
 	}
 
 	return s0, false
 }
 
+func (c *conn) applyTimezone(t time.Time) time.Time {
+	if c.loc == nil {
+		return t
+	}
+	return t.In(c.loc)
+}
+
 // writeTimeFormats are the names and formats supported
 // by the `_time_format` DSN query param.
 var writeTimeFormats = map[string]string{
-	"sqlite": parseTimeFormats[0],
+	"sqlite":   parseTimeFormats[0],
+	"datetime": "2006-01-02 15:04:05",
 }
 
 func (c *conn) formatTime(t time.Time) string {
+	t = c.applyTimezone(t)
 	// Before configurable write time formats were supported,
 	// time.Time.String was used. Maintain that default to
 	// keep existing driver users formatting times the same.
@@ -292,9 +310,7 @@ func (c *conn) bind(pstmt uintptr, n int, args []driver.NamedValue) (allocs []ui
 			return
 		}
 
-		for _, v := range allocs {
-			c.free(v)
-		}
+		c.freeAllocs(allocs)
 		allocs = nil
 	}()
 
@@ -618,6 +634,12 @@ func (c *conn) malloc(n int) (uintptr, error) {
 func (c *conn) free(p uintptr) {
 	if p != 0 {
 		libc.Xfree(c.tls, p)
+	}
+}
+
+func (c *conn) freeAllocs(allocs []uintptr) {
+	for _, v := range allocs {
+		c.free(v)
 	}
 }
 
