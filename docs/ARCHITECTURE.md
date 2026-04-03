@@ -30,8 +30,6 @@ devpulse/
 │   ├── auth/           GitHub OAuth device flow + OS keychain token storage
 │   ├── logging/        Structured logging setup (slog)
 │   └── net/            HTTP client utilities with rate limit handling
-├── config/             Sync config files (YAML, org/repo lists)
-├── infra/gcp/          Terraform for GCP infrastructure
 ├── tools/              Dev scripts (version bump, shared helpers)
 ├── docs/               Documentation
 ├── .github/            CI/CD workflows and composite actions

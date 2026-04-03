@@ -86,7 +86,7 @@ Add `--debug` to any subcommand for verbose logging:
 devpulse import --debug --org <org>
 ```
 
-For structured JSON log output (useful in cloud environments), add `--log-json`:
+For structured JSON log output (useful for log aggregators), add `--log-json`:
 
 ```shell
 devpulse import --debug --log-json --org <org>
