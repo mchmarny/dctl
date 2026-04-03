@@ -12,8 +12,8 @@ import (
 
 func TestResolveTargets(t *testing.T) {
 	repos := []syncRepo{
-		{Name: "aicr", Org: "NVIDIA"},
-		{Name: "skyhook", Org: "NVIDIA", Reputation: &syncReputation{ScoreCount: 200}},
+		{Name: "devpulse", Org: "mchmarny"},
+		{Name: "reputer", Org: "mchmarny", Reputation: &syncReputation{ScoreCount: 200}},
 		{Name: "devpulse", Org: "mchmarny"},
 	}
 
@@ -21,8 +21,8 @@ func TestResolveTargets(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, targets, 3)
 
-	assert.Equal(t, "NVIDIA", targets[0].Org)
-	assert.Equal(t, "aicr", targets[0].Repo)
+	assert.Equal(t, "mchmarny", targets[0].Org)
+	assert.Equal(t, "devpulse", targets[0].Repo)
 	assert.Equal(t, defaultScoreCount, targets[0].ScoreCount)
 	assert.Equal(t, 72, targets[0].ReputationStale) // 3d default
 	assert.Equal(t, 200, targets[1].ScoreCount)
@@ -35,14 +35,14 @@ func TestResolveTargetsEmpty(t *testing.T) {
 }
 
 func TestResolveTargetDefaults(t *testing.T) {
-	target, err := resolveTarget("NVIDIA", "aicr", nil)
+	target, err := resolveTarget("mchmarny", "devpulse", nil)
 	require.NoError(t, err)
 	assert.Equal(t, defaultScoreCount, target.ScoreCount)
 	assert.Equal(t, 72, target.ReputationStale)
 }
 
 func TestResolveTargetOverrides(t *testing.T) {
-	target, err := resolveTarget("NVIDIA", "aicr",
+	target, err := resolveTarget("mchmarny", "devpulse",
 		&syncReputation{ScoreCount: 50, StaleAfter: "1d"},
 	)
 	require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestResolveTargetOverrides(t *testing.T) {
 }
 
 func TestResolveTargetInvalidStale(t *testing.T) {
-	_, err := resolveTarget("NVIDIA", "aicr",
+	_, err := resolveTarget("mchmarny", "devpulse",
 		&syncReputation{StaleAfter: "bogus"})
 	require.Error(t, err)
 }
@@ -59,26 +59,26 @@ func TestResolveTargetInvalidStale(t *testing.T) {
 func TestFindRepo(t *testing.T) {
 	sc := &syncConfig{
 		Repos: []syncRepo{
-			{Name: "aicr", Org: "NVIDIA", Reputation: &syncReputation{ScoreCount: 100}},
-			{Name: "skyhook", Org: "NVIDIA"},
+			{Name: "devpulse", Org: "mchmarny", Reputation: &syncReputation{ScoreCount: 100}},
+			{Name: "reputer", Org: "mchmarny"},
 		},
 	}
 
-	found := findRepo(sc, "NVIDIA", "aicr")
+	found := findRepo(sc, "mchmarny", "devpulse")
 	require.NotNil(t, found)
 	assert.Equal(t, 100, found.Reputation.ScoreCount)
 
-	found = findRepo(sc, "nvidia", "AICR") // case insensitive
+	found = findRepo(sc, "Mchmarny", "DEVPULSE") // case insensitive
 	require.NotNil(t, found)
 
-	found = findRepo(sc, "NVIDIA", "nonexistent")
+	found = findRepo(sc, "mchmarny", "nonexistent")
 	assert.Nil(t, found)
 }
 
 func TestPickTarget(t *testing.T) {
 	targets := []syncTarget{
-		{Org: "NVIDIA", Repo: "aicr"},
-		{Org: "NVIDIA", Repo: "skyhook"},
+		{Org: "mchmarny", Repo: "devpulse"},
+		{Org: "mchmarny", Repo: "reputer"},
 		{Org: "mchmarny", Repo: "devpulse"},
 	}
 
@@ -105,14 +105,14 @@ func TestPickTarget(t *testing.T) {
 
 func TestLoadSyncConfigFromFile(t *testing.T) {
 	yaml := `repos:
-  - name: aicr
-    org: NVIDIA
+  - name: devpulse
+    org: mchmarny
     reputation:
       scoreCount: 100
       staleAfter: "48h"
-  - name: skyhook
-    org: NVIDIA
-  - name: devpulse
+  - name: reputer
+    org: mchmarny
+  - name: viern
     org: mchmarny
 `
 	f := t.TempDir() + "/sync.yaml"
@@ -121,13 +121,14 @@ func TestLoadSyncConfigFromFile(t *testing.T) {
 	sc, err := loadSyncConfig(t.Context(), f)
 	require.NoError(t, err)
 	require.Len(t, sc.Repos, 3)
-	assert.Equal(t, "NVIDIA", sc.Repos[0].Org)
-	assert.Equal(t, "aicr", sc.Repos[0].Name)
+	assert.Equal(t, "mchmarny", sc.Repos[0].Org)
+	assert.Equal(t, "devpulse", sc.Repos[0].Name)
 	require.NotNil(t, sc.Repos[0].Reputation)
 	assert.Equal(t, 100, sc.Repos[0].Reputation.ScoreCount)
 	assert.Equal(t, "48h", sc.Repos[0].Reputation.StaleAfter)
 	assert.Nil(t, sc.Repos[1].Reputation)
 	assert.Equal(t, "mchmarny", sc.Repos[2].Org)
+	assert.Equal(t, "viern", sc.Repos[2].Name)
 }
 
 func TestLoadSyncConfigFileNotFound(t *testing.T) {
@@ -137,8 +138,8 @@ func TestLoadSyncConfigFileNotFound(t *testing.T) {
 
 func TestCmdSyncOrgRepoValidation(t *testing.T) {
 	yaml := `repos:
-  - name: aicr
-    org: NVIDIA
+  - name: devpulse
+    org: mchmarny
 `
 	f := t.TempDir() + "/sync.yaml"
 	require.NoError(t, writeTestFile(f, yaml))
@@ -150,8 +151,8 @@ func TestCmdSyncOrgRepoValidation(t *testing.T) {
 		repo    string
 		wantErr string
 	}{
-		{"org without repo", f, "NVIDIA", "", "--org and --repo must be specified together"},
-		{"repo without org", f, "", "aicr", "--org and --repo must be specified together"},
+		{"org without repo", f, "mchmarny", "", "--org and --repo must be specified together"},
+		{"repo without org", f, "", "devpulse", "--org and --repo must be specified together"},
 		{"no config no override", "", "", "", "--config is required"},
 	}
 

@@ -45,8 +45,8 @@ var (
 Examples:
   devpulse sync --config sync.yaml
   devpulse sync --config https://raw.githubusercontent.com/org/repo/main/sync.yaml
-  devpulse sync --config sync.yaml --org NVIDIA --repo DCGM
-  devpulse sync --org NVIDIA --repo DCGM`,
+  devpulse sync --config sync.yaml --org mchmarny --repo devpulse
+  devpulse sync --org mchmarny --repo devpulse`,
 		Action: cmdSync,
 		Flags: []urfave.Flag{
 			dbFilePathFlag,

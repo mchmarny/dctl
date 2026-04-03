@@ -160,10 +160,10 @@ devpulse sync --config sync.yaml
 devpulse sync --config https://raw.githubusercontent.com/org/repo/main/config/sync.yaml
 
 # Override round-robin to sync a specific repo
-devpulse sync --config sync.yaml --org NVIDIA --repo DCGM
+devpulse sync --config sync.yaml --org mchmarny --repo devpulse
 
 # Sync a specific repo without a config file (uses hardcoded defaults)
-devpulse sync --org NVIDIA --repo DCGM
+devpulse sync --org mchmarny --repo devpulse
 ```
 
 Config format (all `reputation` fields are optional with sensible defaults):
@@ -200,7 +200,7 @@ Use the search bar with prefix syntax to scope the dashboard:
 | Prefix | Example | Scope |
 |--------|---------|-------|
 | `org:` | `org:myorg` | All repos in an organization |
-| `repo:` | `repo:skyhook` | Single repository |
+| `repo:` | `repo:devpulse` | Single repository |
 
 No prefix defaults to org search.
 
@@ -209,7 +209,7 @@ No prefix defaults to org search.
 `devpulse` also exposes data as JSON for scripting:
 
 ```shell
-devpulse query events --org knative --repo serving --type pr --since 2024-01-01
+devpulse query events --org mchmarny --repo devpulse --type pr --since 2024-01-01
 devpulse query developer list --like mark
 devpulse query entity detail --name GOOGLE
 ```

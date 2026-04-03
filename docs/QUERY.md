@@ -37,7 +37,7 @@ devpulse query entity detail --name GOOGLE
 List repositories in an organization:
 
 ```shell
-devpulse query org repos --org knative
+devpulse query org repos --org mchmarny
 ```
 
 ## Events
@@ -45,7 +45,7 @@ devpulse query org repos --org knative
 Search events with filters:
 
 ```shell
-devpulse query events --org knative --repo serving --type pr --since 2024-01-01
+devpulse query events --org mchmarny --repo devpulse --type pr --since 2024-01-01
 ```
 
 Available filters: `--org`, `--repo`, `--type` (pr, pr_review, issue, issue_comment, fork), `--author`, `--since`, `--label`, `--mention`, `--limit`.
@@ -53,7 +53,7 @@ Available filters: `--org`, `--repo`, `--type` (pr, pr_review, issue, issue_comm
 Pipe to jq for post-processing:
 
 ```shell
-devpulse query events --org knative --repo serving --type pr | jq '. | length'
+devpulse query events --org mchmarny --repo devpulse --type pr | jq '. | length'
 ```
 
 Use `--limit` on any list command to control result count (default: 100, max: 500).

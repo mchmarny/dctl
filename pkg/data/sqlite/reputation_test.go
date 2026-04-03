@@ -343,11 +343,11 @@ func TestGetStaleReputationUsernames_FilterByOrg(t *testing.T) {
 
 	_, err := store.db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
 		VALUES
-		('nvidia', 'repo1', 'orguser', 'pr', '2025-01-10', 'http://example.com', '', ''),
+		('mchmarny', 'repo1', 'orguser', 'pr', '2025-01-10', 'http://example.com', '', ''),
 		('other', 'repo2', 'otheruser', 'pr', '2025-01-10', 'http://example.com', '', '')`)
 	require.NoError(t, err)
 
-	org := "nvidia"
+	org := "mchmarny"
 	usernames, err := store.getStaleReputationUsernames(&org, nil, "2025-01-15T00:00:00Z")
 	require.NoError(t, err)
 	assert.Contains(t, usernames, "orguser")
@@ -365,12 +365,12 @@ func TestGetStaleReputationUsernames_FilterByOrgAndRepo(t *testing.T) {
 
 	_, err := store.db.Exec(`INSERT INTO event (org, repo, username, type, date, url, mentions, labels)
 		VALUES
-		('nvidia', 'skyhook', 'repouser', 'pr', '2025-01-10', 'http://example.com', '', ''),
-		('nvidia', 'other', 'otherrepo', 'pr', '2025-01-10', 'http://example.com', '', '')`)
+		('mchmarny', 'devpulse', 'repouser', 'pr', '2025-01-10', 'http://example.com', '', ''),
+		('mchmarny', 'other', 'otherrepo', 'pr', '2025-01-10', 'http://example.com', '', '')`)
 	require.NoError(t, err)
 
-	org := "nvidia"
-	repo := "skyhook"
+	org := "mchmarny"
+	repo := "devpulse"
 	usernames, err := store.getStaleReputationUsernames(&org, &repo, "2025-01-15T00:00:00Z")
 	require.NoError(t, err)
 	assert.Contains(t, usernames, "repouser")
