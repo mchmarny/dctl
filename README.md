@@ -63,6 +63,8 @@ Community health analytics for GitHub organizations and repositories. `devpulse`
 
 ## Install
 
+> DevPulse with even more powerful analytics, AI-powered insights, and less data access limits is available as SaaS offering at https://devpulse.thingz.io/
+
 ### Homebrew (macOS / Linux)
 
 ```shell
